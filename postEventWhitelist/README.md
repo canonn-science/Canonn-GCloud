@@ -67,8 +67,7 @@ The contents as an array of key values pairs in the definitions.
 ]
 ```
 
-To check if an event should be sent to postEvent you need to cycle through each of the definitions and check that all of the key values pairs in the definition match.
-
+To check if an event should be sent to postEvent you need to cycle through each of the definitions and check that all of the key value pairs in the definition match.
 
 Eg If event == "Docked" and "StationName" == "Hutton Orbital" then you can include the event to be sent to postEvent.
 
@@ -76,4 +75,4 @@ Eg If event == "Docked" and "StationName" == "Hutton Orbital" then you can inclu
 # Usage
 
 The whitelist contents can be downloaded from the Canonn api [https://us-central1-canonn-api-236217.cloudfunctions.net/postEventWhitelist](https://us-central1-canonn-api-236217.cloudfunctions.net/postEventWhitelist)
-Because the data is updated very infrequently it should only be checked once per session, not on every event. 
+Because the data is updated very infrequently it should only be checked once per session, not on every event, or once per day would be sufficient. 
