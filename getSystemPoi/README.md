@@ -12,3 +12,6 @@ In addition in uses POI data recorded by the specified commander using the "*can
 
 [https://us-central1-canonn-api-236217.cloudfunctions.net/getSystemPoi?system=Merope&cmdr=Syleo](https://us-central1-canonn-api-236217.cloudfunctions.net/getSystemPoi?system=Merope&cmdr=Syleo "Get system POIs for Merope")
 
+# Usage.
+
+If you wish to access this function from the above [url](https://us-central1-canonn-api-236217.cloudfunctions.net/getSystemPoi?system=Merope&cmdr=Syleo) in your own software we require that you make a formal request to Canonn and that if appropriate you also include code in your application to capture the data from your users so that we can improve our knowledge of the galaxy
