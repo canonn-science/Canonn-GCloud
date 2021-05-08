@@ -35,7 +35,26 @@ Its possible to implement lazy caching so that data is stored between function e
 ## Paging APIs
 When exporting large amounts of data for instance for 3D maps etc you should use a paging model so that if the data grows beyond the function limits, the function will not stop working. 
 
-#TODO
+# Function Testing
+
+It is possible to test functions locally before deploying to the cloud. However as most functions need mysql access you will need to have a few things set up.
+
+## Python 
+Most functions have been deployed with python 3.7 but google supports up to 3.9
+
+## Node: 
+I have no idea how to run node functions locally and will probably migrate them to python unless you figure it out and document it here
+
+## Sql Cloud Auth Proxy
+
+[Sql Cloud Proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy "Google Sql Cloud Proxy") is used to provide access to the mysql database. You will need a secrets file and a login provided by @NoFoolLikeOne
+
+
+
+
+
+
+# TODO
 
 Sanitise functions to remove sensitive features and check in to source control. 
 
