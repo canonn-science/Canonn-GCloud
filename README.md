@@ -51,7 +51,9 @@ I have no idea how to run node functions locally and will probably migrate them 
 
 The way I uses the proxy is set up as a service on a linux box so that I can access it from any PC on my home network. The command it executes is as follows
 
+```bash
 /usr/local/bin/cloud_sql_proxy -dir=/usr/local/bin/cloud_sql_proxy -instances=canonn-api-236217:europe-north1:canonnpai=tcp:10.0.0.72:3306 -credential_file=/var/local/cloud-sql-proxy/mysql_secret.json
+```
 
 Windows users may need to do [something else](https://github.com/GoogleCloudPlatform/cloudsql-proxy/releases "Cloudsql Proxy Releases")
 
@@ -62,19 +64,25 @@ In this example the current directory has file main.py with a function called pa
 
 First set envionment variables
 
+```bash
 export MYSQL_USER=yourusername
 export MYSQL_PASSWORD=yourpassword
 export MYSQL_HOST=localhost
+```
 
 Then start the function framework with the target
 
+```bash
 functions-framework --target payload --debug 
+```
 
 To execute the function you need to put the url into a browser or use curl
 
 Use the following URL  [http://localhost:8080/?system=Merope&cmdr=LCU No Fool Like One](http://localhost:8080/?system=Merope&cmdr=LCU%20No%20Fool%20Like%20One)
 
-If all went well you would see a list POIs for that system
+If all went well you would see a list POIs for that system.
+
+For POST functions I would recommend using [Postman](https://www.postman.com/ "Postman") 
 
 # TODO
 
