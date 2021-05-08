@@ -1,6 +1,6 @@
 # postEvent
 
-This function is used primarilly by [JournalLimpet](https://journal-limpet "Journal Limpet") and [EDMC-Canonn[(https://canonn.fyi/plugin "Canonn EDMC Plugin")] to submit events to the Canonn Database. 
+This function is used primarilly by [JournalLimpet](https://journal-limpet "Journal Limpet") and [EDMC-Canonn](https://canonn.fyi/plugin "Canonn EDMC Plugin") to submit events to the Canonn Database. 
 
 It is designed to accept batches of events so that they can be bulk inserted. 
 
