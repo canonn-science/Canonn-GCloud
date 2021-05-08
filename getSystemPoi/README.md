@@ -1,6 +1,6 @@
 # getSystemPoi
 
-This is a cloud function that accepts a system name and a commander name and returns all the POI information for that system.
+This is a cloud function that accepts a system name and a commander name and returns all the POI information for that system captured in the Canonn database.
 
 The data is captured from the following journal events
 
