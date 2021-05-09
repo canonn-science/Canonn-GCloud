@@ -14,12 +14,74 @@ Frequently occurring events like FSSSignalDiscovered should be batched up before
 
 ## Data format
 
-The data format has some flexibility about how you send records but we will only document the recommended format here.
+The data format has some flexibility about how you send records but we will only document the recommended schema here.
 
-The input data to the function is an array of postEvent Records each postEvent records should contain events for a specific 
-gamestate eg system,body and lat/lon
+```json
+{
+  "type": "array",
+  "items": [
+    {
+      "type": "object",
+      "properties": {
+        "gameState": {
+          "type": "object",
+          "properties": {
+            "systemName": {"type": "string"},
+            "systemAddress": {"type": "integer"},
+            "systemCoordinates": {
+              "type": "array",
+              "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"}              
+              ]
+            },
+            "clientVersion": {"type": "string"},
+            "isBeta": {"type": "boolean"},
+            "latitude": {"type": "number"},
+            "longitude": {"type": "integer"},
+            "bodyName": {"type": "string"},
+            "bodyId": {"type": "string"}
+          },
+          "required": [
+            "systemName",
+            "systemAddress",
+            "systemCoordinates",
+            "clientVersion",
+            "isBeta"
+          ]
+        },
+        "rawEvents": {
+          "type": "array",
+          "items": [  /* an array of raw events from in game */
+            {
+              "type": "object",
+              "properties": {
+                "timestamp": {"type": "string"},
+                "event": {"type": "string"},
+              },
+              "required": [
+                "timestamp",
+                "event"
+              ]
+            }
+          ]
+        },
+        "cmdrName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gameState",
+        "rawEvents",
+        "cmdrName"
+      ]
+    }
+  ]
+}
+```
 
-events sharing these characteristics can be grouped together in a raw events record.
+Note that the gamestate needs to have the correct details to go with the raw events. Eg. The system, body, lat/lon must be the same for all the events in the rawEvents array, otherwise you need to supply a new postEvent record with its own Gamestate. 
 
 ```json
 [
@@ -35,9 +97,9 @@ events sharing these characteristics can be grouped together in a raw events rec
             "clientVersion": "Postman",
             "isBeta": false,
             "latitude": 12.12345,
-            "longitude": 0
-            "body"
-            "bodyId"
+            "longitude": 0,
+            "bodyName": "Lysoovsky BH-L d8-26 5 b",
+            "bodyId": "19",
         },
         "rawEvents": [
             { "timestamp":"2021-04-25T16:03:07Z", "event":"ScanOrganic", "ScanType":"Analyse", "Genus":"$Codex_Ent_Stratum_Genus_Name;", "Genus_Localised":"Stratum", "Species":"$Codex_Ent_Stratum_02_Name;", "Species_Localised":"Stratum Paleas", "SystemAddress":5306398479066, "Body":19 }
