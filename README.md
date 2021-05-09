@@ -35,6 +35,17 @@ Its possible to implement lazy caching so that data is stored between function e
 ## Paging APIs
 When exporting large amounts of data for instance for 3D maps etc you should use a paging model so that if the data grows beyond the function limits, the function will not stop working. 
 
+## Compression
+
+In order to save on bandwidth please use the following headers in the get request so that the gzip transport is used. 
+
+```python
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0",
+    "Accept-Encoding": "gzip, deflate",
+}
+```
+
 # Function Testing
 
 It is possible to test functions locally before deploying to the cloud. However as most functions need mysql access you will need to have a few things set up.
