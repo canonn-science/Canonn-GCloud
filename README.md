@@ -67,8 +67,7 @@ First set envionment variables
 ```bash
 export MYSQL_USER=yourusername
 export MYSQL_PASSWORD=yourpassword
-export MYSQL_HOST=localhost
-export MYSQL_HOST=10.10.0.72  # substiture your ip address here or use localhost
+export MYSQL_HOST=localhost  # or another ip address
 export MYSQL_DATABASE=canonn
 export INSTANCE_CONNECTION_NAME=canonn-api-236217:europe-north1:canonnpai
 export GOOGLE_APPLICATION_CREDENTIALS=/var/local/cloud-sql-proxy/mysql_secret.json
