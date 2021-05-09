@@ -21,10 +21,10 @@ glogclient.setup_logging(log_level=logging.INFO)
 # TODO(developer): specify SQL connection details
 CONNECTION_NAME = getenv(
     'INSTANCE_CONNECTION_NAME',
-    'secret')
+    'canonn-api-236217:europe-north1:canonnpai')
 DB_USER = getenv('MYSQL_USER', 'secret')
 DB_PASSWORD = getenv('MYSQL_PASSWORD', 'secret')
-DB_NAME = getenv('MYSQL_DATABASE', 'secret')
+DB_NAME = getenv('MYSQL_DATABASE', 'canonn')
 DB_HOST = getenv('MYSQL_HOST', 'localhost')
 
 mysql_config = {
