@@ -16,7 +16,7 @@ Frequently occurring events like FSSSignalDiscovered should be batched up before
 
 The data format has some flexibility about how you send records but we will only document the recommended schema here.
 
-```json
+```python
 {
   "type": "array",
   "items": [
@@ -53,7 +53,7 @@ The data format has some flexibility about how you send records but we will only
         },
         "rawEvents": {
           "type": "array",
-          "items": [  /* an array of raw events from in game */
+          "items": [  # an array of raw events from in game 
             {
               "type": "object",
               "properties": {
