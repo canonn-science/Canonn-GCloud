@@ -21,7 +21,7 @@ Cloud Functions can be [written](https://cloud.google.com/functions/docs/writing
 # Design Considerations
 
 ## Invocations
-When capturing events you should batch them if possible as this helps keep function executions below the billing threshold.  When fleet carriers were introduced the number of FSS events per system when up by two orders or magnitude which by December 2020 pushed monthly invocations to 4.5 million. Batching the FSS events on the EDMC-Canonn plugin reduced invocations to 1.5 million. If you need to fetch multiple items from a database create a single function that returns all the data in one go.
+When capturing events you should batch them if possible as this helps keep function executions below the billing threshold.  When fleet carriers were introduced the number of FSS events per system went up by two orders of magnitude. By December 2020, this pushed monthly invocations to 4.5 million. Batching the FSS events on the EDMC-Canonn plugin reduced invocations to 1.5 million. If you need to fetch multiple items from a database create a single function that returns all the data in one go.
 
 ## Mysql connections
 When using cloud functions to access a mysql database the connection is cached so that it can be re-used by subsequent function calls. If each function scales up the number of instances then it is possible for the system overall to run out of connections. Ensure that all functions accessing limited shared resources have scaling limits applied and where possible create functions that batch.
@@ -60,7 +60,7 @@ I have no idea how to run node functions locally and will probably migrate them 
 
 [Sql Cloud Proxy](https://cloud.google.com/sql/docs/mysql/sql-proxy "Google Sql Cloud Proxy") is used to provide access to the mysql database. You will need a secrets file and a login provided by @NoFoolLikeOne
 
-The way I uses the proxy is set up as a service on a linux box so that I can access it from any PC on my home network. The command it executes is as follows
+The way I use the proxy is set up as a service on a linux box so that I can access it from any PC on my home network. The command it executes is as follows
 
 ```bash
 /usr/local/bin/cloud_sql_proxy -dir=/usr/local/bin/cloud_sql_proxy -instances=canonn-api-236217:europe-north1:canonnpai=tcp:10.0.0.72:3306 -credential_file=/var/local/cloud-sql-proxy/mysql_secret.json
@@ -90,6 +90,8 @@ Then start the function framework with the target
 functions-framework --target payload --debug 
 ```
 
+NB: The functions don't currently have consistent --target functions. We wll standardise on *payload*
+
 To execute the function you need to put the url into a browser or use curl
 
 Use the following URL  [http://localhost:8080/?system=Merope&cmdr=LCU No Fool Like One](http://localhost:8080/?system=Merope&cmdr=LCU%20No%20Fool%20Like%20One)
@@ -102,6 +104,6 @@ For POST functions I would recommend using [Postman](https://www.postman.com/ "P
 
 * Sanitise functions to remove sensitive features and check in to source control. 
 * Change functions to use the host environment variable so that you can specify the database host
-
+* create a new function to make querying the database more standard and pool connections. 
 
 
