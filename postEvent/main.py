@@ -22,7 +22,7 @@ glogclient.setup_logging(log_level=logging.INFO)
 CONNECTION_NAME = getenv(
     'INSTANCE_CONNECTION_NAME',
     'canonn-api-236217:europe-north1:canonnpai')
-DB_USER = getenv('MYSQL_USER', 'secret')
+DB_USER = getenv('MYSQL_USER', 'canonn')
 DB_PASSWORD = getenv('MYSQL_PASSWORD', 'secret')
 DB_NAME = getenv('MYSQL_DATABASE', 'canonn')
 DB_HOST = getenv('MYSQL_HOST', 'localhost')
@@ -43,6 +43,14 @@ mysql_conn = None
 
 whitelist = []
 hooklist = {}
+
+
+def is_odyssey(value):
+    if value is False:
+        return "N"
+    if value is True:
+        return "Y"
+    return
 
 
 def __get_cursor():
@@ -195,6 +203,9 @@ def insertCodexReport(request_args):
     region_name_localised = request_args.get("entry").get("Region_Localised")
     nearest_destination = request_args.get("entry").get("NearestDestination")
     reported_at = request_args.get("reported_at")
+    platform = request_args.get("platform")
+    odyssey = request_args.get("odyssey")
+    id64 = request_args.get("entry").get("SystemAddress")
 
     index_id = None
     signal_type = None
@@ -235,7 +246,10 @@ def insertCodexReport(request_args):
 	            index_id,
 	            signal_type,
 	            clientVersion,
-                reported_at
+                reported_at,
+                platform,
+                odyssey,
+                id64
 	        ) values (
             	nullif(%s,''),
                 nullif(%s,''),
@@ -259,7 +273,10 @@ def insertCodexReport(request_args):
 	            nullif(%s,''),
 	            nullif(%s,''),
 	            nullif(%s,''),
-                str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ')
+                str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
+                nullif(%s,''),
+	            nullif(%s,''),
+	            nullif(%s,'')
                 )''', (
             cmdrName,
             system,
@@ -279,7 +296,10 @@ def insertCodexReport(request_args):
             index_id,
             signal_type,
             client,
-            reported_at
+            reported_at,
+            platform,
+            odyssey,
+            id64
         ))
         mysql_conn.commit()
         cursor.close()
@@ -457,7 +477,9 @@ def extendCodex(gs, entry, cmdr):
             "entry": entry,
             "client": gs.get("clientVersion"),
             "reported_at": entry.get("timestamp"),
-            "autoupdate": gs.get("autoupdate")
+            "autoupdate": gs.get("autoupdate"),
+            "platform": gs.get("platform"),
+            "odyssey": is_odyssey(gs.get("odyssey"))
         }
         if postCodex(payload):
             results.append((
