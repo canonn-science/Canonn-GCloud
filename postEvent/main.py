@@ -672,6 +672,13 @@ def extendSignals(gs, event, cmdr):
         body_id = event.get("BodyID")
         signals = event.get("Signals")
         client = gs.get("clientVersion")
+        if gs.get("odyssey") is None:
+            odyssey = 'X'
+        if gs.get("odyssey") == True:
+            odyssey = 'Y'
+        if gs.get("odyssey") == False:
+            odyssey = 'N'
+
         if gs.get("isBeta"):
             beta = 'Y'
         else:
@@ -683,8 +690,8 @@ def extendSignals(gs, event, cmdr):
                 sigtype = signal.get("Type"),
                 type_localised = signal.get("Type_Localised"),
                 count = signal.get("Count"),
-                results.append((cmdr, system, system_address, x, y, z, body,
-                                body_id, sigtype, type_localised, count, client, beta))
+                results.append((cmdr, system, system_address, x, y, z, body, body_id, sigtype, type_localised,
+                                odyssey, count, client, beta, odyssey, count, odyssey, count, odyssey, count, odyssey, count, odyssey, count))
             else:
                 logging.info("Skipping Human Event")
     return results
@@ -783,20 +790,36 @@ def postSignals(values):
                 type_localised,
                 count,
                 client,
-                beta
+                beta,
+                species
             ) values (
-                nullif(%s,''),
-                nullif(%s,''),
-                %s,
-                %s,%s,%s,
-                nullif(%s,''),
-                nullif(%s,''),
-                nullif(%s,''),
-                nullif(%s,''),
-                %s,
-                nullif(%s,''),
-                nullif(%s,'')
-            )        
+                nullif(%s,''),                                          # cmdr
+                nullif(%s,''),                                          # system
+                %s,                                                     # system_address aka id64
+                %s,%s,%s,                                               # xyz
+                nullif(%s,''),                                          # body
+                 nullif(%s,''),                                         # bodyid
+                nullif(%s,''),                                          # type
+                nullif(%s,''),                                          # type_localised
+                case when %s = 'N' then %s else null end,               # odyssey,count
+                nullif(%s,''),                                          # client
+                nullif(%s,''),                                          # beta
+                case when %s = 'Y' then %s else null end,               # odyssey,count
+                case when %s = 'X' then %s else null end,               # odyssey,count
+            ) on duplicate key update (
+                species = case 
+                    when %s = 'Y' then %s                               # odyssey,count
+                    else species
+                end,
+                count = case 
+                    when %s = 'N' then %s                               # odyssey,count
+                    else count
+                end,
+                sites = case 
+                    when %s = 'X' then %s                               # odyssey,count
+                    else sites
+                end 
+            )   
         """,
                         values
                         )
