@@ -101,12 +101,12 @@ def get_webhooks():
 
 
 """
-    This will tell us if the event is handled by code 
+    This will tell us if the event is handled by code
     This list needs to be kept up to date otherwise events
     could end up in raw_events as well as the appropriate table
 
     It would be a good idea to add a flag to the database table
-    so that the whitelist can tell us instead of maintaining a list here. 
+    so that the whitelist can tell us instead of maintaining a list here.
 """
 
 
@@ -407,19 +407,19 @@ def setup_sql_conn():
 def get_records(value):
 
     if isinstance(value, list):
-        #logging.info("Processing {} Containers".format(len(value)))
+        # logging.info("Processing {} Containers".format(len(value)))
         return value
     else:
-        #logging.info("Processing 1 Containers")
+        # logging.info("Processing 1 Containers")
         return [value]
 
 
 def get_events(one, many):
     if one:
-        #logging.info("Processing 1 raw event")
+        # logging.info("Processing 1 raw event")
         return [one]
     elif many:
-        #logging.info("Processing {} raw events".format(len(many)))
+        # logging.info("Processing {} raw events".format(len(many)))
         return many
 
 
@@ -643,7 +643,7 @@ def extendCarriersFSS(gs, event, cmdr):
         bFleetCarrier = False
 
     if bFleetCarrier:
-        #logging.info("Fleet Carrier {}".format(event.get("SignalName")))
+        # logging.info("Fleet Carrier {}".format(event.get("SignalName")))
 
         serial_no = event.get("SignalName")[-7:]
         name = event.get("SignalName")[:-8]
@@ -692,6 +692,7 @@ def extendSignals(gs, event, cmdr):
                 count = signal.get("Count"),
                 results.append((cmdr, system, system_address, x, y, z, body, body_id, sigtype, type_localised,
                                 odyssey, count, client, beta, odyssey, count, odyssey, count, odyssey, count, odyssey, count, odyssey, count))
+
             else:
                 logging.info("Skipping Human Event")
     return results
@@ -700,7 +701,7 @@ def extendSignals(gs, event, cmdr):
 def postRawEvents(values):
     return execute_many("postRawEvents",
                         """
-            insert into raw_events (cmdrName,systemName,bodyName,station,x,y,z,lat,lon,event,raw_event,clientVersion,created_at) 
+            insert into raw_events (cmdrName,systemName,bodyName,station,x,y,z,lat,lon,event,raw_event,clientVersion,created_at)
             values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
         """,
                         values
@@ -727,7 +728,7 @@ def postOrganicScans(values):
                 raw_json,
                 clientVersion,
                 reported_at,
-                is_beta) 
+                is_beta)
             values (
                 nullif(%s,''),
                 nullif(%s,''),
@@ -767,8 +768,8 @@ def postLifeEvents(values):
 
 def postCommanders(values):
     return execute_many("postCommanders",
-                        """ 
-            insert ignore into client_reports (cmdr,client,day,autoupdate,is_beta) 
+                        """
+            insert ignore into client_reports (cmdr,client,day,autoupdate,is_beta)
             values (%s,%s,date(str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ')),%s,%s)
         """,
                         values
@@ -778,8 +779,8 @@ def postCommanders(values):
 def postSignals(values):
 
     return execute_many("postSignals",
-                        """ 
-            insert ignore into SAASignals (
+                        """
+            insert into SAASignals (
                 cmdr,
                 system,
                 system_address,
@@ -791,35 +792,38 @@ def postSignals(values):
                 count,
                 client,
                 beta,
-                species
+                species,
+                sites
             ) values (
-                nullif(%s,''),                                          # cmdr
-                nullif(%s,''),                                          # system
-                %s,                                                     # system_address aka id64
-                %s,%s,%s,                                               # xyz
-                nullif(%s,''),                                          # body
-                 nullif(%s,''),                                         # bodyid
-                nullif(%s,''),                                          # type
-                nullif(%s,''),                                          # type_localised
-                case when %s = 'N' then %s else null end,               # odyssey,count
-                nullif(%s,''),                                          # client
-                nullif(%s,''),                                          # beta
-                case when %s = 'Y' then %s else null end,               # odyssey,count
-                case when %s = 'X' then %s else null end,               # odyssey,count
-            ) on duplicate key update (
-                species = case 
-                    when %s = 'Y' then %s                               # odyssey,count
+                nullif(%s,''),                                         
+                # system
+                nullif(%s,''),
+                %s,                                                    
+                %s,%s,%s,                                              
+                nullif(%s,''),                                         
+                nullif(%s,''),                                         
+                nullif(%s,''),                                         
+                # type_localised
+                nullif(%s,''),
+                case when %s = 'N' then %s else null end,              
+                # client
+                nullif(%s,''),
+                nullif(%s,''),                                         
+                case when %s = 'Y' then %s else null end,              
+                case when %s = 'X' then %s else null end               
+            ) on duplicate key update 
+                species = case
+                    when %s = 'Y' then %s                               
                     else species
                 end,
-                count = case 
-                    when %s = 'N' then %s                               # odyssey,count
+                count = case
+                    when %s = 'N' then %s                               
                     else count
                 end,
-                sites = case 
-                    when %s = 'X' then %s                               # odyssey,count
+                sites = case
+                    when %s = 'X' then %s                               
                     else sites
-                end 
-            )   
+                end
         """,
                         values
                         )
@@ -828,7 +832,7 @@ def postSignals(values):
 def postCarriers(values):
 
     return execute_many("postCarriers",
-                        """ 
+                        """
             INSERT INTO fleet_carriers (
                 serial_no,
                 name,
@@ -841,10 +845,10 @@ def postCarriers(values):
                 previous_system,
                 previous_x,
                 previous_y,
-                previous_z,		
+                previous_z,
                 last_jump_dt
                 )
-                select * from ( SELECT 
+                select * from ( SELECT
                     dummy.newserial,
                     ifnull(newname,name) as newname,
                     dummy.newdate,
@@ -858,7 +862,7 @@ def postCarriers(values):
                     ifnull(current_y,dummy.newy )as oldy,
                     ifnull(current_z,dummy.newz) as oldz,
                     ifnull(jump_dt,dummy.newdate) as olddt
-                from (  SELECT 
+                from (  SELECT
                 %s as newserial,
                 %s as newname,
                 str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ') as newdate,
@@ -868,7 +872,7 @@ def postCarriers(values):
                 cast(%s as decimal(10,5)) as newz,
                 %s as newservices from dual) dummy
             left join fleet_carriers on serial_no = %s  ) data
-            ON DUPLICATE KEY UPDATE 
+            ON DUPLICATE KEY UPDATE
                 name = case when newdate > olddt then ifnull(newname,name) else name end,
                 jump_dt = case when newdate > olddt then newdate else olddt end,
                 current_system = case when newdate > olddt then newsystem else current_system end,
@@ -876,33 +880,33 @@ def postCarriers(values):
                 current_y = case when newdate > olddt then newy else current_y end,
                 current_z = case when newdate > olddt then newz else current_z end,
                 services = case when newdate > olddt then newservices else services end,
-                previous_system=case when 
-                    newdate > olddt and 
-                    newsystem != oldsystem 
-                    then oldsystem 
-                    else previous_system  
+                previous_system=case when
+                    newdate > olddt and
+                    newsystem != oldsystem
+                    then oldsystem
+                    else previous_system
                 end,
-                previous_x=case when 
-                    newdate > olddt and 
-                    newsystem != oldsystem 
-                    then oldx 
-                    else previous_x  
+                previous_x=case when
+                    newdate > olddt and
+                    newsystem != oldsystem
+                    then oldx
+                    else previous_x
                 end,
-                previous_y=case when 
-                    newdate > olddt and 
-                    newsystem != oldsystem 
-                    then oldy 
-                    else previous_y  
+                previous_y=case when
+                    newdate > olddt and
+                    newsystem != oldsystem
+                    then oldy
+                    else previous_y
                 end,
-                previous_z=case when 
-                    newdate > olddt and 
-                    newsystem != oldsystem 
+                previous_z=case when
+                    newdate > olddt and
+                    newsystem != oldsystem
                     then oldz
                     else previous_z
                 end,
-                last_jump_dt=case when 
-                    newdate > olddt and 
-                    newsystem != oldsystem 
+                last_jump_dt=case when
+                    newdate > olddt and
+                    newsystem != oldsystem
                     then olddt
                     else last_jump_dt
                 end;
@@ -940,9 +944,9 @@ def execute_many(function, sqltext, sqlparm):
             )
             mysql_conn.commit()
             retval["inserted"] = cursor.rowcount
-    except:
+    except Exception as e:
         logging.exception("message")
-        retval["error"] = "error in execute_many function check google cloud logging explorer"
+        retval["error"] = str(e)
 
     return retval
 
