@@ -707,14 +707,30 @@ def extendSignals(gs, event, cmdr):
             beta = 'N'
 
         for signal in signals:
-            if signal.get("Type") != '$SAA_SignalType_Human;':
+            sigtype = signal.get("Type")
+            if sigtype != '$SAA_SignalType_Human;':
+                print(sigtype)
+                biology = (sigtype == '$SAA_SignalType_Biological;')
+                geology = (sigtype == '$SAA_SignalType_Geological;')
+                alien = (sigtype == '$SAA_SignalType_Thargoid;' or sigtype ==
+                         '$SAA_SignalType_Guardian;')
 
-                sigtype = signal.get("Type"),
-                type_localised = signal.get("Type_Localised"),
-                count = signal.get("Count"),
+                if (odyssey in ('N', 'X') or alien):
+                    update_type = "sites"
+                elif (odyssey == 'Y' and (biology or geology)):
+                    update_type = "species"
+                else:
+                    update_type = "sites"
+
+                type_localised = signal.get("Type_Localised")
+                count = signal.get("Count")
                 results.append((cmdr, system, system_address, x, y, z, body, body_id, sigtype, type_localised,
-                                count, client, beta, odyssey, count, odyssey, count, odyssey, count, odyssey,
-                                count, odyssey, count, count, odyssey, count)
+                                count, client, beta,
+                                update_type, count,
+                                update_type, count,
+                                update_type, count,
+                                count, count,
+                                update_type, count)
                                )
 
             else:
@@ -816,12 +832,12 @@ def postSignals(values):
                 count,
                 client,
                 beta,
-                species,
-                sites
+                species, #update_type
+                sites    #update_type
             ) values (
-                nullif(%s,''),                                         
-                # system
-                nullif(%s,''),
+                nullif(%s,''),             
+                # system                
+                nullif(%s,''),              
                 %s,                                                    
                 %s,%s,%s,                                              
                 nullif(%s,''),                                         
@@ -833,20 +849,19 @@ def postSignals(values):
                 # client
                 nullif(%s,''),
                 nullif(%s,''),                                         
-                case when %s = 'Y' then %s else null end,              
-                case when %s = 'N' then %s else null end               
+                case when %s = 'species' then %s else null end,              
+                case when %s = 'sites' then %s else null end               
             ) on duplicate key update 
                 species = case
-                    when %s = 'Y' then %s                               
+                    when %s = 'species' then %s                               #update_type,count
                     else species
                 end,
                 count = case
-                    when %s = 'N' then %s
-                    when %s = 'X' and %s != species then %s  # odyssey,count,count
+                    when %s > count then %s                                   #count count
                     else count
                 end,
                 sites = case
-                    when %s = 'N' then %s                               
+                    when %s = 'sites' then %s                               #update_type
                     else sites
                 end
         """,
