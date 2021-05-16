@@ -713,7 +713,9 @@ def extendSignals(gs, event, cmdr):
                 type_localised = signal.get("Type_Localised"),
                 count = signal.get("Count"),
                 results.append((cmdr, system, system_address, x, y, z, body, body_id, sigtype, type_localised,
-                                odyssey, count, client, beta, odyssey, count, odyssey, count, odyssey, count, odyssey, count, odyssey, count))
+                                count, client, beta, odyssey, count, odyssey, count, odyssey, count, odyssey,
+                                count, odyssey, count, count, odyssey, count)
+                               )
 
             else:
                 logging.info("Skipping Human Event")
@@ -827,7 +829,7 @@ def postSignals(values):
                 nullif(%s,''),                                         
                 # type_localised
                 nullif(%s,''),
-                case when %s = 'N' then %s else null end,              
+                %s,
                 # client
                 nullif(%s,''),
                 nullif(%s,''),                                         
@@ -839,7 +841,8 @@ def postSignals(values):
                     else species
                 end,
                 count = case
-                    when %s = 'X' then %s                               
+                    when %s = 'N' then %s
+                    when %s = 'X' and %s != species then %s  # odyssey,count,count
                     else count
                 end,
                 sites = case
@@ -1069,5 +1072,5 @@ def entrywrap(request):
     logging.info(retval)
     # we will always return 200 because errors
     # are logged and we want to stay in memory
-
+    #print(json.dumps(retval, indent=4))
     return (json.dumps(retval), 200, headers)
