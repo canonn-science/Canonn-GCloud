@@ -709,7 +709,7 @@ def extendSignals(gs, event, cmdr):
         for signal in signals:
             sigtype = signal.get("Type")
             if sigtype != '$SAA_SignalType_Human;':
-                print(sigtype)
+
                 biology = (sigtype == '$SAA_SignalType_Biological;')
                 geology = (sigtype == '$SAA_SignalType_Geological;')
                 alien = (sigtype == '$SAA_SignalType_Thargoid;' or sigtype ==
