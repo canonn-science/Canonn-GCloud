@@ -113,6 +113,10 @@ def get_webhooks():
 def event_handled(event):
 
     wl = [
+        {"description": "FC Docked", "definition": {
+            "event": "Docked", "StationType": "FleetCarrier"}},
+        {"description": "FC Jumped", "definition": {
+            "event": "CarrierJump", "StationType": "FleetCarrier"}},
         {"description": "Organic Scans", "definition": {"event": "ScanOrganic"}},
         {"description": "All Codex Events", "definition": {"event": "CodexEntry"}},
         {"description": "Signals Found Scanning Bodies",
@@ -626,9 +630,16 @@ def extendRawEvents(gs, entry, cmdr):
 
 
 def extendCarriersFSS(gs, event, cmdr):
+
     results = []
 
+    bCarrierJump = (event.get("event") == "CarrierJump" and event.get(
+        "StationType") == "FleetCarrier")
+    bCarrierDock = (event.get("event") == "Docked" and event.get(
+        "StationType") == "FleetCarrier")
+
     bFSSSignalDiscovered = (event.get("event") == "FSSSignalDiscovered")
+
     bIsStation = event.get("IsStation")
 
     try:
@@ -642,18 +653,29 @@ def extendCarriersFSS(gs, event, cmdr):
     except:
         bFleetCarrier = False
 
-    if bFleetCarrier:
+    if bFleetCarrier or bCarrierJump or bCarrierDock:
         # logging.info("Fleet Carrier {}".format(event.get("SignalName")))
 
-        serial_no = event.get("SignalName")[-7:]
-        name = event.get("SignalName")[:-8]
+        serial_no = event.get("StationName")
+        if not serial_no and bFleetCarrier:
+            serial_no = event.get("SignalName")[-7:]
+
+        name = None
+        if bFleetCarrier:
+            name = event.get("SignalName")[:-8]
+
         system = gs.get("systemName")
         x, y, z = gs.get("systemCoordinates")
         timestamp = event.get("timestamp")
+
         service_list = "unknown"
+        if event.get("StationServices"):
+            service_list = ",".join(event.get("StationServices"))
+
+        ev = event.get("event")
 
         results.append((serial_no, name, timestamp, system,
-                        x, y, z, service_list, serial_no))
+                        x, y, z, json.dumps(service_list.split(',')), serial_no))
 
     return results
 
@@ -966,12 +988,12 @@ def entrypoint(request):
     retval = {}
     try:
         return entrywrap(request)
-    except:
+    except Exception as e:
         headers = {
             'Content-Type': 'application/json'
         }
 
-        retval["error"] = "Error in entrypoint: check google cloud log explorer"
+        retval["error"] = str(e)
         logging.exception("message")
         return (json.dumps(retval), 500, headers)
 
@@ -981,6 +1003,8 @@ def entrywrap(request):
     headers = {
         'Content-Type': 'application/json'
     }
+
+    retval = {}
 
     if request.method != 'POST':
         return (json.dumps({"error": "only POST operations allowed"}), 500, headers)
@@ -1035,13 +1059,15 @@ def entrywrap(request):
         results.append(postOrganicScans(organicscans))
         # codex events are already posted we just collate the results
         results.append(collateCodex(codexevents))
-    except:
+    except Exception as e:
         logging.error(rj)
         logging.exception("message")
+        retval["error"] = str(e)
 
     retval = compress_results(results, rj)
     retval.append(clientversion)
     logging.info(retval)
     # we will always return 200 because errors
     # are logged and we want to stay in memory
+
     return (json.dumps(retval), 200, headers)
