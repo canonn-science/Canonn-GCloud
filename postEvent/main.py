@@ -832,18 +832,18 @@ def postSignals(values):
                 nullif(%s,''),
                 nullif(%s,''),                                         
                 case when %s = 'Y' then %s else null end,              
-                case when %s = 'X' then %s else null end               
+                case when %s = 'N' then %s else null end               
             ) on duplicate key update 
                 species = case
                     when %s = 'Y' then %s                               
                     else species
                 end,
                 count = case
-                    when %s = 'N' then %s                               
+                    when %s = 'X' then %s                               
                     else count
                 end,
                 sites = case
-                    when %s = 'X' then %s                               
+                    when %s = 'N' then %s                               
                     else sites
                 end
         """,
