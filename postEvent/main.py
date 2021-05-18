@@ -319,6 +319,12 @@ def insertCodex(request_args):
         "entry").get("SubCategory_Localised")
     region = request_args.get("entry").get("Region_Localised")
 
+    release = ""
+    if request_args.get("odyssey") == 'Y':
+        release = " (Osyssey)"
+    if request_args.get("odyssey") == 'N':
+        release = " (Horizons)"
+
     webhooks = get_webhooks()
 
     webhook = webhooks.get("Codex")
@@ -330,11 +336,11 @@ def insertCodex(request_args):
             canonnsearch = "https://canonn.science/?s="
             codexsearch = "https://tools.canonn.tech/Signals/?system="
 
-            content = "@here Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}".format(
+            content = "@here Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
                 cmdrName, name_localised, canonnsearch, quote_plus(
                     name_localised),
                 entryid, system, codexsearch, quote_plus(system),
-                region, category_localised, sub_category_localised)
+                region, category_localised, sub_category_localised, release)
             payload = {}
             payload["content"] = content
 
@@ -372,6 +378,12 @@ def insert_codex_systems(request_args):
     hud, english_name = get_hud_category(entryid, name_localised)
     webhooks = get_webhooks()
 
+    release = ""
+    if request_args.get("odyssey") == 'Y':
+        release = " (Osyssey)"
+    if request_args.get("odyssey") == 'N':
+        release = " (Horizons)"
+
     if hud != 'Unknown':
         stmt = "insert ignore into codex_systems (system,x,y,z,entryid) values (%s,%s,%s,%s,%s)"
 
@@ -381,11 +393,11 @@ def insert_codex_systems(request_args):
                 canonnsearch = "https://canonn.science/?s="
                 codexsearch = "https://tools.canonn.tech/Signals/?system="
 
-                content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}".format(
+                content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {} {}".format(
                     cmdrName, english_name, canonnsearch, quote_plus(
                         english_name),
                     entryid, system, codexsearch, quote_plus(system),
-                    region, category_localised, sub_category_localised)
+                    region, category_localised, sub_category_localised, release)
                 payload = {}
                 payload["content"] = content
                 requests.post(webhooks.get(hud), data=json.dumps(
