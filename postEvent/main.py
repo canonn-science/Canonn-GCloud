@@ -321,7 +321,7 @@ def insertCodex(request_args):
 
     release = ""
     if request_args.get("odyssey") == 'Y':
-        release = " (Osyssey)"
+        release = " (Odyssey)"
     if request_args.get("odyssey") == 'N':
         release = " (Horizons)"
 
@@ -380,7 +380,7 @@ def insert_codex_systems(request_args):
 
     release = ""
     if request_args.get("odyssey") == 'Y':
-        release = " (Osyssey)"
+        release = " (Odyssey)"
     if request_args.get("odyssey") == 'N':
         release = " (Horizons)"
 
