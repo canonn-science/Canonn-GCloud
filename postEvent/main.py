@@ -336,7 +336,7 @@ def insertCodex(request_args):
             canonnsearch = "https://canonn.science/?s="
             codexsearch = "https://tools.canonn.tech/Signals/?system="
 
-            content = "@here Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
+            content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
                 cmdrName, name_localised, canonnsearch, quote_plus(
                     name_localised),
                 entryid, system, codexsearch, quote_plus(system),
