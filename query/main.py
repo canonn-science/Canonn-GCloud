@@ -5,8 +5,15 @@ import localpackage.dbutils
 from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 import localpackage.challenge
+import localpackage.codex
 
 app = current_app
+
+
+@app.route("/codex/ref")
+def codex_ref():
+    print("Getting codex_name_ref")
+    return localpackage.codex.codex_name_ref(request)
 
 
 @app.route("/challenge/next")

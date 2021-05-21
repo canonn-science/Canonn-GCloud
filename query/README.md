@@ -32,3 +32,10 @@ This function will return a data structure showing all codex types and the comma
 
 ## example
 [CMDR LCU No Fool Like One](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/status?cmdr=LCU%20No%20Fool%20Like%20One)
+
+# codex/ref
+
+Gets a structure of all codex entries used by EDMC-Canonn
+
+## example
+[Live Codex Reference Data](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref)
