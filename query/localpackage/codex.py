@@ -55,7 +55,7 @@ def codex_systems(request):
     system = request.args.get("system")
 
     offset = request.args.get("offset", 0)
-    limit = request.args.get("limit", 2000)
+    limit = request.args.get("limit", 1000)
 
     params = []
     clause = ""
