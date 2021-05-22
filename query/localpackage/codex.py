@@ -22,3 +22,21 @@ def codex_name_ref(request):
     for entry in r:
         res[entry.get("entryid")] = entry
     return res
+
+
+def odyssey_subclass(request):
+    setup_sql_conn()
+
+    with get_cursor() as cursor:
+        sql = """
+            select sub_class,count(*) as species from codex_name_ref where platform="odyssey"
+            group by sub_class
+        """
+        cursor.execute(sql, ())
+        r = cursor.fetchall()
+        cursor.close()
+
+    res = {}
+    for entry in r:
+        res[entry.get("sub_class")] = entry.get("species")
+    return res

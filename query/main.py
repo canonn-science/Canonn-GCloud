@@ -10,9 +10,13 @@ import localpackage.codex
 app = current_app
 
 
+@app.route("/codex/odyssey/subclass")
+def codex_odyssey_subclass():
+    return localpackage.codex.odyssey_subclass(request)
+
+
 @app.route("/codex/ref")
 def codex_ref():
-    print("Getting codex_name_ref")
     return localpackage.codex.codex_name_ref(request)
 
 
