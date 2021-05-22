@@ -10,6 +10,11 @@ import localpackage.codex
 app = current_app
 
 
+@app.route("/codex/systems")
+def codex_systems():
+    return localpackage.codex.codex_systems(request)
+
+
 @app.route("/codex/odyssey/subclass")
 def codex_odyssey_subclass():
     return localpackage.codex.odyssey_subclass(request)

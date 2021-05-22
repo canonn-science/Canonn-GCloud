@@ -44,3 +44,77 @@ def odyssey_subclass(request):
 
     res["* Total Species"] = totals
     return res
+
+
+def codex_systems(request):
+    setup_sql_conn()
+
+    hud = request.args.get("hud_category")
+    sub = request.args.get("sub_class")
+    eng = request.args.get("engish_name")
+    system = request.args.get("system")
+
+    offset = request.args.get("offset", 0)
+    limit = request.args.get("limit", 2000)
+
+    params = []
+    clause = ""
+
+    print(hud)
+    print(sub)
+    print(eng)
+    print(system)
+
+    if hud:
+        params.append(hud)
+        clause = "and hud_category = %s"
+    if sub:
+        params.append(sub)
+        clause = f"{clause} and sub_class = %s "
+    if eng:
+        params.append(eng)
+        clause = f"{clause} and english_name = %s "
+    if system:
+        params.append(system)
+        clause = f"{clause} and system = %s "
+
+    params.append(int(offset))
+    params.append(int(limit))
+
+    print(offset)
+    print(limit)
+
+    with get_cursor() as cursor:
+        sql = f"""
+            select s.system,s.x,s.y,s.z,
+            cr.*
+            from codex_systems s
+            join codex_name_ref cr on cr.entryid = s.entryid
+            where 1 = 1
+            {clause}
+            order by system
+            limit %s,%s
+        """
+        print(sql)
+        cursor.execute(sql, (params))
+        r = cursor.fetchall()
+        cursor.close()
+
+    res = {}
+    for entry in r:
+        if not res.get(entry.get("system")):
+            res[entry.get("system")] = {"codex": [], "coords": [
+                entry.get("x"), entry.get("y"), entry.get("z")]}
+        res[entry.get("system")]["codex"].append(
+            {
+                "category": entry.get("category"),
+                "english_name": entry.get("english_name"),
+                "entryid": entry.get("entryid"),
+                "hud_category": entry.get("hud_category"),
+                "name": entry.get("name"),
+                "platform": entry.get("platform"),
+                "sub_category": entry.get("sub_category"),
+                "sub_class": entry.get("sub_class")
+            }
+        )
+    return res
