@@ -590,7 +590,7 @@ def extendOrganicScans(gs, event, cmdr):
         sqlparm = (
             cmdr,
             gs.get("systemName"),
-            event.get("systemAddress"),
+            event.get("SystemAddress"),
             bodyName,
             event.get("Body"),
             x, y, z,
