@@ -37,6 +37,10 @@ def odyssey_subclass(request):
         cursor.close()
 
     res = {}
+    totals = 0
     for entry in r:
+        totals = totals+int(entry.get("species"))
         res[entry.get("sub_class")] = entry.get("species")
+
+    res["* Total Species"] = totals
     return res
