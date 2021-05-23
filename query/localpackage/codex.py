@@ -60,10 +60,6 @@ def codex_systems(request):
     params = []
     clause = ""
 
-    print(hud)
-    print(sub)
-    print(eng)
-    print(system)
 
     if hud:
         params.append(hud)
@@ -81,12 +77,10 @@ def codex_systems(request):
     params.append(int(offset))
     params.append(int(limit))
 
-    print(offset)
-    print(limit)
 
     with get_cursor() as cursor:
         sql = f"""
-            select s.system,s.x,s.y,s.z,
+            select s.system,cast(s.x as char) x,cast(s.y as char) x,cast(s.z as char) z,
             cr.*
             from codex_systems s
             join codex_name_ref cr on cr.entryid = s.entryid
@@ -95,16 +89,15 @@ def codex_systems(request):
             order by system
             limit %s,%s
         """
-        print(sql)
         cursor.execute(sql, (params))
         r = cursor.fetchall()
         cursor.close()
-
     res = {}
     for entry in r:
         if not res.get(entry.get("system")):
             res[entry.get("system")] = {"codex": [], "coords": [
                 entry.get("x"), entry.get("y"), entry.get("z")]}
+
         res[entry.get("system")]["codex"].append(
             {
                 "category": entry.get("category"),
