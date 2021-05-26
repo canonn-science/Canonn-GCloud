@@ -692,6 +692,45 @@ def extendCarriersFSS(gs, event, cmdr):
     return results
 
 
+def extendOrganicSales(gs, entry, cmdr):
+    results = []
+    if entry.get("event") == "SellOrganicData":
+
+        system = gs.get("systemName")
+        body = gs.get("bodyName")
+        station = gs.get("station")
+        reported_at = entry.get("timestamp")
+        market_id = entry.get("MarketID")
+        clientVersion = gs.get("clientVersion")
+        if gs.get("isBeta") == True:
+            beta = 'Y'
+        else:
+            beta = 'N'
+
+        for bioData in entry.get("BioData"):
+            species = bioData.get("Species")
+            genus = bioData.get("Genus")
+            reward = bioData.get("Value")
+            bonus = bioData.get("Bonus")
+
+            results.append((
+                cmdr,
+                system,
+                body,
+                station,
+                market_id,
+                species,
+                genus,
+                reward,
+                bonus,
+                clientVersion,
+                reported_at,
+                beta
+            ))
+
+    return results
+
+
 def extendSignals(gs, event, cmdr):
     eventType = event.get("event")
     results = []
@@ -789,6 +828,42 @@ def postOrganicScans(values):
                 nullif(%s,''),
                 nullif(%s,''),
                 nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                nullif(%s,''),
+                str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
+                nullif(%s,'')
+                )
+        """,
+                        values
+                        )
+
+
+def postOrganicSales(values):
+
+    return execute_many("postOrganicSales",
+                        """
+            insert ignore into organic_sales (
+                cmdr,
+                system,
+                body,
+                station,
+                market_id,
+                species,
+                genus,
+                reward,
+                bonus,
+                client,
+                reported_at,
+                is_beta)
+            values (
                 nullif(%s,''),
                 nullif(%s,''),
                 nullif(%s,''),
@@ -1053,6 +1128,7 @@ def entrywrap(request):
     codexevents = []
     clientversion = {}
     organicscans = []
+    organicsales = []
 
     try:
 
@@ -1076,6 +1152,7 @@ def entrywrap(request):
                     # we will actually post the codex events and collate results
                     codexevents.extend(extendCodex(gs, event, cmdr))
                     organicscans.extend(extendOrganicScans(gs, event, cmdr))
+                    organicsales.extend(extendOrganicSales(gs, event, cmdr))
             else:
                 logging.info("beta events")
 
@@ -1087,6 +1164,7 @@ def entrywrap(request):
         results.append(postLifeEvents(lifevents))
         results.append(postRawEvents(rawevents))
         results.append(postOrganicScans(organicscans))
+        results.append(postOrganicSales(organicsales))
         # codex events are already posted we just collate the results
         results.append(collateCodex(codexevents))
     except Exception as e:
