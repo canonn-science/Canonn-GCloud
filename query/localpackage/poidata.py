@@ -100,6 +100,7 @@ def saa_signals(system, odyssey):
             end as english_name,
             {count} count 
         from SAASignals where system = %s
+        and {count} is not null
     """
     with get_cursor() as cursor:
 
