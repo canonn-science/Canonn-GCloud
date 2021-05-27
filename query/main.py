@@ -1,13 +1,20 @@
 from flask import current_app
 from flask import request
 
+
 import localpackage.dbutils
 from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 import localpackage.challenge
 import localpackage.codex
+import localpackage.poidata
 
 app = current_app
+
+
+@app.route("/getSystemPoi")
+def getSystemPoi():
+    return localpackage.poidata.getSystemPoi(request)
 
 
 @app.route("/codex/prices")
