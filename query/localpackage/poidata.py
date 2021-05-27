@@ -72,7 +72,7 @@ def codex_reports(system, odyssey):
 
 def saa_signals(system, odyssey):
     setup_sql_conn()
-    if odyssey:
+    if odyssey == 'Y':
         count = "species"
     else:
         count = "sites"
