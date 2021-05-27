@@ -46,6 +46,32 @@ def odyssey_subclass(request):
     return res
 
 
+def species_prices(request):
+    setup_sql_conn()
+    r = None
+    with get_cursor() as cursor:
+        sql = f"""
+            SELECT english_name sub_species,os.system,body,reward
+            FROM organic_sales os
+            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
+            REPLACE(os.species,'_Name;','%%')
+            ORDER BY reported_at asc,created_at asc,reward DESC
+        """
+        cursor.execute(sql, ())
+        r = cursor.fetchall()
+        cursor.close()
+
+    res = {}
+    for entry in r:
+        res[entry.get("sub_species")] = {
+            "system": entry.get("system"),
+            "location": entry.get("body"),
+            "reward": entry.get("reward"),
+            "bonus": int(entry.get("reward"))*2
+        }
+    return res
+
+
 def codex_systems(request):
     setup_sql_conn()
 
@@ -59,7 +85,6 @@ def codex_systems(request):
 
     params = []
     clause = ""
-
 
     if hud:
         params.append(hud)
@@ -76,7 +101,6 @@ def codex_systems(request):
 
     params.append(int(offset))
     params.append(int(limit))
-
 
     with get_cursor() as cursor:
         sql = f"""

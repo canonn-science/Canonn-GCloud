@@ -10,6 +10,11 @@ import localpackage.codex
 app = current_app
 
 
+@app.route("/codex/prices")
+def codex_prices():
+    return localpackage.codex.species_prices(request)
+
+
 @app.route("/codex/systems")
 def codex_systems():
     return localpackage.codex.codex_systems(request)
