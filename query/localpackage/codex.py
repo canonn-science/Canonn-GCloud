@@ -104,7 +104,7 @@ def codex_systems(request):
 
     with get_cursor() as cursor:
         sql = f"""
-            select s.system,cast(s.x as char) x,cast(s.y as char) x,cast(s.z as char) z,
+            select s.system,cast(s.x as char) x,cast(s.y as char) y,cast(s.z as char) z,
             cr.*
             from codex_systems s
             join codex_name_ref cr on cr.entryid = s.entryid
