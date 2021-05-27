@@ -12,10 +12,10 @@ from flask import jsonify
 def codex_reports(system, odyssey):
     setup_sql_conn()
 
-    if odyssey == 'Y':
-        odycheck = 'Y'
-    else:
+    if odyssey == 'N':
         odycheck = 'N'
+    else:
+        odycheck = 'Y'
 
     print(f"odycheck {odycheck}")
 
