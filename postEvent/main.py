@@ -676,18 +676,28 @@ def extendCarriersFSS(gs, event, cmdr):
         if bFleetCarrier:
             name = event.get("SignalName")[:-8]
 
-        system = event.get("StarSystem")
-        x, y, z = gs.get("systemCoordinates")
-        timestamp = event.get("timestamp")
+        if event.get("StarSystem"):
+            system = event.get("StarSystem")
+        else:
+            system = gs.get("systemName")
 
-        service_list = "unknown"
-        if event.get("StationServices"):
-            service_list = ",".join(event.get("StationServices"))
+        if not system:
+            logging.error(f"system is null")
+            logging.error(str(gs))
+            logging.error(str(event))
+        else:
 
-        ev = event.get("event")
+            x, y, z = gs.get("systemCoordinates")
+            timestamp = event.get("timestamp")
 
-        results.append((serial_no, name, timestamp, system,
-                        x, y, z, json.dumps(service_list.split(',')), serial_no))
+            service_list = "unknown"
+            if event.get("StationServices"):
+                service_list = ",".join(event.get("StationServices"))
+
+            ev = event.get("event")
+
+            results.append((serial_no, name, timestamp, system,
+                            x, y, z, json.dumps(service_list.split(',')), serial_no))
 
     return results
 
@@ -1072,7 +1082,7 @@ def execute_many(function, sqltext, sqlparm):
             mysql_conn.commit()
             retval["inserted"] = cursor.rowcount
     except Exception as e:
-        logging.exception("message")
+        logging.exception(message)
         retval["error"] = str(e)
 
     return retval
