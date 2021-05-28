@@ -676,7 +676,7 @@ def extendCarriersFSS(gs, event, cmdr):
         if bFleetCarrier:
             name = event.get("SignalName")[:-8]
 
-        system = gs.get("systemName")
+        system = event.get("StarSystem")
         x, y, z = gs.get("systemCoordinates")
         timestamp = event.get("timestamp")
 
