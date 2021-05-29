@@ -1085,7 +1085,7 @@ def collateCodex(values):
         "rows": value_count,
         "inserted": value_count
     }
-    updateNameRef()
+    # updateNameRef()
     return retval
 
 
@@ -1109,7 +1109,7 @@ def execute_many(function, sqltext, sqlparm):
             mysql_conn.commit()
             retval["inserted"] = cursor.rowcount
     except Exception as e:
-        logging.exception(message)
+        logging.exception("message")
         retval["error"] = str(e)
 
     return retval
