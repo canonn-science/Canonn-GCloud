@@ -9,7 +9,7 @@ import json
 from flask import jsonify
 
 
-def codex_reports(system, odyssey):
+def codex_reports(cmdr,system, odyssey):
     setup_sql_conn()
 
     if odyssey == 'N':
@@ -27,18 +27,20 @@ def codex_reports(system, odyssey):
             entryid,
             english_name,
             hud_category,
-            index_id
+            index_id,
+            scanned
             FROM (
                 SELECT  
+                    max(case when cmdrname = %s then 'true' ELSE 'false' END) AS scanned,
                     replace(body,concat(system,' '),'') as body,
-                    cast(max(
+                    cast(
                         case 
                             when odyssey = 'N' and %s = 'Y' then null
                             when odyssey = 'Y' and %s = 'N' then null
                             when odyssey is null then null
                             when latitude is null or longitude is null then null 
                             else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
-                    end) AS JSON) as coords  ,
+                    end AS JSON) as coords  ,
                     cr.entryid,
                     english_name,
                     hud_category,
@@ -55,6 +57,14 @@ def codex_reports(system, odyssey):
                         )
                     )
                     GROUP BY 
+                    cast(
+                        case 
+                            when odyssey = 'N' and %s = 'Y' then null
+                            when odyssey = 'Y' and %s = 'N' then null
+                            when odyssey is null then null
+                            when latitude is null or longitude is null then null 
+                            else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
+                    end AS JSON),
                     replace(body,concat(system,' '),''),
                     cr.entryid,
                     english_name,
@@ -64,7 +74,7 @@ def codex_reports(system, odyssey):
     """
     with get_cursor() as cursor:
 
-        cursor.execute(sql, (odycheck, odycheck, system, odycheck, odycheck))
+        cursor.execute(sql, (cmdr,odycheck, odycheck, system, odycheck, odycheck, odycheck, odycheck))
         cr = cursor.fetchall()
 
     return cr
@@ -165,7 +175,7 @@ def getSystemPoi(request):
     print(f"odyssey {odyssey}")
     result = {}
 
-    codex = codex_reports(system, odyssey)
+    codex = codex_reports(cmdr,system, odyssey)
     saa = saa_signals(system, odyssey)
     cpoi = cmdr_poi(cmdr, system, odyssey)
     fss = fss_events(system, odyssey)
