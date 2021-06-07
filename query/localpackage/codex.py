@@ -48,14 +48,20 @@ def odyssey_subclass(request):
 
 def species_prices(request):
     setup_sql_conn()
+
     r = None
     with get_cursor() as cursor:
-        sql = f"""
-            SELECT english_name sub_species,os.system,body,reward
+        sql = """
+            SELECT 
+                distinct replace(sub_species->"$.p[0]",'"','') as sub_species,reward,sub_class
+                from (		 
+                select 
+                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
             FROM organic_sales os
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
             REPLACE(os.species,'_Name;','%%')
-            ORDER BY reported_at asc,created_at asc,reward DESC
+            ) data
+            ORDER BY reward DESC
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()
@@ -64,8 +70,6 @@ def species_prices(request):
     res = {}
     for entry in r:
         res[entry.get("sub_species")] = {
-            "system": entry.get("system"),
-            "location": entry.get("body"),
             "reward": entry.get("reward"),
             "bonus": int(entry.get("reward"))*2
         }
