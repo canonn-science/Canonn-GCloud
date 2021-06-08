@@ -180,7 +180,7 @@ def insertCodexReport(request_args):
         "SystemAddress":2869708727553
     }
     """
-
+    
     cmdrName = request_args.get("cmdr"),
     system = request_args.get("system"),
     x = request_args.get("x"),
@@ -210,6 +210,7 @@ def insertCodexReport(request_args):
     platform = request_args.get("platform")
     odyssey = request_args.get("odyssey")
     id64 = request_args.get("entry").get("SystemAddress")
+    temperature=request_args.get("temperature")
 
     index_id = None
     signal_type = None
@@ -253,7 +254,8 @@ def insertCodexReport(request_args):
                 reported_at,
                 platform,
                 odyssey,
-                id64
+                id64,
+                temperature
 	        ) values (
             	nullif(%s,''),
                 nullif(%s,''),
@@ -280,7 +282,8 @@ def insertCodexReport(request_args):
                 str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
                 nullif(%s,''),
 	            nullif(%s,''),
-	            nullif(%s,'')
+	            nullif(%s,''),
+                %s
                 )''', (
             cmdrName,
             system,
@@ -303,7 +306,8 @@ def insertCodexReport(request_args):
             reported_at,
             platform,
             odyssey,
-            id64
+            id64,
+            temperature
         ))
         mysql_conn.commit()
         cursor.close()
@@ -495,7 +499,8 @@ def extendCodex(gs, entry, cmdr):
             "reported_at": entry.get("timestamp"),
             "autoupdate": gs.get("autoupdate"),
             "platform": gs.get("platform"),
-            "odyssey": is_odyssey(gs.get("odyssey"))
+            "odyssey": is_odyssey(gs.get("odyssey")),
+            "temperature": gs.get("temperature")
         }
         if postCodex(payload):
             results.append((
@@ -587,6 +592,8 @@ def extendOrganicScans(gs, event, cmdr):
 
         x, y, z = gs.get("systemCoordinates")
 
+        print("temp {}".format(gs.get("temperature")))
+
         sqlparm = (
             cmdr,
             gs.get("systemName"),
@@ -604,7 +611,8 @@ def extendOrganicScans(gs, event, cmdr):
             json.dumps(event),
             clientVersion,
             timestamp,
-            beta
+            beta,
+            gs.get("temperature")
         )
         results.append(sqlparm)
     return results
@@ -855,7 +863,8 @@ def postOrganicScans(values):
                 raw_json,
                 clientVersion,
                 reported_at,
-                is_beta)
+                is_beta,
+                temperature)
             values (
                 nullif(%s,''),
                 nullif(%s,''),
@@ -875,7 +884,8 @@ def postOrganicScans(values):
                 nullif(%s,''),
                 nullif(%s,''),
                 str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
-                nullif(%s,'')
+                nullif(%s,''),
+                %s
                 )
         """,
                         values
