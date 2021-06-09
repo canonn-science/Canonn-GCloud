@@ -180,7 +180,7 @@ def insertCodexReport(request_args):
         "SystemAddress":2869708727553
     }
     """
-    
+
     cmdrName = request_args.get("cmdr"),
     system = request_args.get("system"),
     x = request_args.get("x"),
@@ -210,7 +210,7 @@ def insertCodexReport(request_args):
     platform = request_args.get("platform")
     odyssey = request_args.get("odyssey")
     id64 = request_args.get("entry").get("SystemAddress")
-    temperature=request_args.get("temperature")
+    temperature = request_args.get("temperature")
 
     index_id = None
     signal_type = None
@@ -592,8 +592,6 @@ def extendOrganicScans(gs, event, cmdr):
 
         x, y, z = gs.get("systemCoordinates")
 
-        print("temp {}".format(gs.get("temperature")))
-
         sqlparm = (
             cmdr,
             gs.get("systemName"),
@@ -612,7 +610,8 @@ def extendOrganicScans(gs, event, cmdr):
             clientVersion,
             timestamp,
             beta,
-            gs.get("temperature")
+            gs.get("temperature"),
+            gs.get("gravity")
         )
         results.append(sqlparm)
     return results
@@ -864,7 +863,8 @@ def postOrganicScans(values):
                 clientVersion,
                 reported_at,
                 is_beta,
-                temperature)
+                temperature,
+                gravity)
             values (
                 nullif(%s,''),
                 nullif(%s,''),
@@ -885,6 +885,7 @@ def postOrganicScans(values):
                 nullif(%s,''),
                 str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
                 nullif(%s,''),
+                %s,
                 %s
                 )
         """,
