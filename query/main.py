@@ -70,6 +70,7 @@ def temperature():
                 body,
                 cast(latitude as CHAR) as latitude,
                 cast(longitude as CHAR) as longitude,
+                comment,
                 cast(raw_status->"$.Temperature" as CHAR) as temperature, 
                 cast(raw_status->"$.Gravity" as CHAR) as gravity 
             from status_reports where raw_status->"$.Temperature" is not null
