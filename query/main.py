@@ -1,5 +1,5 @@
 from flask import current_app
-from flask import request
+from flask import request, jsonify
 
 
 import localpackage.dbutils
@@ -56,6 +56,29 @@ def __codex():
 @app.route("/nearest/codex")
 def codex():
     return localpackage.challenge.nearest_codex(request)
+
+
+@app.route("/survey/temperature")
+def temperature():
+    setup_sql_conn()
+
+    with get_cursor() as cursor:
+        sql = """
+            select 
+                cmdr,
+                system,
+                body,
+                cast(latitude as CHAR) as latitude,
+                cast(longitude as CHAR) as longitude,
+                cast(raw_status->"$.Temperature" as CHAR) as temperature, 
+                cast(raw_status->"$.Gravity" as CHAR) as gravity 
+            from status_reports where raw_status->"$.Temperature" is not null
+        """
+        cursor.execute(sql, ())
+        r = cursor.fetchall()
+        cursor.close()
+
+    return jsonify(r)
 
 
 @app.route("/")
