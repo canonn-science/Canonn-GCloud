@@ -53,7 +53,7 @@ def codex_reports(cmdr,system, odyssey):
                         (   
                             %s = 'Y'
                             or
-                            odyssey = 'N' and %s = 'N'
+                            (odyssey = 'N' or odyssey is NULL) and %s = 'N'
                         )
                     )
                     GROUP BY 
