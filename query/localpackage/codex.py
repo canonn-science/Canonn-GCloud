@@ -10,6 +10,7 @@ import json
 def codex_name_ref(request):
     setup_sql_conn()
 
+
     with get_cursor() as cursor:
         sql = """
             select * from codex_name_ref
@@ -19,8 +20,28 @@ def codex_name_ref(request):
         cursor.close()
 
     res = {}
-    for entry in r:
-        res[entry.get("entryid")] = entry
+    if request.args.get("hierarchy"):
+        
+        for entry in r:
+            hud=entry.get("hud_category")
+            genus=entry.get("sub_class")
+            species=entry.get("english_name")
+            if not res.get(hud):
+                res[hud]={}
+            if not res.get(hud).get(genus):
+                res[hud][genus]={}
+            if not res.get(hud).get(genus).get(species):
+                res[hud][genus][species]={
+                    "name": entry.get("name"),
+                    "entryid": entry.get("entryid"),
+                    "category": entry.get("category"),
+                    "sub_category": entry.get("sub_category"),
+                    "platform": entry.get("platform")
+                }                
+
+    else:
+        for entry in r:
+            res[entry.get("entryid")] = entry
     return res
 
 
@@ -81,7 +102,7 @@ def codex_systems(request):
 
     hud = request.args.get("hud_category")
     sub = request.args.get("sub_class")
-    eng = request.args.get("engish_name")
+    eng = request.args.get("english_name")
     system = request.args.get("system")
 
     offset = request.args.get("offset", 0)
