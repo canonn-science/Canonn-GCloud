@@ -1,5 +1,6 @@
 from flask import current_app
 from flask import request, jsonify
+from flask_cors import CORS
 
 
 import localpackage.dbutils
@@ -10,7 +11,7 @@ import localpackage.codex
 import localpackage.poidata
 
 app = current_app
-
+CORS(app)
 
 @app.route("/getSystemPoi")
 def getSystemPoi():
