@@ -43,7 +43,9 @@ The data format has some flexibility about how you send records but we will only
             "bodyName": {"type": "string"},
             "bodyId": {"type": "string"},
             "odyssey": {"type": "boolean"},
-            "platform": {"type": "string"}
+            "platform": {"type": "string"},
+            "temperature": {"type": "number"},
+            "gravity": {"type": "number"},
           },
           "required": [
             "systemName",
@@ -103,7 +105,9 @@ Note that the gamestate needs to have the correct details to go with the raw eve
             "bodyName": "Lysoovsky BH-L d8-26 5 b",
             "bodyId": "19",
             "odyssey": false,
-            "platform": "Xbox"
+            "platform": "Xbox",
+            "temperature": "34.0122",
+            "gravity": "0.03"
         },
         "rawEvents": [
             { "timestamp":"2021-04-25T16:03:07Z", "event":"ScanOrganic", "ScanType":"Analyse", "Genus":"$Codex_Ent_Stratum_Genus_Name;", "Genus_Localised":"Stratum", "Species":"$Codex_Ent_Stratum_02_Name;", "Species_Localised":"Stratum Paleas", "SystemAddress":5306398479066, "Body":19 }
