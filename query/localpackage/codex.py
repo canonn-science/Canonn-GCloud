@@ -10,10 +10,24 @@ import json
 def codex_name_ref(request):
     setup_sql_conn()
 
-
     with get_cursor() as cursor:
         sql = """
-            select * from codex_name_ref
+               select c.*,data2.reward from codex_name_ref c
+            left join (
+                SELECT 
+                                entryid,max(reward) as reward
+                                from (		 
+                                select 
+                                cnr.entryid,
+                                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
+                            FROM organic_sales os
+                            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
+                            REPLACE(os.species,'_Name;','%%')
+
+                            ) data
+                            group by entryid
+                ) as data2
+            on data2.entryid =  c.entryid
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()
@@ -21,23 +35,24 @@ def codex_name_ref(request):
 
     res = {}
     if request.args.get("hierarchy"):
-        
+
         for entry in r:
-            hud=entry.get("hud_category")
-            genus=entry.get("sub_class")
-            species=entry.get("english_name")
+            hud = entry.get("hud_category")
+            genus = entry.get("sub_class")
+            species = entry.get("english_name")
             if not res.get(hud):
-                res[hud]={}
+                res[hud] = {}
             if not res.get(hud).get(genus):
-                res[hud][genus]={}
+                res[hud][genus] = {}
             if not res.get(hud).get(genus).get(species):
-                res[hud][genus][species]={
+                res[hud][genus][species] = {
                     "name": entry.get("name"),
                     "entryid": entry.get("entryid"),
                     "category": entry.get("category"),
                     "sub_category": entry.get("sub_category"),
-                    "platform": entry.get("platform")
-                }                
+                    "platform": entry.get("platform"),
+                    "reward": entry.get("reward")
+                }
 
     else:
         for entry in r:
