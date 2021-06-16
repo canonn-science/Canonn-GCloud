@@ -1155,33 +1155,37 @@ def entrypoint(request):
         return (json.dumps(retval), 500, headers)
 
 def buySuit(gs, entry, cmdr):
-    suits={
-        "UtilitySuit": "Maverick",
-        "ExplorationSuit": "Artemis",
-        "TacticalSuit": "Dominator",  
-    }
-    if entry.get("event") == "BuySuit":
-        suit_type,suit_class=entry.get("Name").split("_")
-        suit_name=suits.get(suit_type)
-        price=entry.get("Price")
-        station=gs.get("station")
-        system=gs.get("systemName")
-        if not gs.get("station"):
-            station=gs.get("bodyName")
-        content=f"**{suit_class} {suit_name} - ${price:,}**"
-        content=f"{content}\nSystem: {system} - {station}"
-        for suitmod in entry.get("SuitMods"):
-            content=f"{content}\n{suitmod}"
-        
-        webhooks = get_webhooks()
-        webhook = webhooks.get("BuySuit")
+    try:
+        suits={
+            "UtilitySuit": "Maverick",
+            "ExplorationSuit": "Artemis",
+            "TacticalSuit": "Dominator",  
+        }
+        if entry.get("event") == "BuySuit":
+            logging.debug("BuySuit")
+            
+            suit_type,suit_class=entry.get("Name").split("_")
+            suit_name=suits.get(suit_type)
+            price=entry.get("Price")
+            station=gs.get("station")
+            system=gs.get("systemName")
+            if not gs.get("station"):
+                station=gs.get("bodyName")
+            content=f"**{suit_class} {suit_name} - ${price:,}**"
+            content=f"{content}\nSystem: {system} - {station}"
+            for suitmod in entry.get("SuitMods"):
+                content=f"{content}\n{suitmod}"
+            
+            webhooks = get_webhooks()
+            webhook = webhooks.get("BuySuit")
 
-        payload = {}
-        payload["content"] = content
+            payload = {}
+            payload["content"] = content
 
-        requests.post(webhook, data=json.dumps(payload), headers={"Content-Type": "application/json"})
-
-
+            requests.post(webhook, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+    except Exception as e:
+        logging.exception("message")
+        raise
 
 
 
