@@ -122,6 +122,10 @@ def codex_systems(request):
 
     offset = request.args.get("offset", 0)
     limit = request.args.get("limit", 1000)
+    if request.args.get("_start"):
+        offset=request.args.get("_start")
+    if request.args.get("_limit"):
+        limit=request.args.get("_limit")        
 
     params = []
     clause = ""
