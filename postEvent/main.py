@@ -9,6 +9,7 @@ import requests
 import pymysql
 import sys
 
+
 import google.cloud.logging
 import logging
 
@@ -629,7 +630,7 @@ def extendRawEvents(gs, entry, cmdr):
             bodyName = gs.get("bodyName")
 
         x, y, z = gs.get("systemCoordinates")
-        station = None
+        station = gs.get("station")
         lat = entry.get("Latitude")
         lon = entry.get("Longitude")
         if not lat:
@@ -909,7 +910,7 @@ def postOrganicSales(values):
                 bonus,
                 client,
                 reported_at,
-                is_beta)
+                is_beta,x,y,z)
             values (
                 nullif(%s,''),
                 nullif(%s,''),
@@ -1153,6 +1154,36 @@ def entrypoint(request):
         logging.exception("message")
         return (json.dumps(retval), 500, headers)
 
+def buySuit(gs, entry, cmdr):
+    suits={
+        "UtilitySuit": "Maverick",
+        "ExplorationSuit": "Artemis",
+        "TacticalSuit": "Dominator",  
+    }
+    if entry.get("event") == "BuySuit":
+        suit_type,suit_class=entry.get("Name").split("_")
+        suit_name=suits.get(suit_type)
+        price=entry.get("Price")
+        station=gs.get("station")
+        system=gs.get("systemName")
+        if not gs.get("station"):
+            station=gs.get("bodyName")
+        content=f"**{suit_class} {suit_name} - ${price:,}**"
+        content=f"{content}\nSystem: {system} - {station}"
+        for suitmod in entry.get("SuitMods"):
+            content=f"{content}\n{suitmod}"
+        
+        webhooks = get_webhooks()
+        webhook = webhooks.get("BuySuit")
+
+        payload = {}
+        payload["content"] = content
+
+        requests.post(webhook, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+
+
+
+
 
 def entrywrap(request):
 
@@ -1194,6 +1225,9 @@ def entrywrap(request):
             logging.debug(gs.get("isBeta"))
             if not gs.get("isBeta"):
                 for event in events:
+
+                    buySuit(gs, event, cmdr)
+        
                     # we copy the events into arrays that can be bulk inserted
                     saaevents.extend(extendSignals(gs, event, cmdr))
                     fleet_carriers.extend(extendCarriersFSS(gs, event, cmdr))
