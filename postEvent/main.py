@@ -712,7 +712,7 @@ def extendCarriersFSS(gs, event, cmdr):
 def extendOrganicSales(gs, entry, cmdr):
     results = []
     if entry.get("event") == "SellOrganicData":
-
+        x, y, z = gs.get("systemCoordinates")
         system = gs.get("systemName")
         body = gs.get("bodyName")
         station = gs.get("station")
@@ -742,7 +742,7 @@ def extendOrganicSales(gs, entry, cmdr):
                 bonus,
                 clientVersion,
                 reported_at,
-                beta
+                beta,x,y,z
             ))
 
     return results
@@ -922,7 +922,10 @@ def postOrganicSales(values):
                 nullif(%s,''),
                 nullif(%s,''),
                 str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'),
-                nullif(%s,'')
+                nullif(%s,''),
+                %s,
+                %s,
+                %s
                 )
         """,
                         values
