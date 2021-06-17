@@ -202,7 +202,7 @@ def capi_systems(request):
         "hud_category": r.get("hud_category"),
         "type": r.get("sub_class"),
         "journalName": r.get("english_name"),
-        "journalID": r.get("entyryid")
+        "journalID": r.get("entryid")
         }
     })
     return jsonify(retval)
