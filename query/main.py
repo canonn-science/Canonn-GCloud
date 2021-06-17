@@ -27,6 +27,10 @@ def codex_prices():
 def codex_systems():
     return localpackage.codex.codex_systems(request)
 
+@app.route("/codex/capi")
+def codex_capi():
+    return localpackage.codex.capi_systems(request)    
+
 
 @app.route("/codex/odyssey/subclass")
 def codex_odyssey_subclass():
