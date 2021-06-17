@@ -743,7 +743,7 @@ def extendOrganicSales(gs, entry, cmdr):
                 bonus,
                 clientVersion,
                 reported_at,
-                beta,x,y,z
+                beta, x, y, z
             ))
 
     return results
@@ -1154,39 +1154,46 @@ def entrypoint(request):
         logging.exception("message")
         return (json.dumps(retval), 500, headers)
 
+
 def buySuit(gs, entry, cmdr):
     try:
-        suits={
+        suits = {
             "UtilitySuit": "Maverick",
             "ExplorationSuit": "Artemis",
-            "TacticalSuit": "Dominator",  
+            "TacticalSuit": "Dominator",
         }
         if entry.get("event") == "BuySuit":
-            logging.debug("BuySuit")
-            
-            suit_type,suit_class=entry.get("Name").split("_")
-            suit_name=suits.get(suit_type)
-            price=entry.get("Price")
-            station=gs.get("station")
-            system=gs.get("systemName")
-            if not gs.get("station"):
-                station=gs.get("bodyName")
-            content=f"**{suit_class} {suit_name} - ${price:,}**"
-            content=f"{content}\nSystem: {system} - {station}"
-            for suitmod in entry.get("SuitMods"):
-                content=f"{content}\n{suitmod}"
-            
-            webhooks = get_webhooks()
-            webhook = webhooks.get("BuySuit")
 
-            payload = {}
-            payload["content"] = content
+            suit_type, suit_class = entry.get("Name").split("_")
 
-            requests.post(webhook, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+            has_mods = (entry.get("SuitMods") and len(
+                entry.get("SuitMods")) > 0)
+            upper_class = (not suit_class == "Class1")
+
+            if has_mods or upper_class:
+
+                suit_name = suits.get(suit_type)
+                price = entry.get("Price")
+                station = gs.get("station")
+                system = gs.get("systemName")
+                if not gs.get("station"):
+                    station = gs.get("bodyName")
+                content = f"**{suit_class} {suit_name} - ${price:,}**"
+                content = f"{content}\nSystem: {system} - {station}"
+                for suitmod in entry.get("SuitMods"):
+                    content = f"{content}\n{suitmod}"
+
+                webhooks = get_webhooks()
+                webhook = webhooks.get("BuySuit")
+
+                payload = {}
+                payload["content"] = content
+
+                requests.post(webhook, data=json.dumps(payload), headers={
+                              "Content-Type": "application/json"})
     except Exception as e:
         logging.exception("message")
         raise
-
 
 
 def entrywrap(request):
@@ -1231,7 +1238,7 @@ def entrywrap(request):
                 for event in events:
 
                     buySuit(gs, event, cmdr)
-        
+
                     # we copy the events into arrays that can be bulk inserted
                     saaevents.extend(extendSignals(gs, event, cmdr))
                     fleet_carriers.extend(extendCarriersFSS(gs, event, cmdr))
