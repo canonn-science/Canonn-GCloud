@@ -5,6 +5,7 @@ import pymysql
 from pymysql.err import OperationalError
 import requests
 import json
+from flask import jsonify
 
 
 def codex_name_ref(request):
@@ -112,7 +113,7 @@ def species_prices(request):
     return res
 
 
-def codex_systems(request):
+def codex_data(request):
     setup_sql_conn()
 
     hud = request.args.get("hud_category")
@@ -160,6 +161,9 @@ def codex_systems(request):
         cursor.execute(sql, (params))
         r = cursor.fetchall()
         cursor.close()
+    
+    return r
+
     res = {}
     for entry in r:
         if not res.get(entry.get("system")):
@@ -179,3 +183,26 @@ def codex_systems(request):
             }
         )
     return res
+
+def codex_systems(request):
+    return jsonify(codex_data(request))
+
+def capi_systems(request):
+    data=codex_data(request)
+    retval=[]
+    for r in data:
+        retval.append({
+        "system": {
+        "systemName": r.get("system"),
+        "edsmCoordX": r.get("x"),
+        "edsmCoordY": r.get("y"),
+        "edsmCoordZ": r.get("z"),
+        },
+        "type": {
+        "hud_category": r.get("hud_category"),
+        "type": r.get("sub_class"),
+        "journalName": r.get("english_name"),
+        "journalID": r.get("entyryid")
+        }
+    })
+    return jsonify(retval)
