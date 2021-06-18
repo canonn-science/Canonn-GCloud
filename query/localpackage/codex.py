@@ -164,6 +164,10 @@ def codex_data(request):
     
     return r
 
+
+
+def codex_systems(request):
+    r=codex_data(request)
     res = {}
     for entry in r:
         if not res.get(entry.get("system")):
@@ -183,9 +187,7 @@ def codex_data(request):
             }
         )
     return res
-
-def codex_systems(request):
-    return jsonify(codex_data(request))
+    #return jsonify(codex_data(request))
 
 def capi_systems(request):
     data=codex_data(request)
