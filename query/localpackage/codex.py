@@ -124,9 +124,9 @@ def codex_data(request):
     offset = request.args.get("offset", 0)
     limit = request.args.get("limit", 1000)
     if request.args.get("_start"):
-        offset=request.args.get("_start")
+        offset = request.args.get("_start")
     if request.args.get("_limit"):
-        limit=request.args.get("_limit")        
+        limit = request.args.get("_limit")
 
     params = []
     clause = ""
@@ -161,14 +161,15 @@ def codex_data(request):
         cursor.execute(sql, (params))
         r = cursor.fetchall()
         cursor.close()
-    
+
     return r
 
 
-
 def codex_systems(request):
-    r=codex_data(request)
+    r = codex_data(request)
+
     res = {}
+
     for entry in r:
         if not res.get(entry.get("system")):
             res[entry.get("system")] = {"codex": [], "coords": [
@@ -187,24 +188,44 @@ def codex_systems(request):
             }
         )
     return res
-    #return jsonify(codex_data(request))
+
+    for entry in r:
+        if not res.get(entry.get("system")):
+            res[entry.get("system")] = {"codex": [], "coords": [
+                entry.get("x"), entry.get("y"), entry.get("z")]}
+
+        res[entry.get("system")]["codex"].append(
+            {
+                "category": entry.get("category"),
+                "english_name": entry.get("english_name"),
+                "entryid": entry.get("entryid"),
+                "hud_category": entry.get("hud_category"),
+                "name": entry.get("name"),
+                "platform": entry.get("platform"),
+                "sub_category": entry.get("sub_category"),
+                "sub_class": entry.get("sub_class")
+            }
+        )
+    return res
+    # return jsonify(codex_data(request))
+
 
 def capi_systems(request):
-    data=codex_data(request)
-    retval=[]
+    data = codex_data(request)
+    retval = []
     for r in data:
         retval.append({
-        "system": {
-        "systemName": r.get("system"),
-        "edsmCoordX": r.get("x"),
-        "edsmCoordY": r.get("y"),
-        "edsmCoordZ": r.get("z"),
-        },
-        "type": {
-        "hud_category": r.get("hud_category"),
-        "type": r.get("sub_class"),
-        "journalName": r.get("english_name"),
-        "journalID": r.get("entryid")
-        }
-    })
+            "system": {
+                "systemName": r.get("system"),
+                "edsmCoordX": r.get("x"),
+                "edsmCoordY": r.get("y"),
+                "edsmCoordZ": r.get("z"),
+            },
+            "type": {
+                "hud_category": r.get("hud_category"),
+                "type": r.get("sub_class"),
+                "journalName": r.get("english_name"),
+                "journalID": r.get("entryid")
+            }
+        })
     return jsonify(retval)
