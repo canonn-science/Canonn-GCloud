@@ -1227,16 +1227,16 @@ def entrywrap(request):
 
         for row in rj:
             gs = gamestate(row)
-
+            
             clientversion = {"client": gs.get("clientVersion")}
 
             cmdr = row.get("cmdrName")
             events = get_events(row.get("rawEvent"), row.get("rawEvents"))
 
             logging.debug(gs.get("isBeta"))
-            if not gs.get("isBeta"):
+            if not gs.get("isBeta") or gs.get("isBeta") == "N":
                 for event in events:
-
+                    
                     buySuit(gs, event, cmdr)
 
                     # we copy the events into arrays that can be bulk inserted
@@ -1264,6 +1264,7 @@ def entrywrap(request):
         # codex events are already posted we just collate the results
         results.append(collateCodex(codexevents))
     except Exception as e:
+        
         logging.error(rj)
         logging.exception("message")
         retval["error"] = str(e)
