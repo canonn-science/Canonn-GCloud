@@ -173,7 +173,11 @@ def getSystemPoi(request):
     system = request.args.get("system")
     odyssey = request.args.get("odyssey")
     print(f"odyssey {odyssey}")
-    result = {}
+    result = {
+        "cmdr": cmdr,
+        "system": system,
+        "odyssey": odyssey
+    }
 
     codex = codex_reports(cmdr,system, odyssey)
     saa = saa_signals(system, odyssey)
