@@ -120,6 +120,7 @@ def codex_data(request):
     sub = request.args.get("sub_class")
     eng = request.args.get("english_name")
     system = request.args.get("system")
+    spe = request.args.get("species")
 
     offset = request.args.get("offset", 0)
     limit = request.args.get("limit", 1000)
@@ -143,6 +144,9 @@ def codex_data(request):
     if system:
         params.append(system)
         clause = f"{clause} and system = %s "
+    if spe:
+        params.append(spe)
+        clause = f"{clause} and english_name like concat(%s,'%%') "
 
     params.append(int(offset))
     params.append(int(limit))
@@ -150,7 +154,7 @@ def codex_data(request):
     with get_cursor() as cursor:
         sql = f"""
             select s.system,cast(s.x as char) x,cast(s.y as char) y,cast(s.z as char) z,
-            cr.*
+            cr.*,trim(SUBSTRING_INDEX(english_name,'-',1)) as species
             from codex_systems s
             join codex_name_ref cr on cr.entryid = s.entryid
             where 1 = 1
@@ -184,7 +188,8 @@ def codex_systems(request):
                 "name": entry.get("name"),
                 "platform": entry.get("platform"),
                 "sub_category": entry.get("sub_category"),
-                "sub_class": entry.get("sub_class")
+                "sub_class": entry.get("sub_class"),
+                "species": entry.get("species")
             }
         )
     return res
@@ -223,6 +228,7 @@ def capi_systems(request):
             },
             "type": {
                 "hud_category": r.get("hud_category"),
+                "species": r.get("species"),
                 "type": r.get("sub_class"),
                 "journalName": r.get("english_name"),
                 "journalID": r.get("entryid")
