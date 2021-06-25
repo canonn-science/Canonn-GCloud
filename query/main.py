@@ -9,6 +9,7 @@ from localpackage.dbutils import get_cursor
 import localpackage.challenge
 import localpackage.codex
 import localpackage.poidata
+import localpackage.gnosis
 
 app = current_app
 CORS(app)
@@ -61,6 +62,10 @@ def __codex():
 @app.route("/nearest/codex")
 def codex():
     return localpackage.challenge.nearest_codex(request)
+
+@app.route("/gnosis")
+def gnosis():
+    return localpackage.gnosis.entry_point(request)    
 
 
 @app.route("/survey/temperature")
