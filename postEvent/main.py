@@ -1154,6 +1154,57 @@ def entrypoint(request):
         logging.exception("message")
         return (json.dumps(retval), 500, headers)
 
+def Promotion(gs, entry, cmdr):
+    ranks={
+        "Exobiologist": [
+            "Directionless","Mostly Directionless","Compiler",
+            "Collector","Cataloguer","Taxonomist",
+            "Ecologist","Geneticist","Elite",
+            "Elite I","Elite II","Elite III","Elite IV","Elite V"
+        ],
+        "Mercenary": [
+            "Defenceless","Mostly Defenceless","Rookie",
+            "Soldier","Gunslinger","Warrior",
+            "Gladiator","Deadeye","Elite",
+            "Elite I","Elite II","Elite III","Elite IV","Elite V"
+        ],
+        "Trade": [        
+            "Penniless","Mostly Penniless","Peddler",
+            "Dealer","Merchant","Broker",
+            "Entrepreneur","Tycoon","Elite",
+            "Elite I","Elite II","Elite III","Elite IV","Elite V"
+        ],
+        "Combat": [	
+            "Harmless","Mostly Harmless","Novice",
+            "Competent","Expert","Master",
+            "Dangerous","Deadly","Elite",
+            "Elite I","Elite II","Elite III","Elite IV","Elite V"
+            ],
+        "Explorer": [
+            "Aimless","Mostly Aimless","Scout",
+            "Surveyor","Trailblazer","Pathfinder",
+            "Ranger","Pioneer","Elite",
+            "Elite I","Elite II","Elite III","Elite IV","Elite V"
+        ]
+    }
+    
+    rank=None
+    for k in ranks.keys():
+    
+        if entry.get(k) and ranks.get(k)[entry.get(k)]:
+            rank=ranks.get(k)[entry.get(k)]
+    if rank:
+        webhooks = get_webhooks()
+        webhook = webhooks.get("Promotion")
+
+        payload = {}
+        payload["content"] = f"Congratulations Cmdr {cmdr} on your promotion to {rank}"
+
+        requests.post(webhook, data=json.dumps(payload), headers={
+                        "Content-Type": "application/json"})
+
+
+
 
 def buySuit(gs, entry, cmdr):
     try:
@@ -1238,6 +1289,7 @@ def entrywrap(request):
                 for event in events:
                     
                     buySuit(gs, event, cmdr)
+                    Promotion(gs, event, cmdr)
 
                     # we copy the events into arrays that can be bulk inserted
                     saaevents.extend(extendSignals(gs, event, cmdr))
