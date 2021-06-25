@@ -1271,6 +1271,8 @@ def entrywrap(request):
 
     retval = compress_results(results, rj)
     retval.append(clientversion)
+    retval.append({"cmdr": cmdr})
+
     logging.info(retval)
     # we will always return 200 because errors
     # are logged and we want to stay in memory
