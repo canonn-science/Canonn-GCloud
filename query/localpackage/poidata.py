@@ -174,7 +174,7 @@ def getSystemPoi(request):
     odyssey = request.args.get("odyssey")
     print(f"odyssey {odyssey}")
     result = {
-        "cmdr": cmdr,
+        "cmdrName": cmdr,
         "system": system,
         "odyssey": odyssey
     }
