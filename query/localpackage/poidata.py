@@ -154,7 +154,7 @@ def cmdr_poi(cmdr, system, odyssey):
                 else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
             end) AS JSON) as coords,s.comment,s.category
             from status_reports s  where 
-            and cmdr = %s
+            cmdr = %s
             and system = %s
             group by category,comment 
         ) data
