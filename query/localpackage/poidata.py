@@ -153,7 +153,7 @@ def cmdr_poi(cmdr, system, odyssey):
                 when latitude is null or longitude is null then null 
                 else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
             end) AS JSON) as coords,s.comment,s.category
-            from status_reports s  where category is not null
+            from status_reports s  where 
             and cmdr = %s
             and system = %s
             group by category,comment 
