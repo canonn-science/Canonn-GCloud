@@ -128,6 +128,7 @@ def fss_events(system, odyssey):
             signalnamelocalised,
             raw_json->"$.IsStation" AS isStation 
             FROM fss_events WHERE system = %s
+            and raw_json like '%%Fixed_Event_Life_%%'
     """
     with get_cursor() as cursor:
 
