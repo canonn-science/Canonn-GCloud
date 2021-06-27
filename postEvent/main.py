@@ -547,6 +547,20 @@ def extendCommanders(gs, event, cmdr):
 
 def extendLife(gs, event, cmdr):
     results = []
+
+    clientVersion = gs.get("clientVersion")
+    if "EDMC-Canonn" not in clientVersion:
+        return results
+    else:
+        cname,v1,v2,v3=clientVersion.split(".")
+
+    # anything over 6.2 is good
+    vNum=float(f"{v1}.{v2}")
+    
+    if vNum <6.2:
+        #print("Not accepting FSS events from < 6.2.0")
+        return results
+
     if event.get("event") == "FSSSignalDiscovered":
 
         if gs.get("isBeta") == True:
@@ -650,8 +664,24 @@ def extendRawEvents(gs, entry, cmdr):
 
 
 def extendCarriersFSS(gs, event, cmdr):
+    
+
 
     results = []
+
+    clientVersion = gs.get("clientVersion")
+    if "EDMC-Canonn" not in clientVersion:
+        return results
+    else:
+        cname,v1,v2,v3=clientVersion.split(".")
+
+    # anything over 6.2 is good
+    vNum=float(f"{v1}.{v2}")
+    
+    if vNum <6.2:
+        #print("Not accepting FSS events from < 6.2.0")
+        return results
+
 
     bCarrierJump = (event.get("event") == "CarrierJump" and event.get(
         "StationType") == "FleetCarrier")
