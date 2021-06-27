@@ -1193,7 +1193,7 @@ def Promotion(gs, entry, cmdr):
             "Ecologist", "Geneticist", "Elite",
             "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
         ],
-        "Mercenary": [
+        "Soldier": [
             "Defenceless", "Mostly Defenceless", "Rookie",
             "Soldier", "Gunslinger", "Warrior",
             "Gladiator", "Deadeye", "Elite",
@@ -1211,12 +1211,19 @@ def Promotion(gs, entry, cmdr):
             "Dangerous", "Deadly", "Elite",
             "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
         ],
-        "Explorer": [
+        "Explore": [
             "Aimless", "Mostly Aimless", "Scout",
             "Surveyor", "Trailblazer", "Pathfinder",
             "Ranger", "Pioneer", "Elite",
             "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
         ]
+    }
+    names={
+        "Explore": "Explorer",
+        "Soldier": "Mercenary",
+        "Trade": "Trade",
+        "Combat": "Combat",
+        "Exobiologist": "Exobiologist"
     }
 
     rank = None
@@ -1224,14 +1231,14 @@ def Promotion(gs, entry, cmdr):
 
         if entry.get(k) and ranks.get(k)[entry.get(k)]:
             rank = ranks.get(k)[entry.get(k)]
-            role = k
+            role = names.get(k)
 
     if rank:
         webhooks = get_webhooks()
         webhook = webhooks.get("Promotion")
 
         payload = {}
-        payload["content"] = f"Congratulations Cmdr {cmdr} on your promotion to {role} {rank}"
+        payload["content"] = f"Congratulations Cmdr {cmdr} on your promotion to {role}: {rank}"
 
         requests.post(webhook, data=json.dumps(payload), headers={
             "Content-Type": "application/json"})
