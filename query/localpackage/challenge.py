@@ -167,22 +167,34 @@ def challenge_status(request):
 
 
 def nearest_codex(request):
-    x = request.args.get("x", 0.0)
-    y = request.args.get("y", 0.0)
-    z = request.args.get("z", 0.0)
+
+    if request.args.get("system"):
+        x, y, z = getCoordinates(request.args.get("system"))
+    else:
+        x = request.args.get("x", 0.0)
+        y = request.args.get("y", 0.0)
+        z = request.args.get("z", 0.0)
+
+    if request.args.get("name"):
+        where = "where english_name like concat('%%',%s,'%%')"
+        params = (x, y, z, request.args.get("name"), x, y, z)
+    else:
+        where = ""
+        params = (x, y, z, x, y, z)
 
     setup_sql_conn()
     with get_cursor() as cursor:
-        sql = """
+        sql = f"""
             select english_name,entryid,system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance
             from (
             select distinct english_name,cs.entryid,system,x,y,z
             from codex_systems cs 
             join codex_name_ref cnr on cnr.entryid = cs.entryid
+            {where}
             order by (pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)) asc 
             limit 20) data
         """
-        cursor.execute(sql, (x, y, z, x, y, z))
+        cursor.execute(sql, params)
         r = cursor.fetchall()
         cursor.close()
 

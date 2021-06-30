@@ -14,6 +14,7 @@ import localpackage.gnosis
 app = current_app
 CORS(app)
 
+
 @app.route("/getSystemPoi")
 def getSystemPoi():
     return localpackage.poidata.getSystemPoi(request)
@@ -28,9 +29,10 @@ def codex_prices():
 def codex_systems():
     return localpackage.codex.codex_systems(request)
 
+
 @app.route("/codex/capi")
 def codex_capi():
-    return localpackage.codex.capi_systems(request)    
+    return localpackage.codex.capi_systems(request)
 
 
 @app.route("/codex/odyssey/subclass")
@@ -53,19 +55,19 @@ def challenge_status():
     return localpackage.challenge.challenge_status(request)
 
 
-@app.route("/nearest/codex/")
-def __codex():
-    logging.warning("deprecated")
-    return localpackage.challenge.nearest_codex(request)
+# @app.route("/nearest/codex/")
+# def __codex():
+#    return localpackage.challenge.nearest_codex(request)
 
 
 @app.route("/nearest/codex")
-def codex():
+def nearest_codex():
     return localpackage.challenge.nearest_codex(request)
+
 
 @app.route("/gnosis")
 def gnosis():
-    return localpackage.gnosis.entry_point(request)    
+    return localpackage.gnosis.entry_point(request)
 
 
 @app.route("/survey/temperature")

@@ -53,6 +53,24 @@ Gets a structure of all codex entries used by EDMC-Canonn
 ## example
 [Live Codex Reference Data](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref)
 
+# nearest/codex 
+
+This function will show you the nearest codex entry to your current position. 
+
+## parameters
+
+* x=&y=&z= (provide x,y,z coordinates to avoid an edsm lookup)
+* system (if x,y,z is not known you can supply the system name and it will look up edsm)
+* name ( The english name of the thing you want to find)
+
+## examples
+
+[Nearest Entry to Sol using coordinates](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?x=0&y=0&z=0)
+[Nearest Entry to Merope using system name ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope)
+[Nearest Bark Mounds to Merope ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope&name=Bark)
+
+
+
 
 # getSystemPoi
 Accepts a system name a commander name and returns all the POI information for that system captured in the Canonn database. There is an optional odyssey flag that controls how data from Odyssey and Horizons is used. 
