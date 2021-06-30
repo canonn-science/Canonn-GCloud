@@ -65,9 +65,9 @@ This function will show you the nearest codex entry to your current position.
 
 ## examples
 
-[Nearest Entry to Sol using coordinates](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?x=0&y=0&z=0)
-[Nearest Entry to Merope using system name ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope)
-[Nearest Bark Mounds to Merope ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope&name=Bark)
+* [Nearest Entry to Sol using coordinates](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?x=0&y=0&z=0)
+* [Nearest Entry to Merope using system name ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope)
+* [Nearest Bark Mounds to Merope ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope&name=Bark)
 
 
 
