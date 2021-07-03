@@ -116,6 +116,7 @@ def event_handled(event):
     wl = [
         {"description": "FC Docked", "definition": {
             "event": "Docked", "StationType": "FleetCarrier"}},
+        {"description": "Promotion", "definition": {"event": "Promotion"}},
         {"description": "FC Jumped", "definition": {
             "event": "CarrierJump", "StationType": "FleetCarrier"}},
         {"description": "Organic Scans", "definition": {"event": "ScanOrganic"}},
@@ -552,12 +553,12 @@ def extendLife(gs, event, cmdr):
     if "EDMC-Canonn" not in clientVersion:
         return results
     else:
-        cname,v1,v2,v3=clientVersion.split(".")
+        cname, v1, v2, v3 = clientVersion.split(".")
 
     # anything over 6.2 is good
-    vNum=float(f"{v1}.{v2}")
-    
-    if vNum <6.2:
+    vNum = float(f"{v1}.{v2}")
+
+    if vNum < 6.2:
         #print("Not accepting FSS events from < 6.2.0")
         return results
 
@@ -664,8 +665,6 @@ def extendRawEvents(gs, entry, cmdr):
 
 
 def extendCarriersFSS(gs, event, cmdr):
-    
-
 
     results = []
 
@@ -673,15 +672,14 @@ def extendCarriersFSS(gs, event, cmdr):
     if "EDMC-Canonn" not in clientVersion:
         return results
     else:
-        cname,v1,v2,v3=clientVersion.split(".")
+        cname, v1, v2, v3 = clientVersion.split(".")
 
     # anything over 6.2 is good
-    vNum=float(f"{v1}.{v2}")
-    
-    if vNum <6.2:
+    vNum = float(f"{v1}.{v2}")
+
+    if vNum < 6.2:
         #print("Not accepting FSS events from < 6.2.0")
         return results
-
 
     bCarrierJump = (event.get("event") == "CarrierJump" and event.get(
         "StationType") == "FleetCarrier")
@@ -1218,7 +1216,7 @@ def Promotion(gs, entry, cmdr):
             "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
         ]
     }
-    names={
+    names = {
         "Explore": "Explorer",
         "Soldier": "Mercenary",
         "Trade": "Trade",
