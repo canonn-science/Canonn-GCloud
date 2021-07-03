@@ -10,6 +10,7 @@ import localpackage.challenge
 import localpackage.codex
 import localpackage.poidata
 import localpackage.gnosis
+import json
 
 app = current_app
 CORS(app)
@@ -92,6 +93,62 @@ def temperature():
         cursor.close()
 
     return jsonify(r)
+
+
+@app.route("/raw")
+def raw_data():
+    setup_sql_conn()
+
+    evt = request.args.get("event")
+    system = request.args.get("system")
+
+    offset = request.args.get("offset", 0)
+    limit = request.args.get("limit", 1000)
+    if request.args.get("_start"):
+        offset = request.args.get("_start")
+    if request.args.get("_limit"):
+        limit = request.args.get("_limit")
+
+    params = []
+    clause = ""
+
+    if evt:
+        params.append(evt)
+        clause = "and event = %s"
+
+    if system:
+        params.append(system)
+        clause = f"{clause} and systemName = %s "
+
+    params.append(int(offset))
+    params.append(int(limit))
+
+    raw = []
+
+    with get_cursor() as cursor:
+        sql = f"""
+            select s.systemName,s.bodyName,cast(s.x as char) x,cast(s.y as char) y,cast(s.z as char) z,raw_event
+            from raw_events s
+            where 1 = 1
+            {clause}
+            order by systemName
+            limit %s,%s
+        """
+        cursor.execute(sql, (params))
+        r = cursor.fetchall()
+        for row in r:
+            raw.append({
+                "system": row.get("systemName"),
+                "body": row.get("bodyName"),
+                "x": row.get("x"),
+                "y": row.get("y"),
+                "z": row.get("z"),
+                "raw_event": json.loads(row.get("raw_event"))
+            }
+            )
+        cursor.close()
+
+    return jsonify(raw)
 
 
 @app.route("/")
