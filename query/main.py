@@ -11,9 +11,12 @@ import localpackage.codex
 import localpackage.poidata
 import localpackage.gnosis
 import json
+import requests
 
 app = current_app
 CORS(app)
+
+biodata = {}
 
 
 @app.route("/getSystemPoi")
@@ -69,6 +72,16 @@ def nearest_codex():
 @app.route("/gnosis")
 def gnosis():
     return localpackage.gnosis.entry_point(request)
+
+
+@app.route("/biostats")
+def biostats():
+    global biodata
+    if not biodata:
+        r = requests.get(
+            "https://drive.google.com/uc?export=download&id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
+        biodata = r.json()
+    return jsonify(biodata)
 
 
 @app.route("/survey/temperature")
