@@ -781,7 +781,7 @@ def extendSignals(gs, event, cmdr):
     eventType = event.get("event")
     results = []
 
-    if eventType == "SAASignalsFound":
+    if eventType in ("SAASignalsFound", "FSSBodySignals"):
         results = []
         signals = event.get("Signals")
         system = gs.get("systemName")
