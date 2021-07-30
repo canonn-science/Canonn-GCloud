@@ -123,6 +123,8 @@ def event_handled(event):
         {"description": "All Codex Events", "definition": {"event": "CodexEntry"}},
         {"description": "Signals Found Scanning Bodies",
             "definition": {"event": "SAASignalsFound"}},
+        {"description": "Signals Found Scanning Bodies",
+            "definition": {"event": "FSSBodySignals"}},
         {"description": "Commander event for codex reports",
             "definition": {"event": "Commander"}},
         {"description": "Cloud NSP", "definition": {
