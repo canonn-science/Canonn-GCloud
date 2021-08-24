@@ -179,8 +179,14 @@ def nearest_codex(request):
         where = "where english_name like concat('%%',%s,'%%')"
         params = (x, y, z, request.args.get("name"), x, y, z)
     else:
-        where = ""
+        where = "1=1"
         params = (x, y, z, x, y, z)
+
+    if request.args.get("odyssey"):
+        if request.args.get("odyssey") == 'Y':
+            where = f"{where} and  odyssey='Y'"
+        if request.args.get("odyssey") == 'N':
+            where = f"{where} and  odyssey='N'"
 
     setup_sql_conn()
     with get_cursor() as cursor:
@@ -188,7 +194,7 @@ def nearest_codex(request):
             select english_name,entryid,system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance
             from (
             select distinct english_name,cs.entryid,system,x,y,z
-            from codex_systems cs 
+            from codexreport cs 
             join codex_name_ref cnr on cnr.entryid = cs.entryid
             {where}
             order by (pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)) asc 
