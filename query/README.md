@@ -50,6 +50,20 @@ This function will return a data structure showing all codex types and the comma
 
 Gets a structure of all codex entries used by EDMC-Canonn
 
+# challenge/fastest_scans
+
+Canonn Challenge Fastest Scans: Gives fastest times between log and analyse for a specifc commander or the top 20 commanders if no parameter
+
+## parameters
+
+* cmdr (the commander name to lookup)
+
+## example
+[Top 20 Commanders](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/fastest_scans)   (NB: This requires a full scan so is quite slow)
+
+[CMDR LCU No Fool Like One](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/fastest_scans?cmdr=LCU%20No%20Fool%20Like%20One)
+
+
 ## example
 [Live Codex Reference Data](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref)
 

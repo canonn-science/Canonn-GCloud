@@ -5,6 +5,7 @@ import pymysql
 from pymysql.err import OperationalError
 import requests
 import json
+from flask import request, jsonify
 
 
 def getCoordinates(system):
@@ -164,6 +165,40 @@ def challenge_status(request):
     res = enrich_data(rg)
 
     return res
+
+
+def fastest_scans(request):
+    where = ""
+    params = ()
+    if request.args.get("cmdr"):
+        where = "where cmdr = %s"
+        params = (request.args.get("cmdr"))
+
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        sql = f"""
+        select distinct data2.cmdr,data2.system,data2.body,ifnull(cnr.english_name,data2.species_localised) as species,data2.diff as seconds from (
+        select cmdr,system,body,species,species_localised,started,ended,TIMESTAMPDIFF(SECOND,started,ended) as diff 
+        from (
+        select cmdr,system,body,species,species_localised,
+        max(case when scantype = 'Log' then reported_at else null end) as started,
+        min(case when scantype = 'Analyse' then reported_at else null end) as ended
+        from organic_scans {where}
+        group by cmdr,system,body,species,species_localised
+        having min(case when scantype = 'Analyse' then reported_at else null end) is not null
+        ) data1
+        where started is not null and ended is not null and TIMESTAMPDIFF(SECOND,started,ended) > 0
+        order by TIMESTAMPDIFF(SECOND,started,ended) asc limit 20
+        ) data2 
+        left join codexreport cr on cr.system = data2.system and cr.body = data2.body and cr.name like replace(data2.species,'_Name;','\_%%')
+        left join codex_name_ref cnr on cnr.entryid = cr.entryid 
+        order by diff asc
+        """
+        cursor.execute(sql, params)
+        r = cursor.fetchall()
+        cursor.close()
+
+    return jsonify(r)
 
 
 def nearest_codex(request):

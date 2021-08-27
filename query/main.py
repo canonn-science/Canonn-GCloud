@@ -54,6 +54,11 @@ def challenge_next():
     return localpackage.challenge.challenge_next(request)
 
 
+@app.route("/challenge/fastest_scans")
+def challenge_fastest_scans():
+    return localpackage.challenge.fastest_scans(request)
+
+
 @app.route("/challenge/status")
 def challenge_status():
     return localpackage.challenge.challenge_status(request)
