@@ -166,6 +166,75 @@ def challenge_status(request):
 
     return res
 
+def speed_challenge(request):
+    where = ""
+    params = ()
+    if request.args.get("cmdr"):
+        where = "and cmdr = %s"
+        params = (request.args.get("cmdr"))
+
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        sql = f"""
+    SELECT 
+	cmdr,
+	started,
+	ended,
+	TIMESTAMPDIFF(SECOND,started,ifnull(ended,now())) seconds,
+	a as osseus,
+	b as aleoid,
+	c as cactoid,
+	d as stratum,	
+	e as bacterium,
+	f as fungoid,
+	g as tussock,
+	h as concha,
+	i as shrub
+ from (
+select cmdr,
+max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null end) as started,
+max(case when scantype = 'Analyse' then greatest(a,b,c,d,e,f,g,h,i) else null end) as ended,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then a else null END),NOW())) AS a,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then b else null END),NOW())) AS b,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then c else null END),NOW())) AS c,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then d else null END),NOW())) AS d,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then e else null END),NOW())) AS e,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then f else null END),NOW())) AS f,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then g else null END),NOW())) AS g,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then h else null END),NOW())) AS h,
+TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null END),
+ifnull(max(case when scantype = 'Analyse' then i else null END),NOW())) AS i
+ from (
+select cmdr,scantype,
+max(case when species = '$Codex_Ent_Osseus_01_Name;' then reported_at else null end) as a,
+max(case when species = '$Codex_Ent_Aleoids_02_Name;' then reported_at else null end) as b,
+max(case when species = '$Codex_Ent_Cactoid_01_Name;' then reported_at else null end) as c,
+max(case when species = '$Codex_Ent_Stratum_01_Name;' then reported_at else null end) as d,
+max(case when species = '$Codex_Ent_Bacterial_01_Name;' then reported_at else null end) as e,
+max(case when species = '$Codex_Ent_Fungoids_02_Name;' then reported_at else null end) as f,
+max(case when species = '$Codex_Ent_Tussocks_11_Name;' then reported_at else null end) as g,
+max(case when species = '$Codex_Ent_Conchas_01_Name;' then reported_at else null end) as h,
+max(case when species = '$Codex_Ent_Shrubs_02_Name;' then reported_at else null end) as i
+from organic_scans where system = 'Tucanae Sector AF-A d71' and body = 'Tucanae Sector AF-A d71 4 e' {where}
+group by cmdr,scantype
+) data
+group by cmdr) data2
+WHERE started IS NOT NULL
+        """
+        cursor.execute(sql, params)
+        r = cursor.fetchall()
+        cursor.close()
+
+    return jsonify(r)
+
 
 def fastest_scans(request):
     where = ""
