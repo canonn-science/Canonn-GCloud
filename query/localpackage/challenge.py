@@ -172,6 +172,9 @@ def speed_challenge(request):
     if request.args.get("cmdr"):
         where = "and cmdr = %s"
         params = (request.args.get("cmdr"))
+    limit = 10
+    if request.args.get("_limit"):
+        limit=request.args.get("_limit")
 
     setup_sql_conn()
     with get_cursor() as cursor:
@@ -227,7 +230,9 @@ from organic_scans where system = 'Tucanae Sector AF-A d71' and body = 'Tucanae 
 group by cmdr,scantype
 ) data
 group by cmdr) data2
-WHERE started IS NOT NULL
+WHERE started IS NOT NULL and ended is not null
+order by seconds asc
+limit {limit}
         """
         cursor.execute(sql, params)
         r = cursor.fetchall()
