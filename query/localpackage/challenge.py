@@ -180,24 +180,46 @@ def speed_challenge(request):
     setup_sql_conn()
     with get_cursor() as cursor:
         sql = f"""
-    SELECT 
+SELECT 
 	cmdr,
 	started,
-	ended,
+	case when 
+		a > 0 and
+		b > 0 and
+		c > 0 and
+		d > 0 and
+		e > 0 and
+		f > 0 and
+		g > 0 and
+		h > 0 and
+		i > 0 
+	then ended else null end as ended,
 	TIMESTAMPDIFF(SECOND,started,ifnull(ended,now())) seconds,
-	a as osseus,
-	b as aleoid,
-	c as cactoid,
-	d as stratum,	
-	e as bacterium,
-	f as fungoid,
-	g as tussock,
-	h as concha,
-	i as shrub
+	if (a > 0,a,null) as osseus,
+	if (b > 0,b,null) as aleoid,
+	if (c > 0,c,null) as cactoid,
+	if (d > 0,d,null) as stratum,	
+	if (e > 0,e,null) as bacterium,
+	if (f > 0,f,null) as fungoid,
+	if (g > 0,g,null) as tussock,
+	if (h > 0,h,null) as concha,
+	if (i > 0,i,null) as shrub
  from (
 select cmdr,
-max(case when scantype = 'Log' then least(a,b,c,d,e,f,g,h,i) else null end) as started,
-max(case when scantype = 'Analyse' then greatest(a,b,c,d,e,f,g,h,i) else null end) as ended,
+max(case when scantype = 'Log' then least(
+ifnull(a,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(b,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(c,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(d,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(e,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(f,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(g,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(h,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
+ifnull(i,STR_TO_DATE("August 10 3307", "%%M %%d %%Y"))
+) else null end) as started,
+max(case 
+	when scantype = 'Analyse' 
+	then greatest(a,b,c,d,e,f,g,h,i) else null end) as ended,
 if (a IS NULL,NULL,TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then a else null END),
 max(case when scantype = 'Analyse' then a else null END))) AS a,
 if (b IS NULL,NULL,TIMESTAMPDIFF(SECOND,max(case when scantype = 'Log' then b else null END),
@@ -231,8 +253,20 @@ from organic_scans where system = 'Tucanae Sector AF-A d71' and body = 'Tucanae 
 group by cmdr,scantype
 ) data
 group by cmdr) data2
-WHERE started IS NOT NULL
-order by case when ended is null then 999999 else 0 end + seconds asc
+WHERE started IS NOT NULL 
+and started != STR_TO_DATE("August 10 3307", "%%M %%d %%Y")
+order by case when 
+	ended is null or 
+		a < 0 or
+		b < 0 or
+		c < 0 or
+		d < 0 or
+		e < 0 or
+		f < 0 or
+		g < 0 or
+		h < 0 or
+		i < 0 
+then 999999 else 0 end + seconds asc
 limit {limit}
         """
         cursor.execute(sql, params)
