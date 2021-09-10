@@ -249,7 +249,7 @@ max(case when species = '$Codex_Ent_Fungoids_02_Name;' then reported_at else nul
 max(case when species = '$Codex_Ent_Tussocks_11_Name;' then reported_at else null end) as g,
 max(case when species = '$Codex_Ent_Conchas_01_Name;' then reported_at else null end) as h,
 max(case when species = '$Codex_Ent_Shrubs_02_Name;' then reported_at else null end) as i
-from organic_scans where system = 'Tucanae Sector AF-A d71' and body = 'Tucanae Sector AF-A d71 4 e' {where}
+from organic_scans where system = 'Tucanae Sector AF-A d71' and body_id = 23 {where}
 group by cmdr,scantype
 ) data
 group by cmdr) data2
