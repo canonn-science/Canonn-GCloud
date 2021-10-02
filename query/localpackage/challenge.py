@@ -91,13 +91,15 @@ def challenge_status(request):
             s = val.get("sub_class")
             if not data.get(s):
                 data[s] = {"hud_category": h, "types_found": [],
-                           "types_available": [], "codex_count": 0, "cmdr_count": 0}
+                           "types_available": [], "types_missing": [], "codex_count": 0, "cmdr_count": 0}
             if val.get("type_found"):
                 data[s]["types_found"].append(val.get("type_found"))
                 data[s]["cmdr_count"] = len(data[s]["types_found"])
             if val.get("type_available"):
                 data[s]["types_available"].append(val.get("type_available"))
                 data[s]["codex_count"] = len(data[s]["types_available"])
+            if val.get("type_available") and not val.get("type_found"):
+                data[s]["types_missing"].append(val.get("type_available"))
 
         retval = []
         for r in data.keys():
@@ -107,7 +109,8 @@ def challenge_status(request):
                 "sub_class": r,
                 "hud_category": data.get(r).get("hud_category"),
                 "types_found": data.get(r).get("types_found"),
-                "types_available": data.get(r).get("types_available")
+                "types_available": data.get(r).get("types_available"),
+                "types_missing": data.get(r).get("types_missing")
             })
         return retval
 
@@ -130,12 +133,18 @@ def challenge_status(request):
             else:
                 types_available = []
 
+            if val.get("types_missing"):
+                types_missing = val.get("types_missing")
+            else:
+                types_missing = []
+
             retval[val.get("sub_class")] = {
                 "hud_category": val.get("hud_category"),
                 "visited": int(val.get("cmdr")),
                 "available": int(val.get("codex")),
                 "types_found": types_found,
                 "types_available": types_available,
+                "types_missing": types_missing,
                 "percentage": int((int(val.get("cmdr"))/int(val.get("codex"))) * 1000)/10
             }
             if val.get("hud_category") in ("Cloud", "Anomaly", "Biology"):
