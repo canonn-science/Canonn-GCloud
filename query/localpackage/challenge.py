@@ -75,7 +75,9 @@ def challenge_status(request):
 				cmdr_stats.english_name as type_found,
 				cnr.english_name as type_available 
             from codex_name_ref cnr
-            left join (select distinct entryid,english_name from v_codex_report where cmdrName = %s) cmdr_stats on cnr.entryid = cmdr_stats.entryid
+            left join (
+                        select distinct entryid,english_name from codex_name_ref cn where not exists (select 1 from codexreport cr where cmdrname = %s and cr.entryid = cn.entryid)
+				) cmdr_stats on cnr.entryid = cmdr_stats.entryid
             order by hud_category,cnr.entryid
         """
         cursor.execute(sql, (cmdr))
