@@ -71,7 +71,7 @@ def challenge_status(request):
             cnr.entryid as codex,
             cmdr_stats.entryid as cmdr ,
             sub_class,
-				hud_category,
+				case when sub_class = 'Thargoid' and hud_category = 'None' then 'Thargoid' else hud_category end as hud_category,
 				cmdr_stats.english_name as type_found,
 				cnr.english_name as type_available 
             from codex_name_ref cnr
