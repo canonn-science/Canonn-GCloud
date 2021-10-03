@@ -15,6 +15,7 @@ import requests
 
 app = current_app
 CORS(app)
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 biodata = {}
 
