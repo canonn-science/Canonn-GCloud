@@ -63,10 +63,20 @@ def challenge_next(request):
 
 def challenge_status(request):
     cmdr = request.args.get("cmdr", None)
+    platform = request.args.get("platform", None)
     setup_sql_conn()
 
+    where1 = " "
+    where2 = " "
+    if platform == "legacy":
+        where1 = "where platform='legacy'"
+        where2 = "and platform='legacy'"
+    if platform == "odyssey":
+        where1 = "where platform='odyssey'"
+        where2 = "and platform='odyssey'"
+
     with get_cursor() as cursor:
-        sql = """
+        sql = f"""
             select 
             cnr.entryid as codex,
             cmdr_stats.entryid as cmdr ,
@@ -76,8 +86,14 @@ def challenge_status(request):
 				cnr.english_name as type_available 
             from codex_name_ref cnr
             left join (
-                        select distinct entryid,english_name from codex_name_ref cn where exists (select 1 from codexreport cr where cmdrname = %s and cr.entryid = cn.entryid)
+                        select distinct entryid,english_name 
+                        from codex_name_ref cn 
+                        where exists (
+                            select 1 from codexreport cr where cmdrname = %s and cr.entryid = cn.entryid 
+                        ) 
+                        {where2}
 				) cmdr_stats on cnr.entryid = cmdr_stats.entryid
+            {where1}
             order by hud_category,cnr.entryid
         """
         cursor.execute(sql, (cmdr))
