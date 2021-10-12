@@ -119,6 +119,40 @@ def temperature():
     return jsonify(r)
 
 
+@app.route("/carrier/<serial>")
+def get_carrier(serial):
+    setup_sql_conn()
+
+    with get_cursor() as cursor:
+        sql = """
+            select 
+            serial_no,
+            name,
+            cast(jump_dt as char) as jump_dt,
+            current_system,
+            cast(current_x as char) as current_x,
+            cast(current_y as char) as current_y,
+            cast(current_z as char) as current_z,	
+            previous_system,
+            cast(previous_x as char) as previous_x,
+            cast(previous_y as char) as previous_y,
+            cast(previous_z as char) as previous_z,
+            cast(last_jump_dt as char) as last_jump_dt,
+            cast(services as char) service,
+            case when current_system = previous_system then 'Y' else 'N' end as static,
+            case when date(jump_dt) = date(now()) then 'Y' else 'N' end as current
+            from fleet_carriers
+            where serial_no = %s
+        """
+        cursor.execute(sql, (serial))
+        r = cursor.fetchone()
+        cursor.close()
+        if r:
+            r["service"] = json.loads(r.get("service"))
+
+    return jsonify(r)
+
+
 @app.route("/raw")
 def raw_data():
     setup_sql_conn()
