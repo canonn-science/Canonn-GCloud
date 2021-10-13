@@ -85,6 +85,11 @@ def gnosis():
     return localpackage.gnosis.entry_point(request)
 
 
+@app.route("/biostats/<entryid>")
+def get_stats_by_id(entryid):
+    return localpackage.codex.get_stats_by_id(entryid)
+
+
 @app.route("/biostats")
 def biostats():
     global biodata

@@ -134,7 +134,7 @@ def guess_biology(body):
     system = spanshdump.get("system")
     results = []
 
-    if body.get("type") != "Planet" or not body.get("isLandable"):
+    if body.get("type") != "Planet" or not landable(body):
         return []
 
     parentType = get_parent_type(system, body)
@@ -145,18 +145,28 @@ def guess_biology(body):
         parentMatch = (parentType in species.get("localStars"))
         # materials is highly dependednt on species
         materialsMatch = match_materials(body, species)
+
         volcanismMatch = (
             (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
+
         atmosphereTypeMatch = (
             (body.get("atmosphereType") or "No atmosphere") in species.get("atmosphereType"))
+
         mainstarMatch = (get_mainstar_type() in species.get("primaryStars"))
+
         bodyMatch = (body.get("subType") in species.get("bodies"))
+
         gravityMatch = (float(species.get("ming")) <= float(
             body.get("gravity")) <= float(species.get("maxg")))
+
         pressureMatch = (float(species.get("minp") or 0) <= float(
             (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
+
         tempMatch = (float(species.get("mint")) <= float(
             body.get("surfaceTemperature")) <= float(species.get("maxt")))
+
+        distanceMatch = (float(species.get("mind")) <= float(
+            body.get("distanceToArrival")) <= float(species.get("maxd")))
 
         if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch):
 
@@ -173,6 +183,32 @@ def get_body_codex(codex, type, body=None):
     return results
 
 
+def set_codex(i, type, body, codex):
+    value = get_body_codex(codex, type, body.get("name"))
+    if value:
+        spanshdump["system"]["bodies"][i]["signals"][type.lower()] = value
+
+
+def landable(body):
+    if body.get("isLandable"):
+        return True
+    signals = body.get("signals")
+    has_biology = (signals and body.get("signals").get(
+        "signals").get("$SAA_SignalType_Biological;"))
+    has_geology = (signals and body.get("signals").get(
+        "signals").get("$SAA_SignalType_Geological;"))
+
+    if has_biology or has_geology:
+        return True
+    return False
+
+
+def get_stats_by_id(entryid):
+    global biostats
+    get_biostats()
+    return jsonify(biostats.get(entryid))
+
+
 def system_biostats(request):
     global biostats
     global spanshdump
@@ -187,29 +223,33 @@ def system_biostats(request):
     system = spanshdump.get("system")
     codex = get_system_codex(system.get("name"))
 
-    spanshdump["system"]["signals"] = {}
-    spanshdump["system"]["signals"]["cloud"] = get_body_codex(codex, 'Cloud')
-    spanshdump["system"]["signals"]["anomaly"] = get_body_codex(
-        codex, 'Anomaly')
+    scloud = get_body_codex(codex, 'Cloud')
+    sanomaly = get_body_codex(codex, 'Anomaly')
+
+    if scloud or sanomaly:
+        spanshdump["system"]["signals"] = {}
+
+        if scloud:
+            spanshdump["system"]["signals"]["cloud"] = scloud
+        if sanomaly:
+            spanshdump["system"]["signals"]["anomaly"] = sanomaly
 
     for i, body in enumerate(system.get("bodies")):
 
-        if not spanshdump["system"]["bodies"][i].get("signals"):
-            spanshdump["system"]["bodies"][i]["signals"] = {}
-        spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess_biology(
-            body)
-        spanshdump["system"]["bodies"][i]["signals"]["biology"] = get_body_codex(
-            codex, 'Biology', body.get("name"))
-        spanshdump["system"]["bodies"][i]["signals"]["geology"] = get_body_codex(
-            codex, 'Geology', body.get("name"))
-        spanshdump["system"]["bodies"][i]["signals"]["thargoid"] = get_body_codex(
-            codex, 'Thargoid', body.get("name"))
-        spanshdump["system"]["bodies"][i]["signals"]["guardian"] = get_body_codex(
-            codex, 'Guardian', body.get("name"))
-        spanshdump["system"]["bodies"][i]["signals"]["cloud"] = get_body_codex(
-            codex, 'Cloud', body.get("name"))
-        spanshdump["system"]["bodies"][i]["signals"]["anomaly"] = get_body_codex(
-            codex, 'Anomaly', body.get("name"))
+        if landable(body):
+            if not spanshdump["system"]["bodies"][i].get("signals"):
+                spanshdump["system"]["bodies"][i]["signals"] = {}
+
+            guess = guess_biology(body)
+            if guess:
+                spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess
+
+            set_codex(i, "Biology", body, codex)
+            set_codex(i, "Geology", body, codex)
+            set_codex(i, "Thargoid", body, codex)
+            set_codex(i, "Guardian", body, codex)
+            set_codex(i, "Cloud", body, codex)
+            set_codex(i, "Anomaly", body, codex)
 
     # return jsonify(biostats.get("2100407"))
     return jsonify(spanshdump)
