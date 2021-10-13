@@ -119,6 +119,11 @@ def temperature():
     return jsonify(r)
 
 
+@app.route("/codex/biostats")
+def system_biostats():
+    return localpackage.codex.system_biostats(request)
+
+
 @app.route("/carrier/<serial>")
 def get_carrier(serial):
     setup_sql_conn()

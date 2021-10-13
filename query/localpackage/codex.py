@@ -7,6 +7,213 @@ import requests
 import json
 from flask import jsonify
 
+biostats = {}
+spanshdump = {}
+
+
+def get_biostats():
+    global biostats
+    if not biostats:
+        print("fetching stats")
+        r = requests.get(
+            "https://drive.google.com/uc?id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
+        biostats = r.json()
+    else:
+        print("stats cached")
+
+
+def get_spansh_by_id(id64):
+    global spanshdump
+
+    cached = (spanshdump.get("system") and spanshdump.get("system").get(
+        "id64") and str(spanshdump.get("system").get("id64")) == str(id64))
+
+    if not cached:
+        print("fetching from spansh")
+        r = requests.get(
+            f"https://spansh.co.uk/api/dump/{id64}")
+        spanshdump = r.json()
+
+        # check that id64 matches
+        cached = (spanshdump.get("system") and spanshdump.get("system").get(
+            "id64") and str(spanshdump.get("system").get("id64")) == str(id64))
+        if not cached:
+            spanshdump = {}
+    else:
+        print("spansh cached")
+
+
+def get_mainstar_type():
+    global spanshdump
+    system = spanshdump.get("system")
+    for body in system.get("bodies"):
+        if body.get("mainStar") == True:
+            return body.get("subType")
+    return None
+
+
+def get_primary_star(system):
+    bodies = system.get("bodies")
+    for body in bodies:
+        if body.get("mainStar"):
+            return body.get("subType")
+
+
+def get_parent_type(system, body):
+    bodyName = body.get("name")
+    systemName = system.get("name")
+    shortName = bodyName.replace(f"{systemName} ", '')
+    bodies = system.get("bodies")
+
+    parts = shortName.split(' ')
+
+    for n in range(len(parts)-1, -1, -1):
+
+        newpart = " ".join(parts[:n])
+        if newpart.isupper():
+            # print(f"converting newpart {newpart} to {newpart[0]}")
+            newpart = newpart[0]
+        newname = systemName+" "+newpart
+        # :qprint(newname)
+        for b in bodies:
+            if b.get("name") == newname and b.get("type") == "Star":
+                # print(f"{newname} = Star")
+                # print("{} {}".format(b.get("name"), parentName))
+                return b.get("subType")
+
+    # fall back to this
+    primary = get_mainstar_type()
+    return primary
+
+
+def get_system_codex(system):
+    setup_sql_conn()
+
+    with get_cursor() as cursor:
+        sqltext = """
+            select distinct system,nullif(body,'') as body,english_name,hud_category from codexreport cr 
+            join codex_name_ref cnr on cnr.entryid = cr.entryid
+            where system = %s
+        """
+        cursor.execute(sqltext, (system))
+        r = cursor.fetchall()
+        cursor.close()
+        return r
+    return None
+
+
+def mat_species(species):
+    id = species.get("id")
+
+    if id:
+        for material in ("Technetium", "Molybdenum", "Ruthenium", "Tellurium",  "Antimony", "Tungsten", "Polonium", "Yttrium",  "Cadmium", "Niobium", "Mercury", "Tin"):
+            if material in id:
+                return True
+    else:
+        return False
+
+
+def match_materials(body, species):
+    materials = body.get("materials")
+    count = 0
+    target = len(species.get("materials"))
+    if not mat_species(species):
+        return True
+
+    if materials:
+        for mat in species.get("materials"):
+            if mat in materials.keys():
+                count += 1
+
+    return (count == target)
+
+
+def guess_biology(body):
+    global biostats
+    global spanshdump
+    system = spanshdump.get("system")
+    results = []
+
+    if body.get("type") != "Planet" or not body.get("isLandable"):
+        return []
+
+    parentType = get_parent_type(system, body)
+
+    for key in biostats.keys():
+        species = biostats.get(key)
+
+        parentMatch = (parentType in species.get("localStars"))
+        # materials is highly dependednt on species
+        materialsMatch = match_materials(body, species)
+        volcanismMatch = (
+            (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
+        atmosphereTypeMatch = (
+            (body.get("atmosphereType") or "No atmosphere") in species.get("atmosphereType"))
+        mainstarMatch = (get_mainstar_type() in species.get("primaryStars"))
+        bodyMatch = (body.get("subType") in species.get("bodies"))
+        gravityMatch = (float(species.get("ming")) <= float(
+            body.get("gravity")) <= float(species.get("maxg")))
+        pressureMatch = (float(species.get("minp") or 0) <= float(
+            (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
+        tempMatch = (float(species.get("mint")) <= float(
+            body.get("surfaceTemperature")) <= float(species.get("maxt")))
+
+        if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch):
+
+            results.append(species.get("name"))
+
+    return results
+
+
+def get_body_codex(codex, type, body=None):
+    results = []
+    for row in codex:
+        if row.get("hud_category") == type and row.get("body") == body:
+            results.append(row.get("english_name"))
+    return results
+
+
+def system_biostats(request):
+    global biostats
+    global spanshdump
+
+    # lazy loaders
+    get_biostats()
+    get_spansh_by_id(request.args.get("id"))
+
+    if not spanshdump:
+        return jsonify({"error": "no spansh data"})
+
+    system = spanshdump.get("system")
+    codex = get_system_codex(system.get("name"))
+
+    spanshdump["system"]["signals"] = {}
+    spanshdump["system"]["signals"]["cloud"] = get_body_codex(codex, 'Cloud')
+    spanshdump["system"]["signals"]["anomaly"] = get_body_codex(
+        codex, 'Anomaly')
+
+    for i, body in enumerate(system.get("bodies")):
+
+        if not spanshdump["system"]["bodies"][i].get("signals"):
+            spanshdump["system"]["bodies"][i]["signals"] = {}
+        spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess_biology(
+            body)
+        spanshdump["system"]["bodies"][i]["signals"]["biology"] = get_body_codex(
+            codex, 'Biology', body.get("name"))
+        spanshdump["system"]["bodies"][i]["signals"]["geology"] = get_body_codex(
+            codex, 'Geology', body.get("name"))
+        spanshdump["system"]["bodies"][i]["signals"]["thargoid"] = get_body_codex(
+            codex, 'Thargoid', body.get("name"))
+        spanshdump["system"]["bodies"][i]["signals"]["guardian"] = get_body_codex(
+            codex, 'Guardian', body.get("name"))
+        spanshdump["system"]["bodies"][i]["signals"]["cloud"] = get_body_codex(
+            codex, 'Cloud', body.get("name"))
+        spanshdump["system"]["bodies"][i]["signals"]["anomaly"] = get_body_codex(
+            codex, 'Anomaly', body.get("name"))
+
+    # return jsonify(biostats.get("2100407"))
+    return jsonify(spanshdump)
+
 
 def codex_name_ref(request):
     setup_sql_conn()
@@ -15,10 +222,10 @@ def codex_name_ref(request):
         sql = """
                select c.*,data2.reward from codex_name_ref c
             left join (
-                SELECT 
+                SELECT
                                 entryid,max(reward) as reward
-                                from (		 
-                                select 
+                                from (
+                                select
                                 cnr.entryid,
                                 cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
                             FROM organic_sales os
@@ -89,10 +296,10 @@ def species_prices(request):
     r = None
     with get_cursor() as cursor:
         sql = """
-            SELECT 
+            SELECT
                 distinct replace(sub_species->"$.p[0]",'"','') as sub_species,reward,sub_class
-                from (		 
-                select 
+                from (
+                select
                 cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
             FROM organic_sales os
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
