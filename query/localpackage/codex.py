@@ -3,7 +3,7 @@ from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 import pymysql
 from pymysql.err import OperationalError
-from EliteDangerousRegionMap.RegionMap import findRegion
+from EDRegionMap.RegionMap import findRegion
 import requests
 import json
 from flask import jsonify
