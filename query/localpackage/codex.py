@@ -10,6 +10,35 @@ from flask import jsonify
 
 biostats = {}
 spanshdump = {}
+id64list = []
+
+# get the id64 for a given system
+
+
+def getId64(systemName):
+    global id64list
+    for system in id64list:
+        id = system.get(systemName)
+        if id:
+            print("id64 from cache")
+            return id
+    try:
+        url = f"https://www.edsm.net/api-v1/system?systemName={systemName}&showId=1"
+        r = requests.get(url)
+        j = r.json()
+        if j.get("id64"):
+            if len(id64list) > 3:
+                id64list.pop()
+
+            item = {}
+            item[systemName] = j.get("id64")
+            id64list.append(item)
+            return j.get("id64")
+    except:
+        print("Error getting request")
+        print(url)
+        print(j)
+        return None
 
 
 def findRegion64(id):
@@ -246,9 +275,14 @@ def system_biostats(request):
     global biostats
     global spanshdump
 
+    id = request.args.get("id")
+    systemName = request.args.get("system")
+    if request.args.get("system"):
+        id = getId64(systemName)
+
     # lazy loaders
     get_biostats()
-    get_spansh_by_id(request.args.get("id"))
+    get_spansh_by_id(id)
 
     if not spanshdump:
         return jsonify({"error": "no spansh data"})
