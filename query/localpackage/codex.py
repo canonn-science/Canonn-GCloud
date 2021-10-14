@@ -3,12 +3,26 @@ from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 import pymysql
 from pymysql.err import OperationalError
+from EliteDangerousRegionMap.RegionMap import findRegion
 import requests
 import json
 from flask import jsonify
 
 biostats = {}
 spanshdump = {}
+
+
+def findRegion64(id):
+    id64 = int(id)
+    masscode = id64 & 7
+    z = (((id64 >> 3) & (0x3FFF >> masscode)) << masscode) * 10 - 24105
+    y = (((id64 >> (17 - masscode)) & (0x1FFF >> masscode)) << masscode) * 10 - 40985
+    x = (((id64 >> (30 - masscode * 2)) & (0x3FFF >> masscode))
+         << masscode) * 10 - 49985
+    try:
+        return findRegion(x, y, z)
+    except:
+        return 0, 'Unknown'
 
 
 def get_biostats():
@@ -117,13 +131,24 @@ def match_materials(body, species):
     materials = body.get("materials")
     count = 0
     target = len(species.get("materials"))
+
     if not mat_species(species):
         return True
+
+    matmatch = False
 
     if materials:
         for mat in species.get("materials"):
             if mat in materials.keys():
                 count += 1
+
+            # the species id contains the key material that must be present
+            # we shouldn't have to do this but there may be some misreported bodies
+            for key in materials.keys():
+                if key in species.get("id"):
+                    matmatch = True
+    if matmatch == False:
+        return False
 
     return (count == target)
 
@@ -134,6 +159,8 @@ def guess_biology(body):
     system = spanshdump.get("system")
     results = []
 
+    region, region_name = findRegion64(system.get("id64"))
+
     if body.get("type") != "Planet" or not landable(body):
         return []
 
@@ -141,6 +168,12 @@ def guess_biology(body):
 
     for key in biostats.keys():
         species = biostats.get(key)
+
+        odyssey = (species.get("platform") == 'odyssey')
+
+        # don't matcvh requins on odyssey bios
+        regionMatch = (odyssey or (species.get("regions")
+                                   and region_name in species.get("regions")))
 
         parentMatch = (parentType in species.get("localStars"))
         # materials is highly dependednt on species
@@ -168,7 +201,7 @@ def guess_biology(body):
         distanceMatch = (float(species.get("mind")) <= float(
             body.get("distanceToArrival")) <= float(species.get("maxd")))
 
-        if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch):
+        if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
 
             results.append(species.get("name"))
 
@@ -225,6 +258,9 @@ def system_biostats(request):
 
     scloud = get_body_codex(codex, 'Cloud')
     sanomaly = get_body_codex(codex, 'Anomaly')
+
+    region, region_name = findRegion64(system.get("id64"))
+    spanshdump["system"]["region"] = {"region": region, "name": region_name}
 
     if scloud or sanomaly:
         spanshdump["system"]["signals"] = {}
