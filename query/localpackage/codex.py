@@ -7,6 +7,7 @@ from EDRegionMap.RegionMap import findRegion
 import requests
 import json
 from flask import jsonify
+import urllib.parse
 
 biostats = {}
 spanshdump = {}
@@ -23,11 +24,18 @@ def getId64(systemName):
             print("id64 from cache")
             return id
     try:
-        url = f"https://www.edsm.net/api-v1/system?systemName={systemName}&showId=1"
+        print(systemName)
+
+        param = urllib.parse.quote(systemName)
+        print(param)
+
+        url = f"https://www.edsm.net/api-v1/system?systemName={param}&showId=1"
+        print(url)
         r = requests.get(url)
         j = r.json()
         if j.get("id64"):
-            if len(id64list) > 3:
+            # we will store 200 id64 in memory
+            if len(id64list) > 200:
                 id64list.pop()
 
             item = {}
