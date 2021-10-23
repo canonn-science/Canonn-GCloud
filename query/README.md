@@ -97,10 +97,43 @@ The data is captured from the following journal events
 
 In addition it uses POI data recorded by the specified commander using the "*canonn capture*" command
 
-[https://us-central1-canonn-api-236217.cloudfunctions.net/getSystemPoi?system=Merope&cmdr=Syleo&odyssey=Y](https://us-central1-canonn-api-236217.cloudfunctions.net/query/getSystemPoi?system=Merope&cmdr=Syleo&odyssey=Y "Get system POIs for Merope")
+## example
+
+* [Get system POIs for Merope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/getSystemPoi?system=Merope&cmdr=Syleo&odyssey=Y)
 
 
-```
+# thargoid/nhss/systems
+This returns a list of all systems with NHSS NB this is limited to the first 1000 
+
+## paramaters
+
+* system (the name of the system you want to find)
+* threat (The threat level you want to see)
+* _start (used for paging to represent the start of teh page -  defaults to 1 )
+* _limit (used for paging to set a limit on how many pages - defaults to 1000)
+
+## examples
+
+* [Get NHSS for Merope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?system=Merope)
+* [Get all systems with threat 0 NHSS](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?threat=0)
+* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?_start=1000*_limit=1000)
+
+# thargoid/nhss/reports
+This returns a list of all reported NHSS 
+NB: this is limited to the first 1000 
+
+## paramaters
+
+* system (the name of the system you want to find)
+* threat (The threat level you want to see)
+* _start (used for paging to represent the start of teh page -  defaults to 1 )
+* _limit (used for paging to set a limit on how many pages - defaults to 1000)
+
+## examples
+
+* [Get NHSS for Merope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?system=Merope)
+* [Get all systems with threat 0 NHSS](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?threat=0)
+* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?_start=1000*_limit=1000)
 
 
 

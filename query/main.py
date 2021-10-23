@@ -10,6 +10,7 @@ import localpackage.challenge
 import localpackage.codex
 import localpackage.poidata
 import localpackage.gnosis
+import localpackage.thargoids
 import json
 import requests
 
@@ -122,6 +123,16 @@ def temperature():
         cursor.close()
 
     return jsonify(r)
+
+
+@app.route("/thargoid/nhss/systems")
+def get_nhss_systems():
+    return localpackage.thargoids.get_nhss_systems(request)
+
+
+@app.route("/thargoid/nhss/reports")
+def get_nhss_reports():
+    return localpackage.thargoids.get_nhss_reports(request)
 
 
 @app.route("/codex/biostats")
