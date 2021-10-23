@@ -117,7 +117,7 @@ This returns a list of all systems with NHSS NB this is limited to the first 100
 
 * [Get NHSS for Merope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?system=Merope)
 * [Get all systems with threat 0 NHSS](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?threat=0)
-* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?_start=1000*_limit=1000)
+* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/systems?_start=1000&_limit=1000)
 
 # thargoid/nhss/reports
 This returns a list of all reported NHSS 

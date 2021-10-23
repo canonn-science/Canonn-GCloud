@@ -34,12 +34,12 @@ def challenge_next(request):
         x = s[0]
         y = s[1]
         z = s[2]
-    if px and py and pz:
+    if px is not None and py is not None and pz is not None:
         x = float(px)
         y = float(py)
         z = float(pz)
 
-    if not x:
+    if x is None:
         return {"error": "cant find source system"}
 
     sql = """
