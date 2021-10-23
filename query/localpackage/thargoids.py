@@ -119,7 +119,7 @@ def get_nhss_systems(request):
                 "threat_6": row.get("threat_6"),
                 "threat_7": row.get("threat_7"),
                 "threat_8": row.get("threat_8"),
-                "threat_90": row.get("threat_9"),
+                "threat_9": row.get("threat_9"),
                 "x": str(row.get("x")),
                 "y": str(row.get("y")),
                 "z": str(row.get("z")),
