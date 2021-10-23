@@ -22,11 +22,25 @@ def getCoordinates(system):
 def challenge_next(request):
     system = request.args.get("system")
     cmdr = request.args.get("cmdr")
+    px = request.args.get("x")
+    py = request.args.get("y")
+    pz = request.args.get("z")
+    x, y, z = None, None, None
 
-    s = getCoordinates(system)
-    x = s[0]
-    y = s[1]
-    z = s[2]
+    if system:
+        s = getCoordinates(system)
+
+    if system and s:
+        x = s[0]
+        y = s[1]
+        z = s[2]
+    if px and py and pz:
+        x = float(px)
+        y = float(py)
+        z = float(pz)
+
+    if not x:
+        return {"error": "cant find source system"}
 
     sql = """
         select system,english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
