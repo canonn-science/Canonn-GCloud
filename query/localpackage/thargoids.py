@@ -108,6 +108,7 @@ def get_nhss_systems(request):
         for row in r:
             nearest=getNearest(row)
             entry = {
+                "systemName": row.get("systemName"),
                 "first_seen": row.get("first_seen"),
                 "last_seen": row.get("last_seen"),
                 "threat_0": row.get("threat_0"),
