@@ -73,6 +73,8 @@ def get_nhss_systems(request):
     params.append(int(offset))
     params.append(int(limit))
 
+    data=[]
+
     with get_cursor() as cursor:
         sql = f"""
           select systemName,
@@ -103,7 +105,30 @@ def get_nhss_systems(request):
         r = cursor.fetchall()
         cursor.close()
 
-    return jsonify(r)
+        for row in r:
+            nearest=getNearest(row)
+            entry = {
+                "first_seen": row.get("first_seen"),
+                "last_seen": row.get("last_seen"),
+                "threat_0": row.get("threat_0"),
+                "threat_1": row.get("threat_1"),
+                "threat_2": row.get("threat_2"),
+                "threat_3": row.get("threat_3"),
+                "threat_4": row.get("threat_4"),
+                "threat_5": row.get("threat_5"),
+                "threat_6": row.get("threat_6"),
+                "threat_7": row.get("threat_7"),
+                "threat_8": row.get("threat_8"),
+                "threat_90": row.get("threat_9"),
+                "x": str(row.get("x")),
+                "y": str(row.get("y")),
+                "z": str(row.get("z")),
+                "bubble": nearest.get("name"),
+                "bubble_distance": nearest.get("distance")
+            }
+            data.append(entry)    
+
+    return jsonify(data)
 
 
 def get_nhss_reports(request):
@@ -132,6 +157,8 @@ def get_nhss_reports(request):
     params.append(int(offset))
     params.append(int(limit))
 
+    data=[]
+
     with get_cursor() as cursor:
         sql = f"""
         select
@@ -153,7 +180,23 @@ def get_nhss_reports(request):
         r = cursor.fetchall()
         cursor.close()
 
-    return jsonify(r)
+        for row in r:
+            nearest=getNearest(row)
+            entry = {
+                "created_at": row.get("created_at"),
+                "found_at": row.get("found_at"),
+                "cmdr": row.get("cmdr"),
+                "system": row.get("system"),
+                "x": str(row.get("x")),
+                "y": str(row.get("y")),
+                "z": str(row.get("z")),
+                "threat_level": row.get("threat_level"),
+                "bubble": nearest.get("name"),
+                "bubble_distance": nearest.get("distance")
+            }
+            data.append(entry)
+
+    return jsonify(data)
 
 
 def get_hyperdiction_detections(request):
