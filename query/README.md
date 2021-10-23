@@ -106,7 +106,7 @@ In addition it uses POI data recorded by the specified commander using the "*can
 # thargoid/nhss/systems
 This returns a list of all systems with NHSS NB this is limited to the first 1000 
 
-## paramaters
+## parameters
 
 * system (the name of the system you want to find)
 * threat (The threat level you want to see)
@@ -123,7 +123,7 @@ This returns a list of all systems with NHSS NB this is limited to the first 100
 This returns a list of all reported NHSS 
 NB: this is limited to the first 1000 
 
-## paramaters
+## parameters
 
 * system (the name of the system you want to find)
 * threat (The threat level you want to see)
