@@ -8,6 +8,41 @@ import requests
 import json
 from flask import jsonify
 import urllib.parse
+from math import sqrt
+
+SOL = [0, 0, 0]
+MEROPE = [-78.59375, -149.625, -340.53125]
+COALSACK = [423.5625, 0.5, 277.75]  # Musca Dark Region PJ-P b6-8
+WITCHHEAD = [355.75, -400.5, -707.21875]  # Ronemar
+CALIFORNIA = [-299.0625, -229.25, -876.125]  # HIP 18390
+CONESECTOR = [609.4375, 154.25, -1503.59375]  # Outotz ST-I d9-4
+
+
+def getDistance(a, b):
+    return round(sqrt(pow(float(a[0])-float(b[0]), 2)+pow(float(a[1])-float(b[1]), 2)+pow(float(a[2])-float(b[2]), 2)), 1)
+
+
+def getNearest(r):
+    x = r.get("x")
+    y = r.get("y")
+    z = r.get("z")
+    d = [
+        {"name": "Sol", "distance": getDistance(
+            [x, y, z], SOL), "coords": SOL},
+        {"name": "Merope", "distance": getDistance(
+            [x, y, z], MEROPE), "coords": MEROPE},
+        {"name": "Coalsack", "distance": getDistance(
+            [x, y, z], COALSACK), "coords": COALSACK},
+        {"name": "Witchhead", "distance": getDistance(
+            [x, y, z], WITCHHEAD), "coords": WITCHHEAD},
+        {"name": "California", "distance": getDistance(
+            [x, y, z], CALIFORNIA), "coords": CALIFORNIA},
+        {"name": "Cone Sector", "distance": getDistance(
+            [x, y, z], CONESECTOR), "coords": CONESECTOR},
+    ]
+    d.sort(key=lambda dx: dx["distance"], reverse=False)
+
+    return d[0]
 
 
 def get_nhss_systems(request):
@@ -119,3 +154,69 @@ def get_nhss_reports(request):
         cursor.close()
 
     return jsonify(r)
+
+
+def get_hyperdiction_detections(request):
+    setup_sql_conn()
+
+    data = []
+
+    offset = request.args.get("offset", 0)
+    limit = request.args.get("limit", 1000)
+    if request.args.get("_start"):
+        offset = request.args.get("_start")
+    if request.args.get("_limit"):
+        limit = request.args.get("_limit")
+
+    params = []
+    clause = ""
+
+    system = request.args.get("system")
+
+    if system:
+        params.append(system)
+        clause = f"{clause} and system = %s"
+
+    params.append(int(offset))
+    params.append(int(limit))
+
+    with get_cursor() as cursor:
+        sql = f"""
+        select * from hd_detected 
+        where dx is not null 
+        and dy is not null 
+        and dz is not null
+        {clause}
+        order by timestamp desc
+        limit %s,%s
+        """
+        cursor.execute(sql, (params))
+        r = cursor.fetchall()
+        cursor.close()
+
+        for row in r:
+            entry = {
+                "cmdr": row.get("cmdr"),
+                "timestamp": str(row.get("timestamp")),
+                "start": {
+                    "system": row.get("system"),
+                    "x": str(row.get("x")),
+                    "y": str(row.get("y")),
+                    "z": str(row.get("z")),
+                    "nearest": getNearest(row)
+                },
+                "destination": {
+                    "system": row.get("destination"),
+                    "x": str(row.get("dx")),
+                    "y": str(row.get("dy")),
+                    "z": str(row.get("dz")),
+                    "nearest": getNearest({
+                        "x": row.get("dx"),
+                        "y": row.get("dy"),
+                        "z": row.get("dz"),
+                    })
+                }
+            }
+            data.append(entry)
+
+    return jsonify(data)

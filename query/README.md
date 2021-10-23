@@ -134,7 +134,22 @@ NB: this is limited to the first 1000
 
 * [Get NHSS for Merope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?system=Merope)
 * [Get all systems with threat 0 NHSS](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?threat=0)
-* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?_start=1000*_limit=1000)
+* [Get the next thousand NHSS system starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/nhss/reports?_start=1000&_limit=1000)
 
 
+# thargoid/hyperdiction/reports
+This returns a list of all hyperdictions detected since March 2021 with th start location and destination of the jump. It also shows which bubble is nearest to each of those locations. 
+
+NB: this is limited to the first 1000 
+
+## parameters
+
+* system (the name of the system you want to find)
+* _start (used for paging to represent the start of teh page -  defaults to 1 )
+* _limit (used for paging to set a limit on how many pages - defaults to 1000)
+
+## examples
+
+* [Get Hyperdiction reports for Asterope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?system=Asterope)
+* [Get the next thousand Hyperdiction reports starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?_start=1000&_limit=1000)
 

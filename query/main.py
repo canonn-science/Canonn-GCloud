@@ -13,6 +13,7 @@ import localpackage.gnosis
 import localpackage.thargoids
 import json
 import requests
+from math import sqrt
 
 app = current_app
 CORS(app)
@@ -133,6 +134,11 @@ def get_nhss_systems():
 @app.route("/thargoid/nhss/reports")
 def get_nhss_reports():
     return localpackage.thargoids.get_nhss_reports(request)
+
+
+@app.route("/thargoid/hyperdiction/reports")
+def get_hd_reports():
+    return localpackage.thargoids.get_hyperdiction_detections(request)
 
 
 @app.route("/codex/biostats")
