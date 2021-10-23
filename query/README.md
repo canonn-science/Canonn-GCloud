@@ -23,17 +23,18 @@ In the local environment you don't need "/query"
 
 # challenge/next
 
-This function will look up the nearest system containing an unscanned codex entry for a given commander and location. The performance of this function is relatively slow because it has to scan codex entries for distance.
+This function will look up the nearest system containing an unscanned codex entry for a given commander and location. The performance of this function is very  slow because it has to scan codex entries for distance. Please do not execute frequently.
 
 ## parameters
 
 * cmdr (the commander name to lookup)
-* system (The name of the reference system)
+* system (The name of the reference system if x,y,z is available use that instead)
 * x,y,z (The coordinates of the reference system)
 
 ## example
 
-[CMDR LCU No Fool Like One from Sol](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/next?cmdr=LCU%20No%20Fool%20Like%20One&system=Sol)
+* [CMDR LCU No Fool Like One from Syriae Thua HQ-E c25-0](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/next?cmdr=LCU%20No%20Fool%20Like%20One&system=Syriae%20Thua%20HQ-E%20c25-0)
+* [CMDR LCU No Fool Like One from 0,0,0](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/next?cmdr=LCU%20No%20Fool%20Like%20One&x=0&y=0&z=0)
 
 # challenge/status
 
