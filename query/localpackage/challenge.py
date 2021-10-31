@@ -43,8 +43,10 @@ def challenge_next(request):
         return {"error": "cant find source system"}
 
     sql = """
-        select system,english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
-        select entryid,name_localised,system,cast(x as char) x,cast(y as char) y,cast(z as char) z from codexreport where cmdrName != 'EDSM User' and  entryid in (
+       select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance 
+        from (
+        select entryid,system,cast(x as char) x,cast(y as char) y,cast(z as char) z 
+        from codex_systems where  entryid in (
         select entryid from codex_name_ref cnr where hud_category not in ('None') and not exists
         (select 1 from codexreport cr where cmdrname = %s and cnr.entryid = cr.entryid)
         ) order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
