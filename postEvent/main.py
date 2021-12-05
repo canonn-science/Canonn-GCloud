@@ -1321,9 +1321,10 @@ def entrywrap(request):
 
             cmdr = row.get("cmdrName")
             events = get_events(row.get("rawEvent"), row.get("rawEvents"))
+            banned = ("BETA" in cmdr)
+            notbeta = (not gs.get("isBeta") or gs.get("isBeta") == "N")
 
-            logging.debug(gs.get("isBeta"))
-            if not gs.get("isBeta") or gs.get("isBeta") == "N":
+            if notbeta and not banned:
                 for event in events:
 
                     buySuit(gs, event, cmdr)
