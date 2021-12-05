@@ -342,7 +342,7 @@ def insertCodex(request_args):
         cursor.execute(stmt, (entryid))
         if cursor.rowcount == 1:
             canonnsearch = "https://canonn.science/?s="
-            codexsearch = "https://tools.canonn.tech/Signals/?system="
+            codexsearch = "https://tools.canonn.tech/signals/?system="
 
             content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
                 cmdrName, name_localised, canonnsearch, quote_plus(
@@ -399,7 +399,7 @@ def insert_codex_systems(request_args):
             cursor.execute(stmt, (system, x, y, z, entryid))
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
-                codexsearch = "https://tools.canonn.tech/Signals/?system="
+                codexsearch = "https://tools.canonn.tech/signals/?system="
 
                 content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {} {}".format(
                     cmdrName, english_name, canonnsearch, quote_plus(
