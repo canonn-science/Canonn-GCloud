@@ -89,7 +89,10 @@ def gnosis():
 
 @app.route("/biostats/<entryid>")
 def get_stats_by_id(entryid):
-    return localpackage.codex.get_stats_by_id(entryid)
+    if entryid.isnumeric():
+        return localpackage.codex.get_stats_by_id(entryid)
+    else:
+        return localpackage.codex.get_stats_by_name(entryid)
 
 
 @app.route("/biostats")

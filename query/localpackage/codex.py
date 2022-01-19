@@ -279,6 +279,16 @@ def get_stats_by_id(entryid):
     return jsonify(biostats.get(entryid))
 
 
+def get_stats_by_name(name):
+    retval = {}
+    global biostats
+    get_biostats()
+    for id, entry in biostats.items():
+        if name in entry.get("name"):
+            retval[id] = entry
+    return jsonify(retval)
+
+
 def system_biostats(request):
     global biostats
     global spanshdump
