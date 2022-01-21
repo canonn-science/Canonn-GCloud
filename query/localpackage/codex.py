@@ -79,7 +79,9 @@ def get_spansh_by_id(id64):
     cached = (spanshdump.get("system") and spanshdump.get("system").get(
         "id64") and str(spanshdump.get("system").get("id64")) == str(id64))
 
-    if not cached:
+    # ignore caching as we want latest data
+    # if not cached:
+    if True:
         print("fetching from spansh")
         r = requests.get(
             f"https://spansh.co.uk/api/dump/{id64}")
