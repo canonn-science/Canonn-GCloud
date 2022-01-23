@@ -286,7 +286,7 @@ def get_stats_by_name(name):
     global biostats
     get_biostats()
     for id, entry in biostats.items():
-        if name in entry.get("name"):
+        if name.lower() in entry.get("name").lower():
             retval[id] = entry
     return jsonify(retval)
 
