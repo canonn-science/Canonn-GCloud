@@ -13,6 +13,7 @@ biostats = {}
 spanshdump = {}
 id64list = []
 
+
 # get the id64 for a given system
 
 
@@ -228,21 +229,32 @@ def guess_biology(body):
 
         bodyMatch = (body.get("subType") in species.get("bodies"))
 
-        gravityMatch = (float(species.get("ming")) <= float(
-            body.get("gravity")) <= float(species.get("maxg")))
+        # This wont be needed when we have hud_category in the biostats2 data structure
+        if species.get("hud_category"):
+            if species.get("hud_category") == 'Biology':
+                biology = True
+        else:
+            biology = True
 
-        pressureMatch = (float(species.get("minp") or 0) <= float(
-            (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
+        if bodyMatch and biology:
+            gravityMatch = (float(species.get("ming")) <= float(
+                body.get("gravity")) <= float(species.get("maxg")))
 
-        tempMatch = (float(species.get("mint")) <= float(
-            body.get("surfaceTemperature")) <= float(species.get("maxt")))
+            pressureMatch = (float(species.get("minp") or 0) <= float(
+                (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
 
-        distanceMatch = (float(species.get("mind")) <= float(
-            body.get("distanceToArrival")) <= float(species.get("maxd")))
+            tempMatch = (float(species.get("mint")) <= float(
+                body.get("surfaceTemperature")) <= float(species.get("maxt")))
 
-        if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
+            distanceMatch = (float(species.get("mind")) <= float(
+                body.get("distanceToArrival")) <= float(species.get("maxd")))
 
-            results.append(species.get("name"))
+            if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
+
+                results.append(species.get("name"))
+        # else:
+        #    if (mainstarMatch and regionMatch):
+        #        results.append(species.get("name"))
 
     return results
 
