@@ -193,7 +193,7 @@ def match_materials(body, species):
     return (count == target)
 
 
-def guess_biology(body):
+def guess_biology(body, codex):
     global biostats
     global spanshdump
     system = spanshdump.get("system")
@@ -246,8 +246,13 @@ def guess_biology(body):
                     body.get("distanceToArrival")) <= float(species.get("maxd")))
 
                 if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
-
-                    results.append(species.get("name"))
+                    genus = species.get("name").split(' ')[0]
+                    # print(genus)
+                    #print(get_body_codex(codex, 'Biology', body.get("name")))
+                    ba = get_body_codex(codex, 'Biology', body.get("name"))
+                    if not genus in str(get_body_codex(codex, 'Biology', body.get("name"))):
+                        print(f"using {genus} {ba}")
+                        results.append(species.get("name"))
         # else:
         #    if (mainstarMatch and regionMatch):
         #        results.append(species.get("name"))
@@ -338,7 +343,7 @@ def system_biostats(request):
             if not spanshdump["system"]["bodies"][i].get("signals"):
                 spanshdump["system"]["bodies"][i]["signals"] = {}
 
-            guess = guess_biology(body)
+            guess = guess_biology(body, codex)
             if guess:
                 spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess
 
