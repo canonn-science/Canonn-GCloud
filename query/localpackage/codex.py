@@ -209,49 +209,45 @@ def guess_biology(body):
     for key in biostats.keys():
         species = biostats.get(key)
 
-        odyssey = (species.get("platform") == 'odyssey')
+        if species.get("hud_category") == 'Biology':
 
-        # don't matcvh requins on odyssey bios
-        regionMatch = (odyssey or (species.get("regions")
-                                   and region_name in species.get("regions")))
+            odyssey = (species.get("platform") == 'odyssey')
 
-        parentMatch = (parentType in species.get("localStars"))
-        # materials is highly dependednt on species
-        materialsMatch = match_materials(body, species)
+            # don't matcvh requins on odyssey bios
+            regionMatch = (odyssey or (species.get("regions")
+                                       and region_name in species.get("regions")))
 
-        volcanismMatch = (
-            (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
+            parentMatch = (parentType in species.get("localStars"))
+            # materials is highly dependednt on species
+            materialsMatch = match_materials(body, species)
 
-        atmosphereTypeMatch = (
-            (body.get("atmosphereType") or "No atmosphere") in species.get("atmosphereType"))
+            volcanismMatch = (
+                (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
 
-        mainstarMatch = (get_mainstar_type() in species.get("primaryStars"))
+            atmosphereTypeMatch = (
+                (body.get("atmosphereType") or "No atmosphere") in species.get("atmosphereType"))
 
-        bodyMatch = (body.get("subType") in species.get("bodies"))
+            mainstarMatch = (get_mainstar_type()
+                             in species.get("primaryStars"))
 
-        # This wont be needed when we have hud_category in the biostats2 data structure
-        if species.get("hud_category"):
-            if species.get("hud_category") == 'Biology':
-                biology = True
-        else:
-            biology = True
+            bodyMatch = (body.get("subType") in species.get("bodies"))
 
-        if bodyMatch and biology:
-            gravityMatch = (float(species.get("ming")) <= float(
-                body.get("gravity")) <= float(species.get("maxg")))
+            if bodyMatch and species.get("ming"):
+                gravityMatch = (float(species.get("ming")) <= float(
+                    body.get("gravity")) <= float(species.get("maxg")))
 
-            pressureMatch = (float(species.get("minp") or 0) <= float(
-                (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
+                pressureMatch = (float(species.get("minp") or 0) <= float(
+                    (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
 
-            tempMatch = (float(species.get("mint")) <= float(
-                body.get("surfaceTemperature")) <= float(species.get("maxt")))
+                tempMatch = (float(species.get("mint")) <= float(
+                    body.get("surfaceTemperature")) <= float(species.get("maxt")))
 
-            distanceMatch = (float(species.get("mind")) <= float(
-                body.get("distanceToArrival")) <= float(species.get("maxd")))
+                distanceMatch = (float(species.get("mind")) <= float(
+                    body.get("distanceToArrival")) <= float(species.get("maxd")))
 
-            if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
+                if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
 
-                results.append(species.get("name"))
+                    results.append(species.get("name"))
         # else:
         #    if (mainstarMatch and regionMatch):
         #        results.append(species.get("name"))
