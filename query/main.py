@@ -11,6 +11,7 @@ import localpackage.codex
 import localpackage.poidata
 import localpackage.gnosis
 import localpackage.thargoids
+import localpackage.regionsvg
 import json
 import requests
 from math import sqrt
@@ -85,6 +86,11 @@ def nearest_codex():
 @app.route("/gnosis")
 def gnosis():
     return localpackage.gnosis.entry_point(request)
+
+
+@app.route("/region/<regions>/<size>")
+def region_svg(regions, size):
+    return localpackage.regionsvg.region_svg(regions, size)
 
 
 @app.route("/biostats/<entryid>")
