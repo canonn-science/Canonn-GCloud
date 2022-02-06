@@ -229,9 +229,13 @@ def challenge_svg(request):
             for name in data.get(group).get("types_missing"):
                 c += 1
                 titles["I"+str(c)] = {"name": name, "class": "missing"}
+    maxcol = trunc(sqrt(c))
+    width = maxcol*50
+    height = maxcol*50+100
 
+    svg_start = f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}px\" height=\"{height}px\" viewBox=\"0 0 {width} {height}\" style=\"background-color: black\" >"
     svg_header = """
-        <svg xmlns="http://www.w3.org/2000/svg" width="1000px" height="1000px" viewBox="0 0 2048 2048" style="background-color: black" >
+        
            <style>
                 .description { font: italic 40px serif; fill: darkorange; }
                 .missing {
@@ -308,7 +312,8 @@ def challenge_svg(request):
             counter = 0
     # print(titles["I1"])
     svg_trailer = "</svg>"
-    svg = svg_header + svg_struct + script_end + svg_rects + svg_text + svg_trailer
+    svg = svg_start + svg_header + svg_struct + \
+        script_end + svg_rects + svg_text + svg_trailer
 
     return flask.Response(svg, mimetype='image/svg+xml')
 
