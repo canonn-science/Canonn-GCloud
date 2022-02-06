@@ -56,6 +56,11 @@ def challenge_next():
     return localpackage.challenge.challenge_next(request)
 
 
+@app.route("/challenge/svg")
+def challenge_svg():
+    return localpackage.challenge.challenge_svg(request)
+
+
 @app.route("/challenge/fastest_scans")
 def challenge_fastest_scans():
     return localpackage.challenge.fastest_scans(request)

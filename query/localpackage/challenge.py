@@ -6,6 +6,8 @@ from pymysql.err import OperationalError
 import requests
 import json
 from flask import request, jsonify
+import flask
+from math import sqrt, trunc
 
 
 def getCoordinates(system):
@@ -208,6 +210,107 @@ def challenge_status(request):
     res = enrich_data(rg)
 
     return res
+
+
+def challenge_svg(request):
+    # maybe I should tailor a query but I'll just reuse what we have got.
+    data = challenge_status(request)
+
+    titles = {}
+    c = 0
+    for group in data.keys():
+        found = data.get(group).get("types_found")
+        #print(f"group {found}")
+        if data.get(group).get("types_available"):
+            for name in data.get(group).get("types_found"):
+                c += 1
+                titles["I"+str(c)] = {"name": name, "class": "found"}
+                # print(titles["I"+str(c)])
+            for name in data.get(group).get("types_missing"):
+                c += 1
+                titles["I"+str(c)] = {"name": name, "class": "missing"}
+
+    svg_header = """
+        <svg xmlns="http://www.w3.org/2000/svg" width="1000px" height="1000px" viewBox="0 0 2048 2048" style="background-color: black" >
+           <style>
+                .description { font: italic 40px serif; fill: darkorange; }
+                .missing {
+                    stroke: orange;
+                    stroke-width: 0.5px;
+                    fill: darkorange;
+                    fill-opacity: 10%;
+                }
+
+                .found {
+                    stroke: orange;
+                    stroke-width: 0.5px;
+                    fill: darkorange;
+                    fill-opacity: 30%;
+                }
+
+                .missing:hover {
+                    stroke: white;
+                    fill: red;
+                    fill-opacity: 50%;
+                }
+
+                .found:hover {
+                    stroke: white;
+                    fill: red;
+                    fill-opacity: 50%;
+                }
+                
+
+            </style>
+            <script>
+              // <![CDATA[
+                window.addEventListener('DOMContentLoaded', () => {
+                    var items={
+        """
+    svg_struct = ""
+    for id in titles.keys():
+        print(titles.get(id))
+        idstr = titles.get(id)
+        svg_struct = svg_struct + "\n" + '"'+id+'": '+str(idstr)+",\n"
+    script_end = """
+                       
+                    }  
+                    
+                    Object.keys(items).map(function (keyid) {
+                        document.querySelector('#'+keyid).addEventListener('mouseover', (e) => {
+                            var wordy  = document.querySelector('text');
+                            wordy.textContent = items[e.target.id]["name"]+" "+items[e.target.id]["class"];
+                        });
+                    });
+                })
+                // ]]>
+                </script>
+
+        """
+    svg_rects = ""
+    svg_text = '<text id="lower" x="10" y="50" dy=".35em" class = "description" text-anchor="left">Hover to see the codex name</text>'
+
+    x = 0
+    y = 100
+    counter = 0
+    maxcol = trunc(sqrt(c))
+    for id in titles.keys():
+        rectclass = titles.get(id).get("class")
+        svg_rects = svg_rects + '<rect id="'+id + \
+            '" x="'+str(x) + \
+            '" width="50" y="'+str(y)+'" height="50" class="' + \
+            rectclass+'" rx="3" ry="3"></rect>'
+        x = x+50
+        counter += 1
+        if counter == maxcol:
+            x = 0
+            y = y+50
+            counter = 0
+    # print(titles["I1"])
+    svg_trailer = "</svg>"
+    svg = svg_header + svg_struct + script_end + svg_rects + svg_text + svg_trailer
+
+    return flask.Response(svg, mimetype='image/svg+xml')
 
 
 def speed_challenge(request):
