@@ -269,7 +269,7 @@ def challenge_svg(request):
         """
     svg_struct = ""
     for id in titles.keys():
-        print(titles.get(id))
+
         idstr = titles.get(id)
         svg_struct = svg_struct + "\n" + '"'+id+'": '+str(idstr)+",\n"
     script_end = """
