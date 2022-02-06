@@ -20,8 +20,6 @@ app = current_app
 CORS(app)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-biodata = {}
-
 
 @app.route("/getSystemPoi")
 def getSystemPoi():
@@ -103,12 +101,7 @@ def get_stats_by_id(entryid):
 
 @app.route("/biostats")
 def biostats():
-    global biodata
-    if not biodata:
-        r = requests.get(
-            "https://drive.google.com/uc?export=download&id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
-        biodata = r.json()
-    return jsonify(biodata)
+    return localpackage.codex.biostats_cache(True)
 
 
 @app.route("/survey/temperature")

@@ -63,15 +63,21 @@ def findRegion64(id):
         return 0, 'Unknown'
 
 
-def get_biostats():
+def get_biostats(cache=True):
     global biostats
-    if not biostats:
+    if not biostats or not cache:
         print("fetching stats")
         r = requests.get(
             "https://drive.google.com/uc?id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
         biostats = r.json()
     else:
         print("stats cached")
+
+
+def biostats_cache(cache):
+    global biostats
+    get_biostats(cache)
+    return jsonify(biostats)
 
 
 def get_spansh_by_id(id64):
