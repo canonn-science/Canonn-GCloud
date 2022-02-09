@@ -230,8 +230,8 @@ def challenge_svg(request):
                 c += 1
                 titles["I"+str(c)] = {"name": name, "class": "missing"}
     maxcol = trunc(sqrt(c))
-    width = maxcol*50
-    height = maxcol*50+100
+    width = maxcol*21
+    height = maxcol*21+100
 
     svg_start = f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}px\" height=\"{height}px\" viewBox=\"0 0 {width} {height}\" style=\"background-color: black\" >"
     svg_header = """
@@ -286,6 +286,12 @@ def challenge_svg(request):
                             wordy.textContent = items[e.target.id]["name"]+" "+items[e.target.id]["class"];
                         });
                     });
+                    Object.keys(items).map(function (keyid) {
+                        document.querySelector('#'+keyid).addEventListener('click', (e) => {
+                            window.open("https://canonn-science.github.io/bioforge/?entryid="+items[e.target.id]["name"],"_blank");
+                            console.log('onclick')
+                        });
+                    });
                 })
                 // ]]>
                 </script>
@@ -302,13 +308,13 @@ def challenge_svg(request):
         rectclass = titles.get(id).get("class")
         svg_rects = svg_rects + '<rect id="'+id + \
             '" x="'+str(x) + \
-            '" width="50" y="'+str(y)+'" height="50" class="' + \
+            '" width="19" y="'+str(y)+'" height="19" class="' + \
             rectclass+'" rx="3" ry="3"></rect>'
-        x = x+50
+        x = x+21
         counter += 1
         if counter == maxcol:
             x = 0
-            y = y+50
+            y = y+21
             counter = 0
     # print(titles["I1"])
     svg_trailer = "</svg>"
