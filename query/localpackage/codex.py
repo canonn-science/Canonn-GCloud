@@ -307,7 +307,7 @@ def get_stats_by_name(names):
     allnames = names.split(",")
     for name in allnames:
         for id, entry in biostats.items():
-            if name.lower() in entry.get("name").lower():
+            if name.lower().strip() in entry.get("name").lower():
                 retval[id] = entry
     return jsonify(retval)
 
