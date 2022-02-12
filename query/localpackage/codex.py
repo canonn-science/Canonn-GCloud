@@ -300,13 +300,15 @@ def get_stats_by_id(entryid):
     return jsonify(biostats.get(entryid))
 
 
-def get_stats_by_name(name):
+def get_stats_by_name(names):
     retval = {}
     global biostats
     get_biostats()
-    for id, entry in biostats.items():
-        if name.lower() in entry.get("name").lower():
-            retval[id] = entry
+    allnames = names.split(",")
+    for name in allnames:
+        for id, entry in biostats.items():
+            if name.lower() in entry.get("name").lower():
+                retval[id] = entry
     return jsonify(retval)
 
 
