@@ -198,12 +198,63 @@ def match_materials(body, species):
 
     return (count == target)
 
+def species_star(codex,system):
+    try:
+        h1,h1,genus,species,star,t=codex.get("fdevname").split("_")
+    except:
+        # we don't know so let it got
+        #print(f"exception: {codex}")
+        return True
+
+    stars={
+        "O": ["O (Blue-White) Star"],
+        "B": ["B (Blue-White) Star"],
+        "A": ["A (Blue-White super giant) Star","A (Blue-White) Star"],
+        "F": ["F (White) Star","F (White super giant) Star"],
+        "G": ["G (White-Yellow super giant) Star","G (White-Yellow) Star"],
+        "K": ["K (Yellow-Orange giant) Star","K (Yellow-Orange) Star"],
+        "M": ["M (Red dwarf) Star","M (Red super giant) Star"], 
+        "L": ["L (Brown dwarf) Star"],
+        "T": ["T (Brown dwarf) Star"],
+        "TTS": ["T Tauri Star"],
+        "Y": ["Y (Brown dwarf) Star"],
+        "W": ["Wolf-Rayet Star"],
+        "D": [
+            "White Dwarf (D) Star",
+            "White Dwarf (DA) Star",
+            "White Dwarf (DAB) Star",
+            "White Dwarf (DAV) Star",
+            "White Dwarf (DAZ) Star",
+            "White Dwarf (DB) Star",
+            "White Dwarf (DBV) Star",
+            "White Dwarf (DC) Star",
+            "White Dwarf (DCV) Star",
+            "White Dwarf (DQ) Star"
+        ],
+        "N": ["Neutron Star"],
+        "Ae": ["Herbig Ae/Be Star"]
+    }
+    # if star is defined we have a star class
+    if star:
+        subTypes=stars.get(star)
+        for body in system.get("bodies"):
+            if body.get("subType") in subTypes:
+                return True
+    else:
+        # we don't know so let it through
+        #print(f"lookup failed: {codex}")
+        True
+    #We didn't find the right starclass
+    return False
+        
 
 def guess_biology(body, codex):
     global biostats
     global spanshdump
     system = spanshdump.get("system")
     results = []
+
+    
 
     region, region_name = findRegion64(system.get("id64"))
 
@@ -216,6 +267,8 @@ def guess_biology(body, codex):
         species = biostats.get(key)
 
         if species.get("hud_category") == 'Biology':
+
+            hasSpeciesStar = species_star(species,system)
 
             odyssey = (species.get("platform") == 'odyssey')
 
@@ -251,14 +304,14 @@ def guess_biology(body, codex):
                 distanceMatch = (float(species.get("mind")) <= float(
                     body.get("distanceToArrival")) <= float(species.get("maxd")))
 
-                if (mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
+                if (hasSpeciesStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
                     genus = species.get("name").split(' ')[0]
                     # print(genus)
                     #print(get_body_codex(codex, 'Biology', body.get("name")))
                     ba = get_body_codex(codex, 'Biology', body.get("name"))
-                    if not genus in str(get_body_codex(codex, 'Biology', body.get("name"))):
-                        print(f"using {genus} {ba}")
-                        results.append(species.get("name"))
+                    #if not genus in str(get_body_codex(codex, 'Biology', body.get("name"))):
+                    #    print(f"using {genus} {ba}")
+                    results.append(species.get("name"))
         # else:
         #    if (mainstarMatch and regionMatch):
         #        results.append(species.get("name"))
