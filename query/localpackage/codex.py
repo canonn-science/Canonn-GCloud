@@ -93,6 +93,11 @@ def get_spansh_by_id(id64):
         r = requests.get(
             f"https://spansh.co.uk/api/dump/{id64}")
         spanshdump = r.json()
+        if spanshdump.get("system"):
+            if spanshdump.get("system").get("factions"):
+                del spanshdump["system"]["factions"]
+            if spanshdump.get("system").get("stations"):
+                del spanshdump["system"]["stations"]
 
         # check that id64 matches
         cached = (spanshdump.get("system") and spanshdump.get("system").get(
