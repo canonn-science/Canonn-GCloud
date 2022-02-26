@@ -207,7 +207,7 @@ def species_star(codex, system):
         # we don't know so let it got
        # print(f"exception: {fdevname}")
         return True
-    print("split ok")
+
     stars = {
         "O": ["O (Blue-White) Star"],
         "B": ["B (Blue-White) Star"],
