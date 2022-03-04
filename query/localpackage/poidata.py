@@ -9,7 +9,7 @@ import json
 from flask import jsonify
 
 
-def codex_reports(cmdr,system, odyssey):
+def codex_reports(cmdr, system, odyssey):
     setup_sql_conn()
 
     if odyssey == 'N':
@@ -74,7 +74,8 @@ def codex_reports(cmdr,system, odyssey):
     """
     with get_cursor() as cursor:
 
-        cursor.execute(sql, (cmdr,odycheck, odycheck, system, odycheck, odycheck, odycheck, odycheck))
+        cursor.execute(sql, (cmdr, odycheck, odycheck, system,
+                       odycheck, odycheck, odycheck, odycheck))
         cr = cursor.fetchall()
 
     return cr
@@ -84,8 +85,10 @@ def saa_signals(system, odyssey):
     setup_sql_conn()
     if odyssey == 'Y':
         count = "species"
+        alt = "sites"
     else:
         count = "sites"
+        alt = "species"
     sql = f"""
         select 
             distinct 
@@ -108,9 +111,9 @@ def saa_signals(system, odyssey):
                 when type like '%%Human%%' then 'Human' 
                 else 'Unknown' 
             end as english_name,
-            {count} count 
+            ifnull({count},{alt}) count 
         from SAASignals where system = %s
-        and {count} is not null
+        and ifnull({count},{alt}) is not null
     """
     with get_cursor() as cursor:
 
@@ -180,7 +183,7 @@ def getSystemPoi(request):
         "odyssey": odyssey
     }
 
-    codex = codex_reports(cmdr,system, odyssey)
+    codex = codex_reports(cmdr, system, odyssey)
     saa = saa_signals(system, odyssey)
     cpoi = cmdr_poi(cmdr, system, odyssey)
     fss = fss_events(system, odyssey)
