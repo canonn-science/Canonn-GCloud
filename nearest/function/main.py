@@ -1,245 +1,238 @@
 from flask import current_app
 from flask import request, jsonify
 from flask_cors import CORS
-
-
-import localpackage.dbutils
-from localpackage.dbutils import setup_sql_conn
-from localpackage.dbutils import get_cursor
-import localpackage.challenge
-import localpackage.codex
-import localpackage.poidata
-import localpackage.gnosis
-import localpackage.thargoids
 import json
 import requests
+import zipfile
 from math import sqrt
 
 app = current_app
 CORS(app)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-biodata = {}
-
-
-@app.route("/getSystemPoi")
-def getSystemPoi():
-    return localpackage.poidata.getSystemPoi(request)
+systems_idx = []
 
 
-@app.route("/codex/prices")
-def codex_prices():
-    return localpackage.codex.species_prices(request)
+def load_data():
+    global stations
+    global systems
+    global systems_idx
+
+    #print("Loading data")
+
+    if not systems_idx:
+        systems_idx = json.loads(zipfile.ZipFile(
+            "data.zip").open("systems_idx.json").read())
 
 
-@app.route("/codex/systems")
-def codex_systems():
-    return localpackage.codex.codex_systems(request)
+# can we load this at build time?
+load_data()
+
+"""
+Get the nearest system in <state>
+"""
 
 
-@app.route("/codex/capi")
-def codex_capi():
-    return localpackage.codex.capi_systems(request)
+""" @app.route("/state/<state>")
+def nearest_state(state):
+    load_data()
+    global stations
+    global systems
+    global systems_idx
+
+    # print(state)
+    x, y, z = get_param_coords(request)
+
+    distance = 999999999999999999999
+    result = {}
+
+    for system_name, system in systems_idx.items():
+
+        for station in system.get("stations"):
+            if station and system and state in station.get("states"):
+                a, b, c = get_system_coords(system)
+
+                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
+                if cdist <= distance:
+                    distance = cdist
+                    result = {"system": system_name,
+                              "distance": round(sqrt(cdist), 0)}
+                # we can exit if we are close
+                if distance == 0:
+                    return result
+    if result:
+        return result
+
+    # don't return anything if we get here
+    return "Couldn't find anything" """
 
 
-@app.route("/codex/odyssey/subclass")
-def codex_odyssey_subclass():
-    return localpackage.codex.odyssey_subclass(request)
+""" @app.route("/module/<module>/<ship>")
+def nearest_module(module, ship):
+    load_data()
+    global stations
+    global systems
+    global systems_idx
+
+    # print(state)
+    x, y, z = get_param_coords(request)
+
+    distance = 999999999999999999999
+    result = {}
+
+    for system_name, system in systems_idx.items():
+
+        for station in system.get("stations"):
+            print(module)
+            if station and system and station.get("selling_modules") and int(module) in station.get("selling_modules") and padcheck(ship, station):
+                a, b, c = get_system_coords(system)
+
+                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
+                if cdist <= distance:
+                    distance = cdist
+                    result = {"system": system_name,
+                              "distance": round(sqrt(cdist), 0)}
+                # we can exit if we are close
+                if distance == 0:
+                    return result
+    if result:
+        return result
+
+    # don't return anything if we get here
+    return "Couldn't find anything"
+ """
+
+"""
+
+Given a system name this will return all data for that system
+eg system and stations
+
+"""
 
 
-@app.route("/codex/ref")
-def codex_ref():
-    return localpackage.codex.codex_name_ref(request)
+""" @app.route("/current")
+def current_system():
+    global stations
+    global systems
+    global systems_idx
 
-
-@app.route("/challenge/next")
-def challenge_next():
-    return localpackage.challenge.challenge_next(request)
-
-
-@app.route("/challenge/fastest_scans")
-def challenge_fastest_scans():
-    return localpackage.challenge.fastest_scans(request)
-
-
-@app.route("/challenge/speed")
-def challenge_speed():
-    return localpackage.challenge.speed_challenge(request)
-
-
-@app.route("/challenge/status")
-def challenge_status():
-    return localpackage.challenge.challenge_status(request)
-
-
-# @app.route("/nearest/codex/")
-# def __codex():
-#    return localpackage.challenge.nearest_codex(request)
-
-
-@app.route("/nearest/codex")
-def nearest_codex():
-    return localpackage.challenge.nearest_codex(request)
-
-
-@app.route("/gnosis")
-def gnosis():
-    return localpackage.gnosis.entry_point(request)
-
-
-@app.route("/biostats/<entryid>")
-def get_stats_by_id(entryid):
-    return localpackage.codex.get_stats_by_id(entryid)
-
-
-@app.route("/biostats")
-def biostats():
-    global biodata
-    if not biodata:
-        r = requests.get(
-            "https://drive.google.com/uc?export=download&id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
-        biodata = r.json()
-    return jsonify(biodata)
-
-
-@app.route("/survey/temperature")
-def temperature():
-    setup_sql_conn()
-
-    with get_cursor() as cursor:
-        sql = """
-            select 
-                cmdr,
-                system,
-                body,
-                cast(latitude as CHAR) as latitude,
-                cast(longitude as CHAR) as longitude,
-                comment,
-                cast(raw_status->"$.Temperature" as CHAR) as temperature, 
-                cast(raw_status->"$.Gravity" as CHAR) as gravity 
-            from status_reports where raw_status->"$.Temperature" is not null
-        """
-        cursor.execute(sql, ())
-        r = cursor.fetchall()
-        cursor.close()
-
-    return jsonify(r)
-
-
-@app.route("/thargoid/nhss/systems")
-def get_nhss_systems():
-    return localpackage.thargoids.get_nhss_systems(request)
-
-
-@app.route("/thargoid/nhss/reports")
-def get_nhss_reports():
-    return localpackage.thargoids.get_nhss_reports(request)
-
-
-@app.route("/thargoid/hyperdiction/reports")
-def get_hd_reports():
-    return localpackage.thargoids.get_hyperdiction_detections(request)
-
-
-@app.route("/codex/biostats")
-def system_biostats():
-    return localpackage.codex.system_biostats(request)
-
-
-@app.route("/carrier/<serial>")
-def get_carrier(serial):
-    setup_sql_conn()
-
-    with get_cursor() as cursor:
-        sql = """
-            select 
-            serial_no,
-            name,
-            cast(jump_dt as char) as jump_dt,
-            current_system,
-            cast(current_x as char) as current_x,
-            cast(current_y as char) as current_y,
-            cast(current_z as char) as current_z,	
-            previous_system,
-            cast(previous_x as char) as previous_x,
-            cast(previous_y as char) as previous_y,
-            cast(previous_z as char) as previous_z,
-            cast(last_jump_dt as char) as last_jump_dt,
-            cast(services as char) service,
-            case when current_system = previous_system then 'Y' else 'N' end as static,
-            case when date(jump_dt) = date(now()) then 'Y' else 'N' end as current
-            from fleet_carriers
-            where serial_no = %s
-        """
-        cursor.execute(sql, (serial))
-        r = cursor.fetchone()
-        cursor.close()
-        if r:
-            r["service"] = json.loads(r.get("service"))
-
-    return jsonify(r)
-
-
-@app.route("/raw")
-def raw_data():
-    setup_sql_conn()
-
-    evt = request.args.get("event")
     system = request.args.get("system")
 
-    offset = request.args.get("offset", 0)
-    limit = request.args.get("limit", 1000)
-    if request.args.get("_start"):
-        offset = request.args.get("_start")
-    if request.args.get("_limit"):
-        limit = request.args.get("_limit")
+    load_data()
+    current = request.args.get("system")
+    system = systems_idx.get(current)
 
-    params = []
-    clause = ""
+    if current and system:
+        id = system.get("id")
 
-    if evt:
-        params.append(evt)
-        clause = "and event = %s"
+        result = json.loads(zipfile.ZipFile(
+            "data.zip").open(f"{id}.json").read())
+        return result
+    return request.args
 
-    if system:
-        params.append(system)
-        clause = f"{clause} and systemName = %s "
+"""
 
-    params.append(int(offset))
-    params.append(int(limit))
 
-    raw = []
+def padcheck(ship, station):
+    pad = station.get("pad")
+    horizons = (request.args.get("horizons")
+                and request.args.get("horizons") == 'y')
+    odyssey = (station.get("type") == "Settlement")
+    if horizons and odyssey:
+        return False
 
-    with get_cursor() as cursor:
-        sql = f"""
-            select s.systemName,s.bodyName,cast(s.x as char) x,cast(s.y as char) y,cast(s.z as char) z,raw_event
-            from raw_events s
-            where 1 = 1
-            {clause}
-            order by systemName
-            limit %s,%s
-        """
-        cursor.execute(sql, (params))
-        r = cursor.fetchall()
-        for row in r:
-            raw.append({
-                "system": row.get("systemName"),
-                "body": row.get("bodyName"),
-                "x": row.get("x"),
-                "y": row.get("y"),
-                "z": row.get("z"),
-                "raw_event": json.loads(row.get("raw_event"))
-            }
-            )
-        cursor.close()
+    if ship == "S":
+        return True
+    if ship == "M" and pad in ("M", "L"):
+        return True
+    if ship == "L" and pad == "L":
+        return True
+    return False
 
-    return jsonify(raw)
+
+"""
+a little helper to get coords out of the params
+"""
+
+
+def get_param_coords(request):
+
+    x = float(request.args.get("x").replace(',', '.'))
+    y = float(request.args.get("y").replace(',', '.'))
+    z = float(request.args.get("z").replace(',', '.'))
+    return x, y, z
+
+
+def get_system_coords(system):
+    x = float(system.get("x"))
+    y = float(system.get("y"))
+    z = float(system.get("z"))
+    return x, y, z
+
+
+"""
+The original function looked for a boolean has_key 
+now we are just looking for presence in services
+"""
+
+
+def closest_station(key, system, ship):
+    distance = 999999999999999999999
+    result = ""
+
+    stations = system.get("stations")
+    for station in stations:
+        if key in station.get("services") and padcheck(ship, station) and station.get("distance") < distance:
+            result = station.get("name")
+            distance = station.get("distance")
+    return result
+
+
+@app.route("/nearest/<key>/<ship>")
+def nearest(key, ship):
+    load_data()
+    global stations
+    global systems
+    global systems_idx
+
+    x, y, z = get_param_coords(request)
+
+    print(f"{key} {ship}")
+
+    has_key = f"has_{key}"
+
+    #
+    distance = 999999999999999999999
+    result = {}
+
+    for system in systems_idx:
+
+        for station in system.get("stations"):
+            # print(station)
+            if station and system and key in station.get("services") and padcheck(ship, station):
+                a, b, c = get_system_coords(system)
+
+                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
+                if cdist <= distance:
+                    distance = cdist
+                    result = {"system": system.get("name"),
+                              "station": closest_station(key, system, ship),
+                              "distance": round(sqrt(cdist), 0)}
+                # we can exit if we are close
+                if distance == 0:
+                    return result
+    if result:
+        return result
+
+    # don't return anything if we get here
+    return "Couldn't find anything"
 
 
 @app.route("/")
 def root():
-    return ""
+    load_data()
+    return "Data Loaded"
 
 
 def payload(request):
+    load_data()
     return "what happen"

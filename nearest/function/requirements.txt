@@ -1,0 +1,8 @@
+# Function dependencies, for example:
+# package>=version
+flask
+click<8.0.0
+pymysql>=0.9
+google.cloud.logging
+flask_cors
+pytz
