@@ -170,6 +170,11 @@ def get_services(station):
             retval.append("interstellar_factors")
         if service == "Restock":
             retval.append("rearm")
+        if service == "Frontline Solutions":
+            retval.append("frontline")
+        if service == "Apex Interstellar":
+            retval.append("apex")
+
     # print(services,flush=True)
     services.update(retval)
     return retval
