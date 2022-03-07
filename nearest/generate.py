@@ -174,6 +174,8 @@ def get_services(station):
             retval.append("frontline")
         if service == "Apex Interstellar":
             retval.append("apex")
+        if service == "Universal Cartographics":
+            retval.append("cartographics")
 
     # print(services,flush=True)
     services.update(retval)

@@ -187,8 +187,23 @@ def closest_station(key, system, ship):
     return result
 
 
+"""
+Legacy version of the route replaces with services
+"""
+
+
 @app.route("/nearest/<key>/<ship>")
-def nearest(key, ship):
+def legacy(key, ship):
+    return services(key, ship)
+
+
+"""
+Find the nearest services
+"""
+
+
+@app.route("/services/<key>/<ship>")
+def services(key, ship):
     load_data()
     global stations
     global systems
