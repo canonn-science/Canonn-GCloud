@@ -11,6 +11,7 @@ import gzip
 services = set()
 systems_idx = []
 types = set()
+dssa = {}
 
 """
 grab a file from a url and save it to a local file
@@ -71,6 +72,19 @@ def syncCheck(file_path):
         print("HTTP Error: " + str(e.fp.read()))
 
     return False
+
+
+def load_dssa():
+    global dssa
+
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSVO1H5hsLmEIklsqlV-G3kL5l8mx2eM-JheRIX89G2hZ0mCCfEDUofUsLMy5o6VzeWNVYuVXz0Qk4g/pub?gid=0&single=true&output=tsv"
+
+    r = requests.get(url, stream=True)
+
+    for line in r.text.split("\n"):
+        id, name = line.split("\t", 1)
+        dssa[id] = name
+    return dssa
 
 
 def load_data():
@@ -183,10 +197,16 @@ def get_services(station):
 
 
 def isStation(station):
+    global dssa
+    if dssa.get(station.get("name")):
+        # this is a DSSA Carrier we can treat it as a station
+        return True
+
     carrier = (station.get("controllingFaction") == "FleetCarrier")
     carrier = (carrier and station.get(
         "primaryEconomy") == "Private Enterprise")
     carrier = (carrier and station.get("government") == "Private Ownership")
+
     return not carrier
 
 
@@ -202,6 +222,7 @@ def padsize(v):
 
 def populate(record):
     global types
+    global dssa
     system = {}
 
     # print(record)
@@ -218,9 +239,15 @@ def populate(record):
             if isStation(station):
                 # print(json.dumps(station,indent=4))
                 # quit()
+
+                name = station.get("name")
+                if dssa.get(name):
+                    name = name + " " + dssa.get(name).strip()
+                    print(name)
+
                 system["stations"].append(
                     {
-                        "name": station.get("name"),
+                        "name": name,
                         "distance": station.get("distanceToArrival"),
                         "services": get_services(station),
                         "pad": padsize(station.get("landingPads"))
@@ -242,17 +269,21 @@ def store_data():
 
 
 stations_updated = syncCheck("galaxy_stations.json.gz")
-stations_updated = True
+
 if stations_updated:
     print("stations has been updated")
-    load_data()
-    store_data()
-    print(json.dumps(list(services), indent=4))
-    print(json.dumps(list(types), indent=4))
-    exit(True)
-else:
+
+load_dssa()
+load_data()
+store_data()
+print(json.dumps(list(services), indent=4))
+print(json.dumps(list(types), indent=4))
+
+if not stations_updated:
     print("nothing to see here")
     exit(False)
+
+exit(True)
 
 
 # load_data()

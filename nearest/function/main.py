@@ -10,6 +10,7 @@ app = current_app
 CORS(app)
 
 systems_idx = []
+DSSA = []
 
 
 def load_data():
@@ -209,11 +210,13 @@ def services(key, ship):
     global systems
     global systems_idx
 
-    x, y, z = get_param_coords(request)
+    print(f"{key} {ship} {request.args}")
 
-    print(f"{key} {ship}")
-
-    has_key = f"has_{key}"
+    try:
+        x, y, z = get_param_coords(request)
+    except:
+        print("coordinate failure")
+        return jsonify({})
 
     #
     distance = 999999999999999999999
@@ -239,7 +242,7 @@ def services(key, ship):
         return result
 
     # don't return anything if we get here
-    return "Couldn't find anything"
+    return jsonify({})
 
 
 @app.route("/")
