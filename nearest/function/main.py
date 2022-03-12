@@ -216,6 +216,8 @@ as the canon plugin will be constructing names
 def getkey(key):
     aliases = {
         "apex": "apex_interstellar",
+        "vista": "vista_genomics",
+        "genomics": "vista_genomics",
         "barkeep": "bartender",
         "barman": "bartender",
         "blackmarket": "black_market",
