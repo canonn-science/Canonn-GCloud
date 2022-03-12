@@ -18,7 +18,7 @@ def load_data():
     global systems
     global systems_idx
 
-    #print("Loading data")
+    # print("Loading data")
 
     if not systems_idx:
         systems_idx = json.loads(zipfile.ZipFile(
@@ -171,7 +171,7 @@ def get_system_coords(system):
 
 
 """
-The original function looked for a boolean has_key 
+The original function looked for a boolean has_key
 now we are just looking for presence in services
 """
 
@@ -198,12 +198,21 @@ def legacy(key, ship):
     return services(key, ship)
 
 
+@app.route("/system/<name>")
+def get_system(name):
+    global systems_idx
+    for system in systems_idx:
+        if system.get("name") == name:
+            return jsonify(system)
+    return jsonify({})
+
+
 """
 Find the nearest services
 """
 
 
-@app.route("/services/<key>/<ship>")
+@ app.route("/services/<key>/<ship>")
 def services(key, ship):
     load_data()
     global stations
@@ -224,20 +233,35 @@ def services(key, ship):
 
     for system in systems_idx:
 
-        for station in system.get("stations"):
-            # print(station)
-            if station and system and key in station.get("services") and padcheck(ship, station):
+        if key.endswith("_allegiance"):
+            if system.get("allegiance") and system.get("allegiance").lower()+"_allegiance" == key:
                 a, b, c = get_system_coords(system)
 
                 cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
                 if cdist <= distance:
                     distance = cdist
                     result = {"system": system.get("name"),
-                              "station": closest_station(key, system, ship),
+                              "station": None,
                               "distance": round(sqrt(cdist), 0)}
                 # we can exit if we are close
                 if distance == 0:
                     return result
+        else:
+            for station in system.get("stations"):
+                # print(station)
+
+                if station and system and key in station.get("services") and padcheck(ship, station):
+                    a, b, c = get_system_coords(system)
+
+                    cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
+                    if cdist <= distance:
+                        distance = cdist
+                        result = {"system": system.get("name"),
+                                  "station": closest_station(key, system, ship),
+                                  "distance": round(sqrt(cdist), 0)}
+                    # we can exit if we are close
+                    if distance == 0:
+                        return result
     if result:
         return result
 
@@ -245,7 +269,7 @@ def services(key, ship):
     return jsonify({})
 
 
-@app.route("/")
+@ app.route("/")
 def root():
     load_data()
     return "Data Loaded"

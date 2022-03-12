@@ -103,7 +103,10 @@ def load_data():
                 except:
                     j = json.loads(line[:-1])
                 s = populate(j)
-                if s.get("stations") and len(s.get("stations")) > 0:
+                has_stations = (s.get("stations")
+                                and len(s.get("stations")) > 0)
+                has_aliens = (s.get("allegiance") in ("Thargoid", "Guardian"))
+                if has_stations or has_aliens:
                     systems_idx.append(s)
 
 
@@ -191,8 +194,15 @@ def get_services(station):
         if service == "Universal Cartographics":
             retval.append("cartographics")
 
+    # we will treat primary economy as a service
+    if station.get("primaryEconomy"):
+        tag = station.get("primaryEconomy").lower().replace(
+            " ", "_").strip()+"_economy"
+        retval.append(tag)
+
     # print(services,flush=True)
     services.update(retval)
+
     return retval
 
 
@@ -232,6 +242,7 @@ def populate(record):
     system["y"] = record.get("coords").get("y")
     system["z"] = record.get("coords").get("z")
     system["stations"] = []
+    system["allegiance"] = record.get("allegiance")
     if record.get("stations"):
         for station in record.get("stations"):
 
@@ -250,6 +261,7 @@ def populate(record):
                         "name": name,
                         "distance": station.get("distanceToArrival"),
                         "services": get_services(station),
+                        "economy": station.get("primaryEconomy"),
                         "pad": padsize(station.get("landingPads"))
                     }
                 )
