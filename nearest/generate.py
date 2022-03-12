@@ -173,26 +173,6 @@ def get_services(station):
         if service in ["Technology Broker", "Material Trader"]:
 
             retval.append(trader(station, service))
-        if service == "Black Market":
-            retval.append("blackmarket")
-        if service == "Fleet Carrier Vendor":
-            retval.append("carrier_vendor")
-        if service == "Market":
-            retval.append("commodities")
-        if service == "Dock":
-            retval.append("docking")
-        if service == "Module Packs":
-            retval.append("carrier_administration")
-        if service == "Facilitator":
-            retval.append("interstellar_factors")
-        if service == "Restock":
-            retval.append("rearm")
-        if service == "Frontline Solutions":
-            retval.append("frontline")
-        if service == "Apex Interstellar":
-            retval.append("apex")
-        if service == "Universal Cartographics":
-            retval.append("cartographics")
 
     # we will treat primary economy as a service
     if station.get("primaryEconomy"):

@@ -208,18 +208,65 @@ def get_system(name):
 
 
 """
+The index uses in game names transformed but we want to recognise variants.
+as the canon plugin will be constructing names
+"""
+
+
+def getkey(key):
+    aliases = {
+        "apex": "apex_interstellar",
+        "barkeep": "bartender",
+        "barman": "bartender",
+        "blackmarket": "black_market",
+        "commodities ": "market",
+        "commodity_market": "market",
+        "frontline": "frontline_solutions",
+        "interstellar_factors": "facilitator",
+        "interstellar": "facilitator",
+        "carrier_vendor": "fleet_carrier_vendor",
+        "commodities": "market",
+        "commodity market": "market",
+        "commodity": "market",
+        "docking": "dock",
+        "carrier_administration": "module_packs",
+        "carrier_admin": "module_packs",
+        "rearm": "restock",
+        "reload": "restock",
+        "cartographics": "universal_cartographics",
+        "tech_broker": "technology_broker",
+        "human_tech_broker": "human_technology_broker",
+        "guardian_tech_broker": "guardian_technology_broker",
+        "human_broker": "human_technology_broker",
+        "guardian_broker": "guardian_technology_broker",
+        "mat_trader": "material_trader",
+        "raw_mat_trader": "raw_material_trader",
+        "encoded_mat_trader": "encoded_material_trader",
+        "manufactured_mat_trader": "manufactured_material_trader",
+        "raw_trader": "raw_material_trader",
+        "encoded_trader": "encoded_material_trader",
+        "manufactured_trader": "manufactured_material_trader",
+    }
+    if aliases.get(key.strip()):
+        return aliases.get(key.strip()).strip()
+    return key
+
+
+"""
 Find the nearest services
 """
 
 
-@ app.route("/services/<key>/<ship>")
-def services(key, ship):
+@ app.route("/services/<keyval>/<ship>")
+def services(keyval, ship):
     load_data()
     global stations
     global systems
     global systems_idx
 
-    print(f"{key} {ship} {request.args}")
+    key = getkey(keyval)
+
+    print(f"{keyval} {key} {ship} {request.args}")
 
     try:
         x, y, z = get_param_coords(request)
