@@ -164,12 +164,16 @@ def trader(station, type):
     print(f"{station_name} {material_trader} {technology_broker} {primary_economy} {secondary_economy}")
 
 
-def get_services(station):
+def get_services(station,system):
     global services
     retval = []
     for service in station.get("services"):
 
         retval.append(service.lower().replace(" ", "_"))
+
+        if service.lower().replace(" ", "_") == "on_dock_mission":
+            print(f"on dock mission,{system.get('name')},{station.get('name')}")
+
         if service in ["Technology Broker", "Material Trader"]:
 
             retval.append(trader(station, service))
@@ -197,7 +201,10 @@ def isStation(station):
         "primaryEconomy") == "Private Enterprise")
     carrier = (carrier and station.get("government") == "Private Ownership")
 
-    return not carrier
+    if carrier:
+        return False
+
+    return True
 
 
 def padsize(v):
@@ -209,6 +216,15 @@ def padsize(v):
 
     return "S"
 
+
+def get_stations(system):
+    stations=[]
+    stations.extend(system.get("stations"))
+    if system.get("bodies"):
+        for body in system.get("bodies"):
+            if body.get("stations"):
+                stations.extend(body.get("stations"))
+    return stations
 
 def populate(record):
     global types
@@ -223,24 +239,32 @@ def populate(record):
     system["z"] = record.get("coords").get("z")
     system["stations"] = []
     system["allegiance"] = record.get("allegiance")
-    if record.get("stations"):
-        for station in record.get("stations"):
+
+    stations=get_stations(record)
+
+    if stations:
+        for station in stations:
+
+            if station.get("name")=="Marshall's Drift":
+                print("Marshalls Drift is here")
 
             types.add(station.get("type"))
             if isStation(station):
                 # print(json.dumps(station,indent=4))
                 # quit()
+                if station.get("name")=="Marshall's Drift":
+                    print("Marshalls Drift is here")
 
                 name = station.get("name")
                 if dssa.get(name):
                     name = name + " " + dssa.get(name).strip()
-                    print(name)
+                    
 
                 system["stations"].append(
                     {
                         "name": name,
                         "distance": station.get("distanceToArrival"),
-                        "services": get_services(station),
+                        "services": get_services(station,system),
                         "economy": station.get("primaryEconomy"),
                         "pad": padsize(station.get("landingPads"))
                     }
