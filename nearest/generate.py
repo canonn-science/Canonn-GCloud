@@ -164,19 +164,22 @@ def trader(station, type):
     print(f"{station_name} {material_trader} {technology_broker} {primary_economy} {secondary_economy}")
 
 
-def get_services(station,system):
+def get_services(station, system):
     global services
     retval = []
     for service in station.get("services"):
+        if service:
+            service_name = service.lower().replace(" ", "_")
 
-        retval.append(service.lower().replace(" ", "_"))
+            retval.append(service_name)
 
-        if service.lower().replace(" ", "_") == "on_dock_mission":
-            print(f"on dock mission,{system.get('name')},{station.get('name')}")
+            if service_name == "on_dock_mission":
+                print(
+                    f"on dock mission,{system.get('name')},{station.get('name')}")
 
-        if service in ["Technology Broker", "Material Trader"]:
+            if service in ["Technology Broker", "Material Trader"]:
 
-            retval.append(trader(station, service))
+                retval.append(trader(station, service))
 
     # we will treat primary economy as a service
     if station.get("primaryEconomy"):
@@ -184,8 +187,17 @@ def get_services(station,system):
             " ", "_").strip()+"_economy"
         retval.append(tag)
 
+    # we will treat allegiance as a name
+    if station.get('allegiance'):
+        tag = station.get('allegiance').lower().replace(
+            " ", "_").strip()+"_station"
+        retval.append(tag)
+    else:
+        retval.append("independent_station")
     # print(services,flush=True)
-    services.update(retval)
+
+    if retval:
+        services.update(retval)
 
     return retval
 
@@ -218,13 +230,14 @@ def padsize(v):
 
 
 def get_stations(system):
-    stations=[]
+    stations = []
     stations.extend(system.get("stations"))
     if system.get("bodies"):
         for body in system.get("bodies"):
             if body.get("stations"):
                 stations.extend(body.get("stations"))
     return stations
+
 
 def populate(record):
     global types
@@ -240,31 +253,30 @@ def populate(record):
     system["stations"] = []
     system["allegiance"] = record.get("allegiance")
 
-    stations=get_stations(record)
+    stations = get_stations(record)
 
     if stations:
         for station in stations:
 
-            if station.get("name")=="Marshall's Drift":
+            if station.get("name") == "Marshall's Drift":
                 print("Marshalls Drift is here")
 
             types.add(station.get("type"))
             if isStation(station):
                 # print(json.dumps(station,indent=4))
                 # quit()
-                if station.get("name")=="Marshall's Drift":
+                if station.get("name") == "Marshall's Drift":
                     print("Marshalls Drift is here")
 
                 name = station.get("name")
                 if dssa.get(name):
                     name = name + " " + dssa.get(name).strip()
-                    
 
                 system["stations"].append(
                     {
                         "name": name,
                         "distance": station.get("distanceToArrival"),
-                        "services": get_services(station,system),
+                        "services": get_services(station, system),
                         "economy": station.get("primaryEconomy"),
                         "pad": padsize(station.get("landingPads"))
                     }
@@ -292,7 +304,12 @@ if stations_updated:
 load_dssa()
 load_data()
 store_data()
-print(json.dumps(list(services), indent=4))
+
+services.remove(None)
+
+for service in sorted(list(services)):
+    print(service)
+
 print(json.dumps(list(types), indent=4))
 
 if not stations_updated:

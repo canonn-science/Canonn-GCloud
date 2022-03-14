@@ -248,6 +248,8 @@ def getkey(key):
         "raw_trader": "raw_material_trader",
         "encoded_trader": "encoded_material_trader",
         "manufactured_trader": "manufactured_material_trader",
+        "imperial_station": "empire_station",
+        "federal_station": "federation_station",
     }
     if aliases.get(key.strip()):
         return aliases.get(key.strip()).strip()
