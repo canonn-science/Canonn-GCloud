@@ -10,5 +10,5 @@ if [[ "$1" == "live" ]] ; then
 fi
 
 if [[ "$1" == "test" ]] ; then
-    gcloud functions deploy hcstest --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 
+    gcloud functions deploy hcstest --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 --memory 4096
 fi
