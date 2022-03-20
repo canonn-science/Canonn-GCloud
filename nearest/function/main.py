@@ -5,11 +5,14 @@ import json
 import requests
 import zipfile
 from math import sqrt
+import gzip
 
 app = current_app
 CORS(app)
 
 systems_idx = []
+buying_idx = []
+selling_idx = []
 DSSA = []
 
 
@@ -17,128 +20,36 @@ def load_data():
     global stations
     global systems
     global systems_idx
+    global buying_idx
+    global selling_idx
 
     # print("Loading data")
 
     if not systems_idx:
-        systems_idx = json.loads(zipfile.ZipFile(
-            "data.zip").open("systems_idx.json").read())
+        # systems_idx = json.loads(zipfile.ZipFile(
+        #    "data.zip").open("systems_idx.json").read())
+        with gzip.open("system_idx.json.gz", 'rt', encoding='UTF-8') as zipfile:
+            systems_idx = json.load(zipfile)
+        with gzip.open("buying_idx.json.gz", 'rt', encoding='UTF-8') as zipfile:
+            buying_idx = json.load(zipfile)
+        with gzip.open("selling_idx.json.gz", 'rt', encoding='UTF-8') as zipfile:
+            selling_idx = json.load(zipfile)
 
 
 # can we load this at build time?
 load_data()
 
-"""
-Get the nearest system in <state>
-"""
 
-
-""" @app.route("/state/<state>")
-def nearest_state(state):
-    load_data()
-    global stations
-    global systems
-    global systems_idx
-
-    # print(state)
-    x, y, z = get_param_coords(request)
-
-    distance = 999999999999999999999
-    result = {}
-
-    for system_name, system in systems_idx.items():
-
-        for station in system.get("stations"):
-            if station and system and state in station.get("states"):
-                a, b, c = get_system_coords(system)
-
-                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
-                if cdist <= distance:
-                    distance = cdist
-                    result = {"system": system_name,
-                              "distance": round(sqrt(cdist), 0)}
-                # we can exit if we are close
-                if distance == 0:
-                    return result
-    if result:
-        return result
-
-    # don't return anything if we get here
-    return "Couldn't find anything" """
-
-
-""" @app.route("/module/<module>/<ship>")
-def nearest_module(module, ship):
-    load_data()
-    global stations
-    global systems
-    global systems_idx
-
-    # print(state)
-    x, y, z = get_param_coords(request)
-
-    distance = 999999999999999999999
-    result = {}
-
-    for system_name, system in systems_idx.items():
-
-        for station in system.get("stations"):
-            print(module)
-            if station and system and station.get("selling_modules") and int(module) in station.get("selling_modules") and padcheck(ship, station):
-                a, b, c = get_system_coords(system)
-
-                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
-                if cdist <= distance:
-                    distance = cdist
-                    result = {"system": system_name,
-                              "distance": round(sqrt(cdist), 0)}
-                # we can exit if we are close
-                if distance == 0:
-                    return result
-    if result:
-        return result
-
-    # don't return anything if we get here
-    return "Couldn't find anything"
- """
-
-"""
-
-Given a system name this will return all data for that system
-eg system and stations
-
-"""
-
-
-""" @app.route("/current")
-def current_system():
-    global stations
-    global systems
-    global systems_idx
-
-    system = request.args.get("system")
-
-    load_data()
-    current = request.args.get("system")
-    system = systems_idx.get(current)
-
-    if current and system:
-        id = system.get("id")
-
-        result = json.loads(zipfile.ZipFile(
-            "data.zip").open(f"{id}.json").read())
-        return result
-    return request.args
-
-"""
-
-
-def padcheck(ship, station):
+def padcheck(key,ship, station):
     pad = station.get("pad")
     horizons = (request.args.get("horizons")
                 and request.args.get("horizons") == 'y')
     odyssey = (station.get("type") == "Settlement")
     if horizons and odyssey:
+        return False
+    
+
+    if key.endswith("_economy") and odyssey:
         return False
 
     if ship == "S":
@@ -182,7 +93,21 @@ def closest_station(key, system, ship):
 
     stations = system.get("stations")
     for station in stations:
-        if key in station.get("services") and padcheck(ship, station) and station.get("distance") < distance:
+        if key in station.get("services") and padcheck(key,ship, station) and station.get("distance") < distance:
+            result = station.get("name")
+            distance = station.get("distance")
+    return result
+
+
+def closest_commodity(key, system, ship, quantity, direction):
+    distance = 999999999999999999999
+    result = ""
+
+    stations = system.get("stations")
+    for station in stations:
+        if key in station.get("commodities"):
+            qvalue = int(station.get("commodities").get(key).get(direction))
+        if key in station.get("commodities") and padcheck(key,ship, station) and station.get("distance") < distance and int(quantity) < int(qvalue):
             result = station.get("name")
             distance = station.get("distance")
     return result
@@ -201,10 +126,24 @@ def legacy(key, ship):
 @app.route("/system/<name>")
 def get_system(name):
     global systems_idx
+
+    target = {}
     for system in systems_idx:
         if system.get("name") == name:
-            return jsonify(system)
-    return jsonify({})
+            target = system
+            break
+
+    for system in buying_idx:
+        if system.get("name") == name:
+            target["buying"] = system.get("stations")
+            break
+
+    for system in selling_idx:
+        if system.get("name") == name:
+            target["selling"] = system.get("stations")
+            break
+
+    return jsonify(target)
 
 
 """
@@ -231,6 +170,7 @@ def getkey(key):
         "commodity market": "market",
         "commodity": "market",
         "docking": "dock",
+        "station": "dock",
         "carrier_administration": "module_packs",
         "carrier_admin": "module_packs",
         "rearm": "restock",
@@ -269,6 +209,7 @@ def services(keyval, ship):
     global systems_idx
 
     key = getkey(keyval)
+    print(key)
 
     print(f"{keyval} {key} {ship} {request.args}")
 
@@ -301,7 +242,7 @@ def services(keyval, ship):
             for station in system.get("stations"):
                 # print(station)
 
-                if station and system and key in station.get("services") and padcheck(ship, station):
+                if station and system and key in station.get("services") and padcheck(key,ship, station):
                     a, b, c = get_system_coords(system)
 
                     cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
@@ -313,6 +254,82 @@ def services(keyval, ship):
                     # we can exit if we are close
                     if distance == 0:
                         return result
+    if result:
+        return result
+
+    # don't return anything if we get here
+    return jsonify({})
+
+
+"""
+Find the buying and selling
+"""
+
+
+@ app.route("/buying/<keyval>/<ship>/<quantity>")
+def get_buying(keyval, ship, quantity):
+    return get_commodity(keyval, ship, int(quantity), "demand")
+
+
+@ app.route("/selling/<keyval>/<ship>/<quantity>")
+def get_selling(keyval, ship, quantity):
+    return get_commodity(keyval, ship, int(quantity), "supply")
+
+
+def get_commodity(keyval, ship, quantity, direction):
+    load_data()
+    global stations
+    global systems
+    global systems_idx
+    global buying_idx
+    global selling_idx
+
+    key = getkey(keyval)
+
+    print(f"{keyval} {key} {ship} {request.args}")
+
+    try:
+        x, y, z = get_param_coords(request)
+    except:
+        print("coordinate failure")
+        return jsonify({})
+
+    #
+    distance = 999999999999999999999
+    result = {}
+
+    if direction == "supply":
+        index = selling_idx
+    else:
+        index = buying_idx
+
+    for system in index:
+
+        for station in system.get("stations"):
+            # print(station)
+
+            has_commodity = (key in station.get("commodities"))
+            qvalue = 0
+            if has_commodity:
+
+                qvalue = int(station.get(
+                    "commodities").get(key).get(direction))
+
+            if station and system and has_commodity and quantity < qvalue and padcheck(key,ship, station):
+
+                a, b, c = get_system_coords(system)
+
+                cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
+                if cdist <= distance:
+                    distance = cdist
+                    result = {"system": system.get("name"),
+                              "station": closest_commodity(key, system, ship, quantity, direction),
+                              "distance": round(sqrt(cdist), 0),
+                              "commodity": station.get("commodities").get(key)
+                              }
+                # we can exit if we are close
+                if distance == 0:
+                    return result
     if result:
         return result
 

@@ -10,6 +10,8 @@ import gzip
 
 services = set()
 systems_idx = []
+buying_stats = {}
+selling_stats = {}
 types = set()
 dssa = {}
 
@@ -74,6 +76,24 @@ def syncCheck(file_path):
     return False
 
 
+class Index:
+    def __init__(self, name):
+        self.file = gzip.open(name, 'wt', encoding='UTF-8')
+        self.file.write("[")
+        self.first = True
+
+    def write(self, text):
+        if not self.first:
+            self.file.write(",")
+        else:
+            self.first = False
+        self.file.write(text)
+
+    def close(self):
+        self.file.write("]")
+        self.file.close()
+
+
 def load_dssa():
     global dssa
 
@@ -91,7 +111,11 @@ def load_data():
     global systems_idx
     errors = []
 
-    # print("Loading data")
+    basic_index = Index('function/system_idx.json.gz')
+    buying_index = Index('function/buying_idx.json.gz')
+    selling_index = Index('function/selling_idx.json.gz')
+
+    # we need to open a gzip to populate first
 
     with gzip.open("galaxy_stations.json.gz", "rt") as f:
         for line in f:
@@ -102,12 +126,33 @@ def load_data():
                     j = json.loads(line[:-2])
                 except:
                     j = json.loads(line[:-1])
-                s = populate(j)
-                has_stations = (s.get("stations")
-                                and len(s.get("stations")) > 0)
-                has_aliens = (s.get("allegiance") in ("Thargoid", "Guardian"))
+                system_basic = populate_basic(j)
+                system_buying = populate_commodities(j, 'buying')
+                system_selling = populate_commodities(j, 'selling')
+
+                has_stations = (system_basic.get("stations")
+                                and len(system_basic.get("stations")) > 0)
+                has_aliens = (system_basic.get("allegiance")
+                              in ("Thargoid", "Guardian"))
                 if has_stations or has_aliens:
-                    systems_idx.append(s)
+                    # systems_idx.append(s)
+                    basic_index.write(json.dumps(system_basic))
+
+                has_stations = (system_buying.get("stations")
+                                and len(system_buying.get("stations")) > 0)
+                if has_stations:
+                    # systems_idx.append(s)
+                    buying_index.write(json.dumps(system_buying))
+
+                has_stations = (system_selling.get("stations")
+                                and len(system_selling.get("stations")) > 0)
+                if has_stations:
+                    # systems_idx.append(s)
+                    selling_index.write(json.dumps(system_selling))
+        # terminate the file
+        basic_index.close()
+        buying_index.close()
+        selling_index.close()
 
 
 """
@@ -166,16 +211,14 @@ def trader(station, type):
 
 def get_services(station, system):
     global services
+    global buying_stats
+    global selling_stats
     retval = []
     for service in station.get("services"):
         if service:
             service_name = service.lower().replace(" ", "_")
 
             retval.append(service_name)
-
-            if service_name == "on_dock_mission":
-                print(
-                    f"on dock mission,{system.get('name')},{station.get('name')}")
 
             if service in ["Technology Broker", "Material Trader"]:
 
@@ -239,7 +282,7 @@ def get_stations(system):
     return stations
 
 
-def populate(record):
+def populate_basic(record):
     global types
     global dssa
     system = {}
@@ -258,29 +301,94 @@ def populate(record):
     if stations:
         for station in stations:
 
-            if station.get("name") == "Marshall's Drift":
-                print("Marshalls Drift is here")
-
             types.add(station.get("type"))
             if isStation(station):
-                # print(json.dumps(station,indent=4))
-                # quit()
-                if station.get("name") == "Marshall's Drift":
-                    print("Marshalls Drift is here")
 
                 name = station.get("name")
                 if dssa.get(name):
                     name = name + " " + dssa.get(name).strip()
 
+                commodities = []
+                if station.get("market"):
+                    commodities = station.get("market").get("commodities")
+
                 system["stations"].append(
                     {
                         "name": name,
+                        "type": station.get("type"),
                         "distance": station.get("distanceToArrival"),
                         "services": get_services(station, system),
+                        # "outfitting": station.get("outfitting"),
                         "economy": station.get("primaryEconomy"),
                         "pad": padsize(station.get("landingPads"))
                     }
                 )
+    return system
+
+
+def populate_commodities(record, direction):
+    global types
+    global dssa
+    system = {}
+
+    # print(record)
+    # quit()
+    system["name"] = record.get("name")
+    system["x"] = record.get("coords").get("x")
+    system["y"] = record.get("coords").get("y")
+    system["z"] = record.get("coords").get("z")
+    system["stations"] = []
+    system["allegiance"] = record.get("allegiance")
+
+    if direction == 'buying':
+        price = "buyPrice"
+        stock = "demand"
+
+    if direction == 'selling':
+        price = "sellPrice"
+        stock = "supply"
+
+    stations = get_stations(record)
+
+    if stations:
+        for station in stations:
+
+            types.add(station.get("type"))
+            if isStation(station):
+
+                name = station.get("name")
+                if dssa.get(name):
+                    name = name + " " + dssa.get(name).strip()
+
+                commodities = []
+                if station.get("market"):
+                    commodities = station.get("market").get("commodities")
+
+                has_commodity = False
+                if commodities:
+
+                    shoppingList = {}
+                    for commodity in commodities:
+
+                        if commodity.get(stock) > 0 and commodity.get(price) > 0:
+                            label = commodity.get(
+                                "name").lower().replace(" ", "_").strip()
+                            shoppingList[label] = {stock: commodity.get(
+                                stock), price: commodity.get(price)}
+                            has_commodity = True
+
+                    if has_commodity:
+                        system["stations"].append(
+                            {
+                                "name": name,
+                                "type": station.get("type"),
+                                "distance": station.get("distanceToArrival"),
+                                "commodities": shoppingList,
+                                # "outfitting": station.get("outfitting"),
+                                "economy": station.get("primaryEconomy"),
+                                "pad": padsize(station.get("landingPads"))
+                            }
+                        )
     return system
 
 
@@ -303,7 +411,9 @@ if stations_updated:
 
 load_dssa()
 load_data()
-store_data()
+
+# we are going to create the file as we go along
+# store_data()
 
 services.remove(None)
 
@@ -311,6 +421,8 @@ for service in sorted(list(services)):
     print(service)
 
 print(json.dumps(list(types), indent=4))
+print(json.dumps(buying_stats, indent=4))
+
 
 if not stations_updated:
     print("nothing to see here")
