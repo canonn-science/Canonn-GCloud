@@ -40,14 +40,13 @@ def load_data():
 load_data()
 
 
-def padcheck(key,ship, station):
+def padcheck(key, ship, station):
     pad = station.get("pad")
     horizons = (request.args.get("horizons")
                 and request.args.get("horizons") == 'y')
     odyssey = (station.get("type") == "Settlement")
     if horizons and odyssey:
         return False
-    
 
     if key.endswith("_economy") and odyssey:
         return False
@@ -93,7 +92,7 @@ def closest_station(key, system, ship):
 
     stations = system.get("stations")
     for station in stations:
-        if key in station.get("services") and padcheck(key,ship, station) and station.get("distance") < distance:
+        if key in station.get("services") and padcheck(key, ship, station) and station.get("distance") < distance:
             result = station.get("name")
             distance = station.get("distance")
     return result
@@ -107,7 +106,7 @@ def closest_commodity(key, system, ship, quantity, direction):
     for station in stations:
         if key in station.get("commodities"):
             qvalue = int(station.get("commodities").get(key).get(direction))
-        if key in station.get("commodities") and padcheck(key,ship, station) and station.get("distance") < distance and int(quantity) < int(qvalue):
+        if key in station.get("commodities") and padcheck(key, ship, station) and station.get("distance") < distance and int(quantity) < int(qvalue):
             result = station.get("name")
             distance = station.get("distance")
     return result
@@ -163,8 +162,9 @@ def getkey(key):
         "commodities ": "market",
         "commodity_market": "market",
         "frontline": "frontline_solutions",
-        "interstellar_factors": "facilitator",
-        "interstellar": "facilitator",
+        "facilitator": "interstellar_factors_contact",
+        "interstellar_factors": "interstellar_factors_contact",
+        "interstellar": "interstellar_factors_contact",
         "carrier_vendor": "fleet_carrier_vendor",
         "commodities": "market",
         "commodity market": "market",
@@ -242,7 +242,7 @@ def services(keyval, ship):
             for station in system.get("stations"):
                 # print(station)
 
-                if station and system and key in station.get("services") and padcheck(key,ship, station):
+                if station and system and key in station.get("services") and padcheck(key, ship, station):
                     a, b, c = get_system_coords(system)
 
                     cdist = pow(a-x, 2)+pow(b-y, 2)+pow(c-z, 2)
@@ -315,7 +315,7 @@ def get_commodity(keyval, ship, quantity, direction):
                 qvalue = int(station.get(
                     "commodities").get(key).get(direction))
 
-            if station and system and has_commodity and quantity < qvalue and padcheck(key,ship, station):
+            if station and system and has_commodity and quantity < qvalue and padcheck(key, ship, station):
 
                 a, b, c = get_system_coords(system)
 
