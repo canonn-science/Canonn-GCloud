@@ -171,8 +171,9 @@ def getkey(key):
         "commodity": "market",
         "docking": "dock",
         "station": "dock",
-        "carrier_administration": "module_packs",
-        "carrier_admin": "module_packs",
+        "carrier_administration": "fleet_carrier_administration",
+        "carrier_admin": "fleet_carrier_administration",
+        "module_packs": "fleet_carrier_administration"
         "rearm": "restock",
         "reload": "restock",
         "cartographics": "universal_cartographics",
