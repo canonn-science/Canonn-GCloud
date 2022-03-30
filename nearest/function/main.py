@@ -106,7 +106,9 @@ def closest_commodity(key, system, ship, quantity, direction):
     for station in stations:
         if key in station.get("commodities"):
             qvalue = int(station.get("commodities").get(key).get(direction))
-        if key in station.get("commodities") and padcheck(key, ship, station) and station.get("distance") < distance and int(quantity) < int(qvalue):
+            has_quantity = (int(quantity) <= int(qvalue))
+
+        if key in station.get("commodities") and padcheck(key, ship, station) and station.get("distance") < distance and has_quantity:
             result = station.get("name")
             distance = station.get("distance")
     return result
@@ -310,13 +312,16 @@ def get_commodity(keyval, ship, quantity, direction):
             # print(station)
 
             has_commodity = (key in station.get("commodities"))
+
             qvalue = 0
             if has_commodity:
 
                 qvalue = int(station.get(
                     "commodities").get(key).get(direction))
 
-            if station and system and has_commodity and quantity < qvalue and padcheck(key, ship, station):
+            has_quantity = (quantity <= qvalue)
+
+            if station and system and has_commodity and has_quantity and padcheck(key, ship, station):
 
                 a, b, c = get_system_coords(system)
 

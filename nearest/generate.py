@@ -341,11 +341,11 @@ def populate_commodities(record, direction):
     system["allegiance"] = record.get("allegiance")
 
     if direction == 'buying':
-        price = "buyPrice"
+        price = "sellPrice"
         stock = "demand"
 
     if direction == 'selling':
-        price = "sellPrice"
+        price = "buyPrice"
         stock = "supply"
 
     stations = get_stations(record)
@@ -375,7 +375,11 @@ def populate_commodities(record, direction):
                                 "name").lower().replace(" ", "_").strip()
                             shoppingList[label] = {stock: commodity.get(
                                 stock), price: commodity.get(price)}
+
                             has_commodity = True
+                        # if direction == "buying" and commodity.get(price) > 0 and commodity.get(stock) > 1:
+                        #    print({stock: commodity.get(stock),
+                        #           price: commodity.get(price)})
 
                     if has_commodity:
                         system["stations"].append(

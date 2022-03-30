@@ -6,9 +6,9 @@ if [[ "$1" == "local" ]] ; then
 fi
 
 if [[ "$1" == "live" ]] ; then
-    gcloud functions deploy hcs --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 --memory 4096
+    gcloud functions deploy hcs --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 --memory 8192
 fi
 
 if [[ "$1" == "test" ]] ; then
-    gcloud functions deploy hcstest --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 --memory 4096
+    gcloud functions deploy hcstest --project populated --allow-unauthenticated --runtime python39 --entry-point $entrypoint --trigger-http  --max-instances 2 --memory 8192
 fi
