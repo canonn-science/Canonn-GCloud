@@ -41,7 +41,7 @@ discordurl = None
 def gethook():
     global discordurl
     if not discordurl:
-        with open('discord.secrets') as f:
+        with open('secret.json') as f:
             discordurl = json.load(f)
 
 
@@ -206,7 +206,7 @@ def postDiscord(n, r):
     else:
         content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}.{game}"
 
-    if is_notable(n):
+    if is_notable(n) and system != "TEST":
         data["content"] = f"@here {content}"
     else:
         data["content"] = content
