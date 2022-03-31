@@ -1,3 +1,4 @@
+from calendar import monthcalendar
 import requests
 import json
 from flask import escape
@@ -22,26 +23,6 @@ DB_USER = getenv('MYSQL_USER', 'canonn')
 DB_PASSWORD = getenv('MYSQL_PASSWORD', 'FROM_ENV')
 DB_NAME = getenv('MYSQL_DATABASE', 'canonn')
 
-hooklist = {}
-
-
-def get_webhooks():
-    global hooklist
-    if not hooklist:
-        with __get_cursor() as cursor:
-            sql = """select * from webhooks"""
-            cursor.execute(sql, ())
-            r = cursor.fetchall()
-            result = {}
-            cursor.close()
-        for v in r:
-            result[v.get("category")] = v.get("url")
-
-        hooklist = result
-
-    return hooklist
-
-
 mysql_config = {
     'user': DB_USER,
     'password': DB_PASSWORD,
@@ -54,6 +35,14 @@ mysql_config = {
 # Create SQL connection globally to enable reuse
 # PyMySQL does not include support for connection pooling
 mysql_conn = None
+discordurl = None
+
+
+def gethook():
+    global discordurl
+    if not discordurl:
+        with open('discord.secrets') as f:
+            discordurl = json.load(f)
 
 
 def __get_cursor():
@@ -81,15 +70,16 @@ def insertReport(r):
     # timestamp":"2019-10-11T15:47:06Z"
     timestamp = r.get("timestamp").replace('T', ' ').replace('Z', ''),
     cmdr = r.get("cmdr"),
+    game = r.get("odyssey")
 
     with __get_cursor() as cursor:
         # '9999-12-31 23:59:59'
         # timestamp":"2019-10-11T15:47:06Z"
         sql = """
-        	INSERT ignore INTO hd_detected (cmdr,system,timestamp,x,y,z,destination,dx,dy,dz,client) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        	INSERT ignore INTO hd_detected (cmdr,system,timestamp,x,y,z,destination,dx,dy,dz,client,odyssey) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """
         cursor.execute(sql, (cmdr, system, timestamp, r.get("x"), r.get("y"), r.get(
-            "z"), r.get("destination"), r.get("dx"), r.get("dy"), r.get("dz"), r.get("client")))
+            "z"), r.get("destination"), r.get("dx"), r.get("dy"), r.get("dz"), r.get("client"), game))
 
         mysql_conn.commit()
 
@@ -187,6 +177,8 @@ def getJumpDistance(r):
 
 def postDiscord(n, r):
     logging.info("posting to discord")
+    global discordurl
+    gethook()
 
     data = {}
 
@@ -199,15 +191,20 @@ def postDiscord(n, r):
     ref_coords = n.get("coords")
     dest_distance = round(getDistance(
         ref_coords, [float(r.get("dx")), float(r.get("dy")), float(r.get("dz"))]), 1)
+    url = discordurl.get("url")
 
-    webhooks = get_webhooks()
-    url = webhooks.get("Hyperdiction")
+    game = ""
+    if r.get("odyssey"):
+        if r.get("odyssey") == 'Y':
+            game = " (Odyssey)"
+        if r.get("odyssey") == 'N':
+            game = " (Horizons)"
 
     # we only got accurate xyz when client was added so we will skip old versions
     if r.get("client"):
-        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}."
+        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}.{game}"
     else:
-        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}"
+        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}.{game}"
 
     if is_notable(n):
         data["content"] = f"@here {content}"
