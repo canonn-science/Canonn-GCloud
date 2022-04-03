@@ -383,6 +383,10 @@ def insert_codex_systems(request_args):
     y = request_args.get("y")
     z = request_args.get("z")
 
+    if name_localised is None:
+        name_localised = request_args.get("entry").get("Name").replace(
+            "$Codex_Ent_", "").replace("_Name;", "").replace("_", " ")
+
     hud, english_name = get_hud_category(entryid, name_localised)
     webhooks = get_webhooks()
 
