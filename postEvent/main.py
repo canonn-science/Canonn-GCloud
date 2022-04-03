@@ -327,6 +327,10 @@ def insertCodex(request_args):
         "entry").get("SubCategory_Localised")
     region = request_args.get("entry").get("Region_Localised")
 
+    if name_localised is None:
+        name_localised = request_args.get("entry").get("Name").replace(
+            "$Codex_Ent_", "").replace("_Name;", "").replace("_", " ")
+
     release = ""
     if request_args.get("odyssey") == 'Y':
         release = " (Odyssey)"
