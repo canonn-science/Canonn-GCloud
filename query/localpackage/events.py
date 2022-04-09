@@ -25,7 +25,7 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
     while event_date < end:
         dn = datetime.utcfromtimestamp(event_date)
 
-        display_dt = dn.isoformat()[:-5]
+        display_dt = dn.isoformat()[:-4]+"+00:00"
         result = {
             "title": description,
             "start": display_dt,
@@ -34,7 +34,7 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
         }
         if duration > 0:
             end_dt = datetime.utcfromtimestamp(event_date+duration)
-            result["end"] = end_dt.isoformat()[:-5]
+            result["end"] = end_dt.isoformat()[:-4]+"+00:00"
 
         if (bgcolour != "defaultbg"):
             result["backgroundColor"] = bgcolour
