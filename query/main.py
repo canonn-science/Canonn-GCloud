@@ -12,6 +12,8 @@ import localpackage.poidata
 import localpackage.gnosis
 import localpackage.thargoids
 import localpackage.regionsvg
+import localpackage.events
+
 import json
 import requests
 from math import sqrt
@@ -19,6 +21,11 @@ from math import sqrt
 app = current_app
 CORS(app)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
+
+@app.route("/events")
+def getevents():
+    return localpackage.events.fetch_events(request)
 
 
 @app.route("/getSystemPoi")
