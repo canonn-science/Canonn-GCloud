@@ -46,8 +46,8 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
 
 
 def fetch_events(request):
-    start = request.args.get("start")
-    end = request.args.get("end")
+    start = request.args.get("start").replace("Z", "")
+    end = request.args.get("end").replace("Z", "")
     anniversary = 31536000
 
     events = []
