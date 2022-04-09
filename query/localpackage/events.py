@@ -2,6 +2,14 @@ from datetime import datetime
 from flask import jsonify
 
 
+def format_dn(dn):
+    temp = dn.isoformat()
+    if len(temp) < len("2022-04-10T07:00:23.53"):
+        return temp+"+00:00"
+    else:
+        return temp[:-4]+"+00:00"
+
+
 def parse_events(range_start, range_end, start_dt, interval, duration, url, description, bgcolour):
     results = []
     year = 31536000
@@ -17,7 +25,7 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
     end = re.timestamp()
 
     diff = cur - ref
-    interval_count = int(diff / interval) + 1
+    interval_count = int(diff / interval)
 
     rem = diff % interval
 
@@ -25,7 +33,8 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
     while event_date < end:
         dn = datetime.utcfromtimestamp(event_date)
 
-        display_dt = dn.isoformat()[:-4]+"+00:00"
+        display_dt = format_dn(dn)
+
         result = {
             "title": description,
             "start": display_dt,
@@ -34,7 +43,7 @@ def parse_events(range_start, range_end, start_dt, interval, duration, url, desc
         }
         if duration > 0:
             end_dt = datetime.utcfromtimestamp(event_date+duration)
-            result["end"] = end_dt.isoformat()[:-4]+"+00:00"
+            result["end"] = format_dn(end_dt)
 
         if (bgcolour != "defaultbg"):
             result["backgroundColor"] = bgcolour
@@ -58,7 +67,7 @@ def fetch_events(request):
                                'Blaa Eohn YZ-G d10-0 (Planet of Slightly Lesser Death) - Apoapsis', 'defaultbg'))
     events.extend(parse_events(start, end, '2022-03-24T12:31:00', 695478.442, 0,
                                'https://www.edsm.net/en_GB/system/id/4308078/name/Synuefe+WH-F+c0', 'Synuefe WH-F c0 (Cyanean Rocks)', 'defaultbg'))
-    events.extend(parse_events(start, end, '2021-05-18T00:00:00', anniversary, 3600*24,
+    events.extend(parse_events(start, end, '2021-05-18T07:00:00', anniversary, 3600*5,
                                'https://canonn.science/codex/the-gnosis/', 'Gnosis Launch Anniversary', '#ef7b04'))
 
     return jsonify(events)
