@@ -193,7 +193,7 @@ def extract_events(request):
                                'https://canonn.science/codex/the-gnosis/', 'Gnosis Launch Anniversary', '#ef7b04'))
 
     events.extend(koi_events(start, end))
-    events.extend(parse_events('Synuefe WH-F c0', start, end, '2021-06-24T21:25:43', 695478.441973363, 3600*2.5,
+    events.extend(parse_events('Synuefe WH-F c0', start, end, '2020-12-13T14:35:11', 695478.441973363, 0,
                                'https://www.edsm.net/en_GB/system/id/4308078/name/Synuefe+WH-F+c0', 'Synuefe WH-F c0 (Cyanean Rocks)'))
 
     events.extend(parse_events('Varati', start, end, '2021-05-23T07:00:00', anniversary, 0,
