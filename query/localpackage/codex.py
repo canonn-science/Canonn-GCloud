@@ -251,7 +251,7 @@ def species_star(codex, system):
     else:
         # we don't know so let it through
         #print(f"lookup failed: {codex}")
-        True
+        return True
     # We didn't find the right starclass
     return False
 
