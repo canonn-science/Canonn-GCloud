@@ -178,11 +178,12 @@ def mat_species(species):
         return False
 
 
-def match_materials(body, species):
+def checkMats(body, species):
     materials = body.get("materials")
     count = 0
     target = len(species.get("materials"))
 
+    # its its not a materials based species we can return true
     if not mat_species(species):
         return True
 
@@ -192,19 +193,28 @@ def match_materials(body, species):
         for mat in species.get("materials"):
             if mat in materials.keys():
                 count += 1
+        
+        # if we have all required materials we should be good.
+        matmatch=((count == target))
+        # the species id contains the key material that must be present
+        # we shouldn't have to do this but there may be some misreported bodies
 
-            # the species id contains the key material that must be present
-            # we shouldn't have to do this but there may be some misreported bodies
-            for key in materials.keys():
-                if key in species.get("id"):
-                    matmatch = True
-    if matmatch == False:
-        return False
+        hasmat=False
+        for key in materials.keys():
+            if key in species.get("id"):
+                hasmat = True
+                break
 
-    return (count == target)
+    #We need matching materials and for our material to be present
+    matmatch=(matmatch and hasmat)
 
+    return matmatch
 
-def species_star(codex, system):
+"""
+  If the species is tied to a star type and the star type does not match 
+  then return false all other cases we can return true
+"""
+def checkStar(codex, system):
     fdevname = codex.get("fdevname")
     try:
         h1, h1, genus, species, star, t = fdevname.split("_")
@@ -241,11 +251,10 @@ def species_star(codex, system):
         "N": ["Neutron Star"],
         "Ae": ["Herbig Ae/Be Star"]
     }
-    # if star is defined we have a star class
-    if star:
+    # if star is defined and in the star list we have a star class
+    if star and stars.get(star):
         subTypes = stars.get(star)
         for body in system.get("bodies"):
-
             if subTypes and body.get("subType") and body.get("subType") in subTypes:
                 return True
     else:
@@ -274,17 +283,20 @@ def guess_biology(body, codex):
 
         if species.get("hud_category") == 'Biology':
 
-            hasSpeciesStar = species_star(species, system)
+            validStar = checkStar(species, system)
 
             odyssey = (species.get("platform") == 'odyssey')
 
-            # don't matcvh requins on odyssey bios
+            # don't match regions on odyssey bios
+            # NB we now know that there is region specific biology 
+            # But we don't want to miss guesses we would have to build 
+            # some reference data
             regionMatch = (odyssey or (species.get("regions")
                                        and region_name in species.get("regions")))
 
             parentMatch = (parentType in species.get("localStars"))
             # materials is highly dependednt on species
-            materialsMatch = match_materials(body, species)
+            validMaterials = checkMats(body, species)
 
             volcanismMatch = (
                 (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
@@ -310,7 +322,7 @@ def guess_biology(body, codex):
                 distanceMatch = (float(species.get("mind")) <= float(
                     body.get("distanceToArrival")) <= float(species.get("maxd")))
 
-                if (hasSpeciesStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and materialsMatch and parentMatch and regionMatch):
+                if (validStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and validMaterials and parentMatch and regionMatch):
                     genus = species.get("name").split(' ')[0]
                     # print(genus)
                     #print(get_body_codex(codex, 'Biology', body.get("name")))
