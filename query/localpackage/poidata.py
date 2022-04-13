@@ -78,7 +78,22 @@ def codex_reports(cmdr, system, odyssey):
                        odycheck, odycheck, odycheck, odycheck))
         cr = cursor.fetchall()
 
-    return cr
+    exclude={}
+    for entry in cr:
+        
+        if entry.get("body"):
+            exclude[entry.get("entryid")]=True
+
+    result=[]
+    i = 0
+    while i < len(cr):
+        entry=cr[i]
+        if entry.get("body") or not exclude.get(entry.get("entryid")):
+            print(entry.get("body"))
+            result.append(entry)
+        i+=1
+
+    return result
 
 
 def saa_signals(system, odyssey):
