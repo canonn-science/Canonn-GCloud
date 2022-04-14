@@ -421,7 +421,14 @@ def system_biostats(request):
         if landable(body):
             if not spanshdump["system"]["bodies"][i].get("signals"):
                 spanshdump["system"]["bodies"][i]["signals"] = {}
-
+				r = requests.get(f"https://us-central1-canonn-api-236217.cloudfunctions.net/query/getSystemPoi?system={systemName}")
+				poi = r.json()
+				for bodySignals in poi["SAAsignals"]:
+					if bodySignals["body"] and bodySignals["body"] == body["name"].replace(f"{systemName} ", ''):
+						spanshdump["system"]["bodies"][i]["signals"]["signals"] = {}
+						signalType = f"$SAA_SignalType_{bodySignals["hud_category"].replace("y", "ical;")}"
+						spanshdump["system"]["bodies"][i]["signals"]["signals"][signalType] = bodySignals["count"]
+			
             guess = guess_biology(body, codex)
             if guess:
                 spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess
@@ -453,7 +460,6 @@ def codex_name_ref(request):
                             FROM organic_sales os
                             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
                             REPLACE(os.species,'_Name;','%%')
-
                             ) data
                             group by entryid
                 ) as data2
