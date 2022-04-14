@@ -425,7 +425,8 @@ def system_biostats(request):
                 poi = r.json()
                 for bodySignals in poi["SAAsignals"]:
                     if bodySignals["body"] and bodySignals["body"] == body["name"].replace(f"{systemName} ", ''):
-                        spanshdump["system"]["bodies"][i]["signals"]["signals"] = {}
+                        if not spanshdump["system"]["bodies"][i]["signals"]["signals"]:
+                            spanshdump["system"]["bodies"][i]["signals"]["signals"] = {}
                         signalType = f"$SAA_SignalType_{bodySignals["hud_category"].replace("y", "ical;")}"
                         spanshdump["system"]["bodies"][i]["signals"]["signals"][signalType] = bodySignals["count"]
 			
