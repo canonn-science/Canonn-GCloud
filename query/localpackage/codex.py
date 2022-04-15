@@ -307,7 +307,13 @@ def guess_biology(body, codex):
             mainstarMatch = (get_mainstar_type()
                              in species.get("primaryStars"))
 
-            bodyMatch = (body.get("subType") in species.get("bodies"))
+            # use combined body and volcanism
+            #bodyMatch = (body.get("subType") in species.get("bodies"))
+            volcanicbodytype=body.get("subType") + " - " + (body.get("volcanismType") or "No volcanism")
+            if species.get("histograms").get("volcanic_body_types") and volcanicbodytype in species.get("histograms").get("volcanic_body_types").keys():
+                bodyMatch=True
+            else:
+                bodyMatch = False
 
             if bodyMatch and species.get("ming"):
                 gravityMatch = (float(species.get("ming")) <= float(
