@@ -11,7 +11,7 @@ app = current_app
 CORS(app)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-@app.route("/publish/id")
+@app.route("/publish/<id>")
 def publish(id):
     webhook=requests.args.get("webhook")
     if not id and not webhook:
