@@ -15,9 +15,9 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 def publish(id):
     webhook=request.args.get("webhook")
     if not id and not webhook:
-        return Response({"error": "id and webkook url empty"},500, mimetype='application/json')
+        return Response({'error': "id and webkook url empty"},500, mimetype='application/json')
     else:
-        return Response({"success": True},200, mimetype='application/json')
+        return jsonify({"success": True})
 
 @app.route("/")
 def root():
