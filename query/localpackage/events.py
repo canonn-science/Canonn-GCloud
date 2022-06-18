@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, date, timedelta
+from inspect import TPFLAGS_IS_ABSTRACT
 from pickletools import read_unicodestring1
 from flask import jsonify
 from math import cos, acos, sin, asin, sqrt, radians, degrees
+import requests
+
+collisions = []
 
 
 def format_dn(dn):
@@ -10,6 +14,15 @@ def format_dn(dn):
         return temp+"+00:00"
     else:
         return temp[:-4]+"+00:00"
+
+
+def get_collisions(cache=True):
+    global collisions
+    if not collisions or not cache:
+        print("fetching stats")
+        r = requests.get(
+            "https://drive.google.com/uc?id=1m8TMGRO3D1KBhBv3c52x64ahSwjoR-rc")
+        collisions = r.json()
 
 
 def parse_events(system, range_start, range_end, reference_dt, interval, duration, url, description, bgcolour="defaultbg"):
@@ -104,7 +117,7 @@ def koi_events(range_start, range_end):
     # 09/08/3306 09:05:27
     reference_dt = "2020-08-09T09:05:27"
     interval = 3437286.34266023
-    #interval = 3437999.99999665000
+    # interval = 3437999.99999665000
     # two hour duration
     duration = 3600*2
     url = "https://canonn.science/codex/cartographics/rhubarb-and-custard/"
@@ -166,15 +179,18 @@ def koi_events(range_start, range_end):
     return results
 
 
-def extract_events(request):
-    if request.args.get("start"):
-        start = request.args.get("start").replace("Z", "")
+def extract_events(alpha, omega, system):
+    global collisions
+    get_collisions(cache=True)
+
+    if alpha:
+        start = alpha.replace("Z", "")
     else:
         now_ts = datetime.now().timestamp()
         start = datetime.utcfromtimestamp(now_ts).isoformat()
 
-    if request.args.get("nend"):
-        end = request.args.get("end").replace("Z", "")
+    if omega:
+        end = omega.replace("Z", "")
     else:
         # end will be 700 days from today
         now_ts = datetime.fromisoformat(start).timestamp()
@@ -192,20 +208,52 @@ def extract_events(request):
     events.extend(parse_events('Varati', start, end, '2021-05-18T07:00:00', anniversary, 0,
                                'https://canonn.science/codex/the-gnosis/', 'Gnosis Launch Anniversary', '#ef7b04'))
 
-    events.extend(koi_events(start, end))
-    events.extend(parse_events('Synuefe WH-F c0', start, end, '2020-12-13T14:35:11', 695478.441973363, 0,
-                               'https://www.edsm.net/en_GB/system/id/4308078/name/Synuefe+WH-F+c0', 'Synuefe WH-F c0 (Cyanean Rocks)'))
+    #events.extend(koi_events(start, end))
+    # events.extend(parse_events('Synuefe WH-F c0', start, end, '2020-12-13T14:35:11', 695478.441973363, 0,
+    #                           'https://www.edsm.net/en_GB/system/id/4308078/name/Synuefe+WH-F+c0', 'Synuefe WH-F c0 (Cyanean Rocks)'))
 
     events.extend(parse_events('Varati', start, end, '2021-05-23T07:00:00', anniversary, 0,
                                'https://canonn.science/lore/', "Dr Arcanonn's Birthday", '#ef7b04'))
-    return events
+    events.extend(collisions)
+
+    # we need to sort and filter this list or paging wont work
+    def sort_events(value):
+        return datetime.fromisoformat(value.get("start")[:-9]).timestamp()
+
+    retval = []
+    for e in events:
+        if len(e.get("start")) > len("2022-04-17 06:57:43"):
+            x = e.get("start")[:-9]
+        else:
+            x = e.get("start")
+
+        tsetime = datetime.fromisoformat(x).timestamp()
+        tsstart = datetime.fromisoformat(start).timestamp()
+        tsend = datetime.fromisoformat(end).timestamp()
+        match_system = (system and system == e.get("system"))
+        if tsstart < tsetime < tsend and (match_system or not system):
+            retval.append(e)
+
+    return sorted(retval, key=sort_events)
+
+
+def page_events(limit, page, system):
+    refdate = now_ts = datetime.today()
+    start = refdate
+    end = start+timedelta(days=3650)
+    page_start = limit*(page-1)
+    page_end = page_start+limit
+
+    return jsonify(extract_events(start.isoformat(), end.isoformat(), system)[page_start:page_end])
 
 
 def fetch_events(request):
     system = request.args.get("system")
+    start = request.args.get("start")
+    end = request.args.get("end")
     events = []
 
-    for event in extract_events(request):
+    for event in extract_events(start, end, system):
         match_system = (system and system == event.get("system"))
         if match_system or not system:
             events.append(event)

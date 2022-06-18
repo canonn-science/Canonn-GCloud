@@ -28,6 +28,13 @@ def getevents():
     return localpackage.events.fetch_events(request)
 
 
+@app.route("/events/<limit>/<page>")
+def pageevents(limit, page):
+    system = request.args.get("system")
+    print("page events")
+    return localpackage.events.page_events(int(limit), int(page), system)
+
+
 @app.route("/getSystemPoi")
 def getSystemPoi():
     return localpackage.poidata.getSystemPoi(request)
