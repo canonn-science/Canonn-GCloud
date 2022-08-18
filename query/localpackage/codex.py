@@ -193,27 +193,30 @@ def checkMats(body, species):
         for mat in species.get("materials"):
             if mat in materials.keys():
                 count += 1
-        
+
         # if we have all required materials we should be good.
-        matmatch=((count == target))
+        matmatch = ((count == target))
         # the species id contains the key material that must be present
         # we shouldn't have to do this but there may be some misreported bodies
 
-        hasmat=False
+        hasmat = False
         for key in materials.keys():
             if key in species.get("id"):
                 hasmat = True
                 break
 
-    #We need matching materials and for our material to be present
-    matmatch=(matmatch and hasmat)
+    # We need matching materials and for our material to be present
+    matmatch = (matmatch and hasmat)
 
     return matmatch
+
 
 """
   If the species is tied to a star type and the star type does not match 
   then return false all other cases we can return true
 """
+
+
 def checkStar(codex, system):
     fdevname = codex.get("fdevname")
     try:
@@ -288,8 +291,8 @@ def guess_biology(body, codex):
             odyssey = (species.get("platform") == 'odyssey')
 
             # don't match regions on odyssey bios
-            # NB we now know that there is region specific biology 
-            # But we don't want to miss guesses we would have to build 
+            # NB we now know that there is region specific biology
+            # But we don't want to miss guesses we would have to build
             # some reference data
             regionMatch = (odyssey or (species.get("regions")
                                        and region_name in species.get("regions")))
@@ -309,9 +312,10 @@ def guess_biology(body, codex):
 
             # use combined body and volcanism
             #bodyMatch = (body.get("subType") in species.get("bodies"))
-            volcanicbodytype=body.get("subType") + " - " + (body.get("volcanismType") or "No volcanism")
+            volcanicbodytype = body.get(
+                "subType") + " - " + (body.get("volcanismType") or "No volcanism")
             if species.get("histograms").get("volcanic_body_types") and volcanicbodytype in species.get("histograms").get("volcanic_body_types").keys():
-                bodyMatch=True
+                bodyMatch = True
             else:
                 bodyMatch = False
 
@@ -588,14 +592,18 @@ def codex_data(request):
 
     with get_cursor() as cursor:
         sql = f"""
-            select s.system,cast(s.x as char) x,cast(s.y as char) y,cast(s.z as char) z,
-            cr.*,trim(SUBSTRING_INDEX(english_name,'-',1)) as species
-            from codex_systems s
-            join codex_name_ref cr on cr.entryid = s.entryid
-            where 1 = 1
-            {clause}
-            order by system
-            limit %s,%s
+        select system,entryid,cast(x as char) x,cast(y as char) y,cast(z as char) z,
+            cr.*,trim(SUBSTRING_INDEX(cr.english_name,'-',1)) as species
+            FROM codex_systems cs
+            INNER JOIN codex_name_ref as cr using (entryid)
+            INNER JOIN (
+            select s.system,s.entryid from 
+            codex_systems s
+                        join codex_name_ref cr on cr.entryid = s.entryid
+                        where 1 = 1
+                        {clause}
+            limit %s,%s)
+            AS my_results USING(system,entryid)
         """
         cursor.execute(sql, (params))
         r = cursor.fetchall()
