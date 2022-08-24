@@ -116,6 +116,8 @@ def event_handled(event):
     wl = [
         {"description": "FC Docked", "definition": {
             "event": "Docked", "StationType": "FleetCarrier"}},
+        {"description": "Approached Settlements", "definition": {
+            "event": "ApproachSettlement"}},
         {"description": "Promotion", "definition": {"event": "Promotion"}},
         {"description": "FC Jumped", "definition": {
             "event": "CarrierJump", "StationType": "FleetCarrier"}},
@@ -674,6 +676,111 @@ def extendRawEvents(gs, entry, cmdr):
     return results
 
 
+def extendSettlements(gs, entry, cmdr):
+    results = []
+
+    if entry.get("event") == "ApproachSettlement":
+
+        systemName = entry.get("StarSystem")
+        if not systemName:
+            systemName = gs.get("systemName")
+        id64 = entry.get("SystemAddress")
+
+        bodyName = entry.get("BodyName")
+
+        if not bodyName:
+            bodyName = gs.get("bodyName")
+
+        bodyID = entry.get("BodyID")
+        name = entry.get("Name")
+        name_localised = entry.get("NameLocalised")
+        market_id = entry.get("MarketID")
+
+        x, y, z = gs.get("systemCoordinates")
+
+        lat = entry.get("Latitude")
+        lon = entry.get("Longitude")
+        if not lat:
+            lat = gs.get("latitude")
+            lon = gs.get("longitude")
+
+        event = entry.get("event")
+        timestamp = entry.get("timestamp")
+        clientVersion = gs.get("clientVersion")
+
+        results.append(
+            (cmdr,	id64,	systemName,	bodyName,	bodyID,	name,	name_localised,
+             market_id,	lat,	lon,	x,	y,	z,	json.dumps(entry),	clientVersion, timestamp)
+        )
+
+    return results
+
+
+def extendGuardianSettlements(gs, entry, cmdr):
+    results = []
+
+    if entry.get("event") == "ApproachSettlement":
+        name = entry.get("Name")
+        name_localised = entry.get("NameLocalised")
+
+    if entry.get("event") == "CodexEntry":
+        name = entry.get("NearestDestination")
+        name_localised = entry.get("NearestDestination_Localised")
+
+        # if set and we have an index then we can decode
+    if name and "index" in name:
+        signal_type = None
+        ndarray = name.split('#')
+        if len(ndarray) == 2:
+            dummy, c = name.split('#')
+            dummy, index_id = c.split("=")
+            index_id = index_id[:-1]
+        else:
+            dummy, b, c = name.split('#')
+            dummy, signal_type = b.split("=")
+            dummy, index_id = c.split("=")
+            signal_type = signal_type[:-1]
+            index_id = index_id[:-1]
+
+    if entry.get("event") in ("CodexEntry", "ApproachSettlement") and "$Ancient" in name:
+
+        market_id = entry.get("MarketID")
+        systemName = entry.get("StarSystem")
+        if not systemName:
+            systemName = gs.get("systemName")
+        id64 = entry.get("SystemAddress")
+
+        bodyName = entry.get("BodyName")
+
+        if not bodyName:
+            bodyName = gs.get("bodyName")
+
+        bodyID = entry.get("BodyID")
+        if not bodyID:
+            bodyID = gs.get("bodyId")
+
+        market_id = entry.get("MarketID")
+
+        x, y, z = gs.get("systemCoordinates")
+
+        lat = entry.get("Latitude")
+        lon = entry.get("Longitude")
+        if not lat:
+            lat = gs.get("latitude")
+            lon = gs.get("longitude")
+
+        event = entry.get("event")
+        timestamp = entry.get("timestamp")
+        clientVersion = gs.get("clientVersion")
+
+        results.append(
+            (cmdr,	event, id64,	systemName,	bodyName,	bodyID,	name,	name_localised,
+             market_id,	lat,	lon, index_id,	x,	y,	z,	json.dumps(entry),	clientVersion, timestamp)
+        )
+
+    return results
+
+
 def extendCarriersFSS(gs, event, cmdr):
 
     results = []
@@ -850,6 +957,26 @@ def postRawEvents(values):
                         """
             insert into raw_events (cmdrName,systemName,bodyName,station,x,y,z,lat,lon,event,raw_event,clientVersion,created_at)
             values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
+        """,
+                        values
+                        )
+
+
+def postSettlements(values):
+    return execute_many("postSettlements",
+                        """
+            insert ignore into settlements (cmdr,id64,systemName,bodyName,bodyid,Name,name_localised,market_id,lat,lon,x,y,z,raw_event,clientVersion,created_at)
+            values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
+        """,
+                        values
+                        )
+
+
+def postGuardianSettlements(values):
+    return execute_many("postGuardianSettlements",
+                        """
+            insert ignore into guardian_settlements (cmdr,event,id64,systemName,bodyName,bodyid,Name,name_localised,market_id,lat,lon,index_id,x,y,z,raw_event,clientVersion,created_at)
+            values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
         """,
                         values
                         )
@@ -1319,6 +1446,8 @@ def entrywrap(request):
     clientversion = {}
     organicscans = []
     organicsales = []
+    settlements = []
+    guardian_settlements = []
 
     try:
 
@@ -1344,6 +1473,9 @@ def entrywrap(request):
                     commanders.extend(extendCommanders(gs, event, cmdr))
                     lifevents.extend(extendLife(gs, event, cmdr))
                     rawevents.extend(extendRawEvents(gs, event, cmdr))
+                    settlements.extend(extendSettlements(gs, event, cmdr))
+                    guardian_settlements.extend(
+                        extendGuardianSettlements(gs, event, cmdr))
                     # we will actually post the codex events and collate results
                     codexevents.extend(extendCodex(gs, event, cmdr))
                     organicscans.extend(extendOrganicScans(gs, event, cmdr))
@@ -1358,12 +1490,13 @@ def entrywrap(request):
         results.append(postCommanders(commanders))
         results.append(postLifeEvents(lifevents))
         results.append(postRawEvents(rawevents))
+        results.append(postSettlements(settlements))
+        results.append(postGuardianSettlements(guardian_settlements))
         results.append(postOrganicScans(organicscans))
         results.append(postOrganicSales(organicsales))
         # codex events are already posted we just collate the results
         results.append(collateCodex(codexevents))
     except Exception as e:
-
         logging.error(rj)
         logging.exception("message")
         retval["error"] = str(e)
