@@ -715,7 +715,7 @@ def extendSettlements(gs, entry, cmdr):
 
     return results
 
-
+# create an array of settlement values
 def extendGuardianSettlements(gs, entry, cmdr):
     results = []
 
