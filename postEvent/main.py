@@ -111,7 +111,7 @@ def get_webhooks():
 """
 
 
-def event_handled(event):
+def event_handled(event, gs):
 
     wl = [
         {"description": "FC Docked", "definition": {
@@ -138,10 +138,10 @@ def event_handled(event):
         {"description": "Stations",            "definition": {
             "event": "FSSSignalDiscovered",                "IsStation": True}},
     ]
-    return event_parse(wl, event)
+    return event_parse(wl, event, gs)
 
 
-def event_parse(wl, event):
+def event_parse(wl, event, gs):
     keycount = 0
     keymatch = 0
     for wlevent in wl:
@@ -151,13 +151,15 @@ def event_parse(wl, event):
                 keymatch += 1
         if keymatch == keycount:
             return True
-    logging.error(json.dumps(wl))
+    logging.error("unknown event")
+    logging.error(json.dumps(event))
+    logging.error(json.dumps(gs))
     return False
 
 
-def event_known(event):
+def event_known(event, gs):
     wl = __get_whitelist()
-    return event_parse(wl, event)
+    return event_parse(wl, event, gs)
 
 
 def notNone(value):
@@ -648,7 +650,7 @@ def extendOrganicScans(gs, event, cmdr):
 def extendRawEvents(gs, entry, cmdr):
     results = []
 
-    if event_known(entry) and not event_handled(entry):
+    if event_known(entry, gs) and not event_handled(entry, gs):
         systemName = entry.get("StarSystem")
         if not systemName:
             systemName = gs.get("systemName")
@@ -716,6 +718,8 @@ def extendSettlements(gs, entry, cmdr):
     return results
 
 # create an array of settlement values
+
+
 def extendGuardianSettlements(gs, entry, cmdr):
     results = []
 
@@ -727,22 +731,23 @@ def extendGuardianSettlements(gs, entry, cmdr):
         name = entry.get("NearestDestination")
         name_localised = entry.get("NearestDestination_Localised")
 
-        # if set and we have an index then we can decode
-    if name and "index" in name:
-        signal_type = None
-        ndarray = name.split('#')
-        if len(ndarray) == 2:
-            dummy, c = name.split('#')
-            dummy, index_id = c.split("=")
-            index_id = index_id[:-1]
-        else:
-            dummy, b, c = name.split('#')
-            dummy, signal_type = b.split("=")
-            dummy, index_id = c.split("=")
-            signal_type = signal_type[:-1]
-            index_id = index_id[:-1]
+    # if set and we have an index then we can decode
+    if entry.get("event") in ("CodexEntry", "ApproachSettlement"):
+        if name and "index" in name:
+            signal_type = None
+            ndarray = name.split('#')
+            if len(ndarray) == 2:
+                dummy, c = name.split('#')
+                dummy, index_id = c.split("=")
+                index_id = index_id[:-1]
+            else:
+                dummy, b, c = name.split('#')
+                dummy, signal_type = b.split("=")
+                dummy, index_id = c.split("=")
+                signal_type = signal_type[:-1]
+                index_id = index_id[:-1]
 
-    if entry.get("event") in ("CodexEntry", "ApproachSettlement") and "$Ancient" in name:
+    if entry.get("event") in ("CodexEntry", "ApproachSettlement") and name and "$Ancient" in name:
 
         market_id = entry.get("MarketID")
         systemName = entry.get("StarSystem")
