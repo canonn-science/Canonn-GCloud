@@ -4,7 +4,7 @@ cd function
 
 
 if [[ "$1" == "local" ]] ; then
-    functions-framework  --debug --target $entrypoint --host $(hostname -I | awk '{print $1}') --set-env-vars=MYSQL_USER=$MYSQL_USER,MYSQL_PASSWORD=$MYSQL_PASSWORD
+    functions-framework  --debug --target $entrypoint --host $(hostname -I | awk '{print $1}') 
 fi
 
 if [[ "$1" == "live" ]] ; then
