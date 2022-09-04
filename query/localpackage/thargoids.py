@@ -16,6 +16,8 @@ COALSACK = [423.5625, 0.5, 277.75]  # Musca Dark Region PJ-P b6-8
 WITCHHEAD = [355.75, -400.5, -707.21875]  # Ronemar
 CALIFORNIA = [-299.0625, -229.25, -876.125]  # HIP 18390
 CONESECTOR = [609.4375, 154.25, -1503.59375]  # Outotz ST-I d9-4
+WAYPOINT1 = [686.125 , -372.875, -1832.375] #Oochorrs UF-J c11-0
+WAYPOINT2 = [658.625 , -384.21875 , -1783.53125] #Oochorrs CS-F c13-0
 
 
 def getDistance(a, b):
@@ -39,6 +41,10 @@ def getNearest(r):
             [x, y, z], CALIFORNIA), "coords": CALIFORNIA},
         {"name": "Cone Sector", "distance": getDistance(
             [x, y, z], CONESECTOR), "coords": CONESECTOR},
+        {"name": "UIA Route", "distance": getDistance(
+            [x, y, z], WAYPOINT2), "coords": WAYPOINT2},
+        {"name": "UIA Route", "distance": getDistance(
+            [x, y, z], WAYPOINT1), "coords": WAYPOINT1},
     ]
     d.sort(key=lambda dx: dx["distance"], reverse=False)
 
@@ -242,6 +248,7 @@ def get_hyperdiction_detections(request):
             entry = {
                 "cmdr": row.get("cmdr"),
                 "timestamp": str(row.get("timestamp")),
+                "hostile": row.get("hostility"),
                 "start": {
                     "system": row.get("system"),
                     "x": str(row.get("x")),
