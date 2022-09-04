@@ -71,15 +71,21 @@ def insertReport(r):
     timestamp = r.get("timestamp").replace('T', ' ').replace('Z', ''),
     cmdr = r.get("cmdr"),
     game = r.get("odyssey")
+    hostile = ""
+    if r.get("hostile") is not None:
+        if r.get("hostile"):
+            hostile = 'Y'
+        else:
+            hostile = 'N'
 
     with __get_cursor() as cursor:
         # '9999-12-31 23:59:59'
         # timestamp":"2019-10-11T15:47:06Z"
         sql = """
-        	INSERT ignore INTO hd_detected (cmdr,system,timestamp,x,y,z,destination,dx,dy,dz,client,odyssey) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        	INSERT ignore INTO hd_detected (cmdr,system,timestamp,x,y,z,destination,dx,dy,dz,client,odyssey,hostile) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """
         cursor.execute(sql, (cmdr, system, timestamp, r.get("x"), r.get("y"), r.get(
-            "z"), r.get("destination"), r.get("dx"), r.get("dy"), r.get("dz"), r.get("client"), game))
+            "z"), r.get("destination"), r.get("dx"), r.get("dy"), r.get("dz"), r.get("client"), game, hostile))
 
         mysql_conn.commit()
 
@@ -200,9 +206,13 @@ def postDiscord(n, r):
         if r.get("odyssey") == 'N':
             game = " (Horizons)"
 
+    hostile = " "
+    if r.get("hostile"):
+        hostile = " hostile "
+
     # we only got accurate xyz when client was added so we will skip old versions
     if r.get("client"):
-        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}.{game}"
+        content = f"Commander {cmdr} reporting{hostile}hyperdiction at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}.{game}"
     else:
         content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}.{game}"
 
