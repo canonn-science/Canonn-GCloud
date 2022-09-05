@@ -16,8 +16,8 @@ COALSACK = [423.5625, 0.5, 277.75]  # Musca Dark Region PJ-P b6-8
 WITCHHEAD = [355.75, -400.5, -707.21875]  # Ronemar
 CALIFORNIA = [-299.0625, -229.25, -876.125]  # HIP 18390
 CONESECTOR = [609.4375, 154.25, -1503.59375]  # Outotz ST-I d9-4
-WAYPOINT1 = [686.125 , -372.875, -1832.375] #Oochorrs UF-J c11-0
-WAYPOINT2 = [658.625 , -384.21875 , -1783.53125] #Oochorrs CS-F c13-0
+WAYPOINT1 = [686.125, -372.875, -1832.375]  # Oochorrs UF-J c11-0
+WAYPOINT2 = [658.625, -384.21875, -1783.53125]  # Oochorrs CS-F c13-0
 
 
 def getDistance(a, b):
@@ -79,7 +79,7 @@ def get_nhss_systems(request):
     params.append(int(offset))
     params.append(int(limit))
 
-    data=[]
+    data = []
 
     with get_cursor() as cursor:
         sql = f"""
@@ -112,7 +112,7 @@ def get_nhss_systems(request):
         cursor.close()
 
         for row in r:
-            nearest=getNearest(row)
+            nearest = getNearest(row)
             entry = {
                 "systemName": row.get("systemName"),
                 "first_seen": row.get("first_seen"),
@@ -133,7 +133,7 @@ def get_nhss_systems(request):
                 "bubble": nearest.get("name"),
                 "bubble_distance": nearest.get("distance")
             }
-            data.append(entry)    
+            data.append(entry)
 
     return jsonify(data)
 
@@ -164,7 +164,7 @@ def get_nhss_reports(request):
     params.append(int(offset))
     params.append(int(limit))
 
-    data=[]
+    data = []
 
     with get_cursor() as cursor:
         sql = f"""
@@ -188,7 +188,7 @@ def get_nhss_reports(request):
         cursor.close()
 
         for row in r:
-            nearest=getNearest(row)
+            nearest = getNearest(row)
             entry = {
                 "created_at": row.get("created_at"),
                 "found_at": row.get("found_at"),
@@ -248,7 +248,7 @@ def get_hyperdiction_detections(request):
             entry = {
                 "cmdr": row.get("cmdr"),
                 "timestamp": str(row.get("timestamp")),
-                "hostile": row.get("hostility"),
+                "hostile": row.get("hostile"),
                 "start": {
                     "system": row.get("system"),
                     "x": str(row.get("x")),
