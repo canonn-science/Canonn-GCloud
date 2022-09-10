@@ -9,6 +9,24 @@ import json
 from flask import jsonify
 
 
+def uai_waypoints(uia=1):
+    links = [
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1795350434&single=true&output=tsv",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1985235220&single=true&output=tsv"
+    ]
+
+    url = links[uia - 1]
+
+    retval = []
+    r = requests.get(url)
+    lines = r.text.split('\r\n')
+    for line in lines:
+        l = line.split('\t')
+        retval.append(l)
+
+    return jsonify(retval)
+
+
 def codex_reports(cmdr, system, odyssey):
     setup_sql_conn()
 
@@ -75,23 +93,23 @@ def codex_reports(cmdr, system, odyssey):
     with get_cursor() as cursor:
 
         cursor.execute(sql, (cmdr, odycheck, odycheck, system,
-                       odycheck, odycheck, odycheck, odycheck))
+                             odycheck, odycheck, odycheck, odycheck))
         cr = cursor.fetchall()
 
-    exclude={}
+    exclude = {}
     for entry in cr:
-        
-        if entry.get("body"):
-            exclude[entry.get("entryid")]=True
 
-    result=[]
+        if entry.get("body"):
+            exclude[entry.get("entryid")] = True
+
+    result = []
     i = 0
     while i < len(cr):
-        entry=cr[i]
+        entry = cr[i]
         if entry.get("body") or not exclude.get(entry.get("entryid")):
             print(entry.get("body"))
             result.append(entry)
-        i+=1
+        i += 1
 
     return result
 
