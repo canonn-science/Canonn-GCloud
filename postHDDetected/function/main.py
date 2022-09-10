@@ -208,13 +208,15 @@ def postDiscord(n, r):
 
     hostile = " "
     if r.get("hostile"):
+        logging.info("hostile hyperdiction")
         hostile = " hostile "
 
     # we only got accurate xyz when client was added so we will skip old versions
-    if r.get("client"):
-        content = f"Commander {cmdr} reporting{hostile}hyperdiction at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}.{game}"
-    else:
-        content = f"Commander {cmdr} was hyperdicted at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}.{game}"
+
+    content = f"Commander {cmdr} reporting{hostile}hyperdiction at {system} while jumping {jump}ly to {destination}. The hyperdiction was {distance}ly from {ref}, the destination was {dest_distance} from {ref}.{game}"
+
+    #ishostile = (r.get("hostile") and r.get("hostile") == 'Y')
+    #notable = (is_notable(n) or ishostile)
 
     if is_notable(n) and system != "TEST":
         data["content"] = f"@here {content}"
@@ -250,7 +252,17 @@ def payload(request):
     hdFound = hdExists(request_json)
     nearest = getNearest(request_json)
 
-    if not hdFound:
+    ishostile = (request_json.get("hostile")
+                 and request_json.get("hostile") == 'Y')
+
+    if ishostile:
+        logging.info("hostile hyperdiction")
+    else:
+        logging.info("pacific hyperdiction")
+
+    hdNotFound = (not hdFound)
+
+    if hdNotFound or ishostile:
         postDiscord(nearest, request_json)
 
     insertReport(request_json)
