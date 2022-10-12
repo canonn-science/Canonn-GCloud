@@ -29,7 +29,7 @@ def challenge_next(request):
     pz = request.args.get("z")
     x, y, z = None, None, None
     limit=""
-    if request.args.get("odyssey") in ('N','n'):
+    if request.args.get("horizons") in ('Y','y'):
         limit=" platform = 'legacy' and "
 
     if system:
