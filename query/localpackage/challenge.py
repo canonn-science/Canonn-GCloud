@@ -28,9 +28,13 @@ def challenge_next(request):
     py = request.args.get("y")
     pz = request.args.get("z")
     x, y, z = None, None, None
+    limit=""
+    if request.args.get("odyssey") in ('N','n'):
+        limit=" platform = 'legacy' and "
 
     if system:
         s = getCoordinates(system)
+
 
     if system and s:
         x = s[0]
@@ -44,12 +48,12 @@ def challenge_next(request):
     if x is None:
         return {"error": "cant find source system"}
 
-    sql = """
+    sql = f"""
        select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance 
         from (
         select entryid,system,cast(x as char) x,cast(y as char) y,cast(z as char) z 
         from codex_systems where  entryid in (
-        select entryid from codex_name_ref cnr where hud_category not in ('None') and not exists
+        select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
         (select 1 from codexreport cr where cmdrname = %s and cnr.entryid = cr.entryid)
         ) order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
         ) challenge
