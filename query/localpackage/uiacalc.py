@@ -1,9 +1,27 @@
-from math import acos, degrees, sqrt, radians
+from math import acos, degrees, sqrt, radians, sin
 import json
 from this import d
 import requests
 from trianglesolver import solve
 from flask import jsonify
+
+
+class objdict(dict):
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            None
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+    def __delattr__(self, name):
+        if name in self:
+            del self[name]
+        else:
+            raise AttributeError("No such attribute: " + name)
+
 
 def get_systems(target, dest, observer):
     url = f"https://www.edsm.net/api-v1/systems?showCoordinates=1&systemName[]={target}&systemName[]={dest}&systemName[]={observer}"
@@ -14,11 +32,13 @@ def get_systems(target, dest, observer):
     for system in values:
         if system.get("name") == target:
             systems["target"] = list(system.get("coords").values())
+        if system.get("name") == target:
+            systems["origin"] = list(system.get("coords").values())
         if system.get("name") == dest:
             systems["dest"] = list(system.get("coords").values())
         if system.get("name") == observer:
             systems["observer"] = list(system.get("coords").values())
-    return systems
+    return objdict(systems)
 
 
 def dist(a, b):
@@ -37,14 +57,14 @@ def getdatum(C, a, A):
 
 def resolve(a=None, b=None, c=None, A=None, B=None, C=None):
     a, b, c, A, B, C = solve(a=a, b=b, c=c, A=A, B=B, C=C)
-    return {
+    return objdict({
         "a": a,
         "b": b,
         "c": c,
         "A": A,
         "B": B,
         "C": C,
-    }
+    })
 
 
 """
@@ -63,10 +83,10 @@ def calc_position(target, dest, observer, length, sample):
     systems = get_systems(target, dest, observer)
     # print(systems)
 
-    a = dist(systems.get("observer"), systems.get("dest"))
-    b = dist(systems.get("observer"), systems.get("target"))
-    c = dist(systems.get("target"), systems.get("dest"))
-    
+    a = dist(systems.observer, systems.dest)
+    b = dist(systems.observer, systems.target)
+    c = dist(systems.target, systems.dest)
+
     a, b, c, A, B, C = solve(a=a, b=b, c=c)
     A1 = radians(90)
 
@@ -81,3 +101,46 @@ def calc_position(target, dest, observer, length, sample):
     print(f"result {result} out of {c}")
     return jsonify(result)
 
+
+def calc_uia(origin, dest, observer, limit, offset, length, sample):
+    # limit/offset are expressed as a percentage of length
+    # 100% 50% etc
+    tEG = sample/length
+    tGB = (length-sample)/length
+
+    systems = get_systems(origin, dest, observer)
+    # print(systems)
+
+    BC = dist(systems.observer, systems.dest)
+    AC = dist(systems.observer, systems.origin)
+    AB = dist(systems.origin, systems.dest)
+
+    # this is the distance from the start we are going to test
+    # this will be half way between the range
+    print(f"AB {AB} {limit} {offset}")
+    AD = (AB/100) * ((offset-limit)/2)
+    print(f"AD {AD}")
+    DB = AB-AD
+
+    # ABC is the triangle formed by observer origin and destination
+    print(f"resolve(a={BC}, c={AC}, b={AB})")
+    ABC = resolve(a=BC, b=AC, c=AB)
+    DBC = resolve(a=BC, c=DB, B=ABC.B)
+    DC = DBC.b
+
+    # get the height
+    GB = BC*(sin(radians(ABC.C)))
+    GC = DBC.b
+
+    print(f"resolve(a={DC}, c={AD}, b={AC})")
+    ADC = resolve(a=DC, c=AD, b=AC)
+    print(f"resolve(a={GC}, B=90, C={ABC.C})")
+    EGC = resolve(a=GC, B=90, C=ADC.C)
+    EG = EGC.c
+    EB = EGC.c+GB
+
+    # now we have lengths we can convert into fractions of length
+    rEG = EG/EB
+    rGB = (EB-EG)/EB
+
+    print(f"{rEG} vs {tEG}")
