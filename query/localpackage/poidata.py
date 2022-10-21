@@ -16,7 +16,8 @@ def uai_waypoints(uia=1):
         "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1157712983&single=true&output=tsv",
         "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1884103472&single=true&output=tsv",
         "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1784951467&single=true&output=tsv",
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=844257496&single=true&output=tsv"
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=844257496&single=true&output=tsva,"
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=280976695&single=true&output=tsv"
     ]
 
     url = links[uia - 1]
