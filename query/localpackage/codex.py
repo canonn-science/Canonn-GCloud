@@ -529,7 +529,7 @@ def species_prices(request):
     with get_cursor() as cursor:
         sql = """
             SELECT
-				replace(sub_species->"$.p[0]",'"','') as sub_species,max(reward),sub_class
+				replace(sub_species->"$.p[0]",'"','') as sub_species,max(reward) as reward,sub_class
                 from (
                 select
                 cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
