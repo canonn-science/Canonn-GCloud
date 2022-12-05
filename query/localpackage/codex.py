@@ -529,7 +529,7 @@ def species_prices(request):
     with get_cursor() as cursor:
         sql = """
             SELECT
-                distinct replace(sub_species->"$.p[0]",'"','') as sub_species,reward,sub_class
+				replace(sub_species->"$.p[0]",'"','') as sub_species,max(reward),sub_class
                 from (
                 select
                 cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
@@ -537,6 +537,7 @@ def species_prices(request):
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
             REPLACE(os.species,'_Name;','%%')
             ) data
+            group by replace(sub_species->"$.p[0]",'"',''),sub_class
             ORDER BY reward DESC
         """
         cursor.execute(sql, ())
