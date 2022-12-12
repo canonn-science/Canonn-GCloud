@@ -529,16 +529,16 @@ def species_prices(request):
     with get_cursor() as cursor:
         sql = """
             SELECT
-				replace(sub_species->"$.p[0]",'"','') as sub_species,max(reward) as reward,sub_class
+				replace(sub_species->"$.p[0]",'"','') as sub_species,cast(SUBSTRING_INDEX( GROUP_CONCAT(reward ORDER BY created_at DESC), ',', 1) as SIGNED) as reward,sub_class
                 from (
                 select
-                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
+                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class,created_at
             FROM organic_sales os
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
             REPLACE(os.species,'_Name;','%%')
             ) data
             group by replace(sub_species->"$.p[0]",'"',''),sub_class
-            ORDER BY reward DESC
+            ORDER BY reward DESC            
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()
