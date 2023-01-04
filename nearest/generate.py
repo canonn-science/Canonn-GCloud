@@ -214,7 +214,8 @@ def get_services(station, system):
     global buying_stats
     global selling_stats
     retval = []
-    for service in station.get("services"):
+    # 2023-01-04 at least one station out there has no services at all...
+    for service in station.get("services", []):
         if service:
             service_name = service.lower().replace(" ", "_")
 
