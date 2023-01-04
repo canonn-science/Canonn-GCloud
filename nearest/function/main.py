@@ -202,6 +202,8 @@ def getkey(key):
         "s_and_r": "search_and_rescue",
         "search": "search_and_rescue",
         "rescue": "search_and_rescue",
+        "pioneer": "pioneer_supplies",
+        "supplies": "pioneer_supplies",
     }
     if aliases.get(key.strip()):
         return aliases.get(key.strip()).strip()
