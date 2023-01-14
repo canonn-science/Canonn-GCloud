@@ -452,22 +452,22 @@ def codex_name_ref(request):
 
     with get_cursor() as cursor:
         sql = """
-               select c.*,data2.reward from codex_name_ref c
-            left join (
-                SELECT
-                                entryid,max(reward) as reward
-                                from (
-                                select
-                                cnr.entryid,
-                                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class
-                            FROM organic_sales os
-                            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
-                            REPLACE(os.species,'_Name;','%%')
-
-                            ) data
-                            group by entryid
-                ) as data2
-            on data2.entryid =  c.entryid
+            SELECT c.*,data2.reward
+            FROM codex_name_ref c
+            LEFT JOIN (
+            SELECT
+                            entryid, CAST(SUBSTRING_INDEX(GROUP_CONCAT(reward
+                            ORDER BY created_at DESC), ',', 1) AS SIGNED) AS reward
+            FROM (
+            SELECT
+            entryid,
+            reward,created_at
+            FROM organic_sales os
+            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
+            REPLACE(os.species,'_Name;','%%')
+            ) DATA
+            GROUP BY entryid
+            ) AS data2 ON data2.entryid = c.entryid
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()

@@ -13,7 +13,7 @@ import localpackage.gnosis
 import localpackage.thargoids
 import localpackage.regionsvg
 import localpackage.events
-import localpackage.uiacalc
+
 
 import json
 import requests
@@ -23,9 +23,6 @@ app = current_app
 CORS(app)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-@app.route("/uia/calc/<target>/<dest>/<observer>/<length>/<sample>")
-def uiacalc(target, dest, observer, length, sample):
-    return localpackage.uiacalc.calc_position(target, dest, observer, float(length), float(sample))
 
 @app.route("/uia/waypoints")
 def uiawaypoints():
