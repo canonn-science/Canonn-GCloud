@@ -240,7 +240,7 @@ def insertCodexReport(request_args):
 
     with __get_cursor() as cursor:
         cursor.execute('''
-            insert into codexreport (
+            insert ignore into codexreport (
                 cmdrName,
                 system,
                 x,
