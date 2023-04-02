@@ -658,7 +658,13 @@ def extendRawEvents(gs, entry, cmdr):
         if not bodyName:
             bodyName = gs.get("bodyName")
 
-        x, y, z = gs.get("systemCoordinates")
+        try:
+            x, y, z = gs.get("systemCoordinates")
+        except:
+            logging.error(f"x y z is null")
+            logging.error(str(gs))
+            x, y, z = [None, None, None]
+
         station = gs.get("station")
         lat = entry.get("Latitude")
         lon = entry.get("Longitude")
@@ -1017,7 +1023,7 @@ def postOrganicScans(values):
 
     return execute_many("postOrganicScans",
                         """
-            insert into organic_scans (
+            insert ignore into organic_scans (
                 cmdr,
                 system,
                 systemAddress,
