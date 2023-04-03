@@ -70,6 +70,7 @@ def codex_reports(cmdr, system, odyssey):
                             when odyssey = 'Y' and %s = 'N' then null
                             when odyssey is null then null
                             when latitude is null or longitude is null then null 
+                            when hud_category in ('Thargoid','Guardian') then null
                             else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
                     end AS JSON) as coords  ,
                     cr.entryid,
@@ -78,7 +79,7 @@ def codex_reports(cmdr, system, odyssey):
                     index_id
                     FROM codexreport cr 
                     JOIN codex_name_ref cnr ON cnr.entryid = cr.entryid
-                    WHERE system = %s
+                    WHERE system = %s and cr.entryid in (select cs.entryid from codex_systems cs where system = cr.system)
                     and hud_category != 'None'
                     and (
                         (   
@@ -94,6 +95,7 @@ def codex_reports(cmdr, system, odyssey):
                             when odyssey = 'Y' and %s = 'N' then null
                             when odyssey is null then null
                             when latitude is null or longitude is null then null 
+                            when hud_category in ('Thargoid','Guardian') then null
                             else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
                     end AS JSON),
                     replace(body,concat(system,' '),''),
