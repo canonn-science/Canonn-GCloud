@@ -636,6 +636,8 @@ def extendOrganicScans(gs, event, cmdr):
             event.get("Species_Localised"),
             event.get("Genus"),
             event.get("Genus_Localised"),
+            event.get("Variant"),
+            event.get("Variant_Localised"),
             json.dumps(event),
             clientVersion,
             timestamp,
@@ -1036,6 +1038,8 @@ def postOrganicScans(values):
                 species_localised,
                 genus,
                 genus_localised,
+                variant,
+                variant_localised,
                 raw_json,
                 clientVersion,
                 reported_at,
@@ -1043,6 +1047,8 @@ def postOrganicScans(values):
                 temperature,
                 gravity)
             values (
+                nullif(%s,''),
+                nullif(%s,''),
                 nullif(%s,''),
                 nullif(%s,''),
                 nullif(%s,''),
