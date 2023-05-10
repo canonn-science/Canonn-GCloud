@@ -40,6 +40,50 @@ def uai_waypoints(uia=1):
         return jsonify([])
 
 
+def organic_scans(cmdr, system, odyssey):
+    if odyssey == 'N':
+        return
+
+    setup_sql_conn()
+    sql = """
+    SELECT 
+        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end as body,
+        latitude,longitude,
+        entryid,english_name,hud_category,null as index_id,
+        max(case when cmdr = %s then 'true' ELSE 'false' END) AS scanned
+        from organic_scans os
+        left join codex_name_ref cnr on cnr.name = os.variant
+        where system = %s
+        and variant is not null
+        group by 
+        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end,
+        latitude,longitude,
+        entryid,english_name,hud_category
+    """
+
+    with get_cursor() as cursor:
+
+        cursor.execute(sql, (cmdr, system))
+        cr = cursor.fetchall()
+
+    exclude = {}
+    for entry in cr:
+
+        if entry.get("body"):
+            exclude[entry.get("entryid")] = True
+
+    result = []
+    i = 0
+    while i < len(cr):
+        entry = cr[i]
+        if entry.get("body") or not exclude.get(entry.get("entryid")):
+            print(entry.get("body"))
+            result.append(entry)
+        i += 1
+
+    return result
+
+
 def codex_reports(cmdr, system, odyssey):
     setup_sql_conn()
 
@@ -235,6 +279,7 @@ def getSystemPoi(request):
     saa = saa_signals(system, odyssey)
     cpoi = cmdr_poi(cmdr, system, odyssey)
     fss = fss_events(system, odyssey)
+    scans = organic_scans(cmdr, system, odyssey)
 
     if codex:
         result["codex"] = codex
@@ -244,5 +289,7 @@ def getSystemPoi(request):
         result["cmdr"] = cpoi
     if fss:
         result["FSSsignals"] = fss
+    if scans:
+        result["ScanOrganic"] = scans
 
     return result
