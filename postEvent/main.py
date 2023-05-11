@@ -606,7 +606,7 @@ def extendLife(gs, event, cmdr):
 
 def extendOrganicScans(gs, event, cmdr):
     results = []
-    if event.get("event") == "ScanOrganic":
+    if event.get("event") == "ScanOrganic" and event.get("ScanType") in ("Log","Sample"):
 
         if gs.get("isBeta") == True:
             beta = 'Y'
