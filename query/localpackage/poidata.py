@@ -7,6 +7,8 @@ from pymysql.err import OperationalError
 import requests
 import json
 from flask import jsonify
+from collections import defaultdict
+import math
 
 
 def uai_waypoints(uia=1):
@@ -47,7 +49,8 @@ def organic_scans(cmdr, system, odyssey):
     setup_sql_conn()
     sql = """
     SELECT 
-        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end as body,
+        distinct 
+        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE replace(body,concat(system,' '),'') end as body,
         latitude,longitude,
         entryid,english_name,hud_category,null as index_id,
         max(case when cmdr = %s then 'true' ELSE 'false' END) AS scanned
@@ -77,7 +80,7 @@ def organic_scans(cmdr, system, odyssey):
     while i < len(cr):
         entry = cr[i]
         if entry.get("body") or not exclude.get(entry.get("entryid")):
-            print(entry.get("body"))
+            # print(entry.get("body"))
             result.append(entry)
         i += 1
 
@@ -166,7 +169,7 @@ def codex_reports(cmdr, system, odyssey):
     while i < len(cr):
         entry = cr[i]
         if entry.get("body") or not exclude.get(entry.get("entryid")):
-            print(entry.get("body"))
+            # print(entry.get("body"))
             result.append(entry)
         i += 1
 
@@ -263,6 +266,97 @@ def cmdr_poi(cmdr, system, odyssey):
     return cr
 
 
+def calc_distance(lat_a, lon_a, lat_b, lon_b, radius):
+
+    if radius is None:
+        return 0.0
+
+    lat_a = lat_a * math.pi / 180.
+    lon_a = lon_a * math.pi / 180.
+    lat_b = lat_b * math.pi / 180.
+    lon_b = lon_b * math.pi / 180.
+
+    if(lat_a != lat_b or lon_b != lon_a):
+        d_lambda = lon_b - lon_a
+        S_ab = math.acos(math.sin(lat_a)*math.sin(lat_b) +
+                         math.cos(lat_a)*math.cos(lat_b)*math.cos(d_lambda))
+        return S_ab * radius
+    else:
+        return 0.0
+
+
+def limitPois(data):
+    new_data = []
+
+    def calculate_score(poi):
+        max_distance = 0
+        if poi is None:
+            #print("poi undefined")
+            return 0
+        if poi.get("latitude") is None or poi.get("longitude") is None:
+            #print(f"poi coords undefined {poi}")
+            return 0
+
+        #print(f"new_data {new_data}")
+
+        for other in new_data:
+            if other and other.get("latitude") is not None and other.get("longitude") is not None:
+                distance = calc_distance(
+                    float(poi.get("latitude")),
+                    float(poi.get("longitude")),
+                    float(other.get("latitude")),
+                    float(other.get("longitude")),
+                    10000)
+                max_distance = max(max_distance, distance)
+            # else:
+            #    print(f"What? {other}")
+
+        return max_distance
+
+    # store one null location
+    null_loc = None
+
+    # count the number of nulls
+    for item in data:
+        c = 1
+        if item.get("latitude") is None or item.get("longitude") is None:
+            null_loc = item
+        else:
+            c += 1
+            if item:
+                new_data.append(item)
+    # we can add the null_loc back in
+    if c < 5 and null_loc:
+        new_data.append(null_loc)
+    # if its less then 6 then we can just return it.
+    if len(new_data) < 6:
+        return new_data
+
+    limited_data = sorted(new_data, key=calculate_score, reverse=True)[:5]
+
+    return limited_data
+
+
+def samplePoi(codex, scans):
+    grouped_data = defaultdict(list)
+    retval = []
+
+    for item in codex+scans:
+        body = item["body"]
+        entryid = item["entryid"]
+        grouped_data[(body, entryid)].append(item)
+
+    grouped_data = dict(grouped_data)
+    # print(grouped_data)
+    # lets quit here
+
+    for key, value in grouped_data.items():
+        # print(value)
+        retval += limitPois(value)
+
+    return retval
+
+
 def getSystemPoi(request):
 
     cmdr = request.args.get("cmdr")
@@ -282,14 +376,14 @@ def getSystemPoi(request):
     scans = organic_scans(cmdr, system, odyssey)
 
     if codex:
-        result["codex"] = codex
+        result["codex"] = samplePoi(codex, scans)
     if saa:
         result["SAAsignals"] = saa
     if cpoi:
         result["cmdr"] = cpoi
     if fss:
         result["FSSsignals"] = fss
-    if scans:
-        result["ScanOrganic"] = scans
+    # if scans:
+    #    result["ScanOrganic"] = scans
 
     return result
