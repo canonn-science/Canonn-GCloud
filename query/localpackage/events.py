@@ -5,6 +5,7 @@ from flask import jsonify
 from math import cos, acos, sin, asin, sqrt, radians, degrees
 import requests
 
+
 collisions = []
 
 
@@ -245,6 +246,27 @@ def page_events(limit, page, system):
     page_end = page_start+limit
 
     return jsonify(extract_events(start.isoformat(), end.isoformat(), system)[page_start:page_end])
+
+def collision_dates(request): 
+    system = request.args.get("system")
+    start = request.args.get("start")
+    end = request.args.get("end")
+    limit = request.args.get("limit") or 10
+    events = []
+
+    for event in extract_events(start, end, system):
+        match_system = (system and system == event.get("system"))
+        if match_system or not system:
+            human_time = "{:0>8}".format(str(timedelta(seconds=float(event.get("duration")))))
+            events.append({
+                "Start": event.get("start"),
+                "End": event.get("end"),
+                "Duration:R": human_time,
+                "Overlap:R": f"{event.get('seperation_pct')}%",}
+            )
+            if len(events) == limit:
+                break
+    return events
 
 
 def fetch_events(request):

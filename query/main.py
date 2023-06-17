@@ -1,7 +1,7 @@
 from flask import current_app
 from flask import request, jsonify
 from flask_cors import CORS
-
+import localpackage.tableutils
 
 import localpackage.dbutils
 from localpackage.dbutils import setup_sql_conn
@@ -38,11 +38,22 @@ def uiawaypoints2(uia):
 def getevents():
     return localpackage.events.fetch_events(request)
 
+@app.route("/collision_table")
+def collision_table():
+    
+    events=localpackage.events.collision_dates(request)
+    image_data=localpackage.tableutils.generate_table_image(events)
+    headers = {
+        'Content-Type': 'image/png',
+        'Content-Disposition': 'inline; filename=table.png',
+    }
+    return image_data, 200, headers
+    
 
 @app.route("/events/<limit>/<page>")
 def pageevents(limit, page):
     system = request.args.get("system")
-    print("page events")
+    
     return localpackage.events.page_events(int(limit), int(page), system)
 
 
@@ -115,6 +126,32 @@ def nearest_codex():
 def gnosis():
     return localpackage.gnosis.entry_point(request)
 
+@app.route("/gnosis/schedule")
+def gnosis_schedule():
+    schedule=localpackage.gnosis.get_schedule()
+    return jsonify(schedule)
+
+@app.route("/gnosis/schedule/table")
+def gnosis_schedule_tab():
+    system = request.args.get("system")
+    schedule=[]
+    data=localpackage.gnosis.get_schedule()
+    for item in data:
+        if system is None or system==item.get("system"):
+            schedule.append(
+                {
+                    "Arrival": item.get("arrival"),
+                    "System": item.get("system"),
+                    "Description": item.get("desc"),
+                    "Departure": item.get("departure"),
+                }
+            )
+    image_data=localpackage.tableutils.generate_table_image(schedule)
+    headers = {
+        'Content-Type': 'image/png',
+        'Content-Disposition': 'inline; filename=table.png',
+    }
+    return image_data, 200, headers
 
 @app.route("/region/<regions>/<size>")
 def region_svg(regions, size):
