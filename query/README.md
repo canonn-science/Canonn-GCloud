@@ -153,3 +153,34 @@ NB: this is limited to the first 1000
 * [Get Hyperdiction reports for Asterope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?system=Asterope)
 * [Get the next thousand Hyperdiction reports starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?_start=1000&_limit=1000)
 
+# gnosis
+
+Returns a json with the current location of the Gnosis
+
+https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis
+
+# gnosis/schedule
+
+returns a json array with the current schedule
+
+https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule
+
+
+# gnosis/schedule/table
+
+This endpoint generates a png with the Gnosis Schedule. The schedule can be limited to a single system.
+
+## parameters
+
+* system (the name of the system you want to find)
+
+## Example
+
+https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table
+
+![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table)
+
+https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?system=Epsilon%20Indi
+
+![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?system=Epsilon%20Indi)
+
