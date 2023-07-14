@@ -48,17 +48,39 @@ def challenge_next(request):
     if x is None:
         return {"error": "cant find source system"}
 
-    sql = f"""
-       select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance 
-        from (
-        select entryid,system,cast(x as char) x,cast(y as char) y,cast(z as char) z 
-        from codex_systems where  entryid in (
-        select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
+    entries=[]
+    entrysql=f"""
+    select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
         (select 1 from codexreport cr where cmdrname = %s and cnr.entryid = cr.entryid)
-        ) order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
-        ) challenge
-        join codex_name_ref cnr on cnr.entryid = challenge.entryid
     """
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        cursor.execute(entrysql, cmdr)
+        rows = cursor.fetchall()
+        entries = [row['entryid'] for row in rows]
+    placeholders = ', '.join(['%s'] * len(entries))
+    
+
+    sql = f"""
+        select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
+        select * from (
+            select * from codex_systems 
+            where zorder(%s,%s,%s) > z_order
+            and entryid in ({placeholders})
+            order by z_order desc
+            limit 100) data
+        union
+        select * from (
+            select * from codex_systems 
+            where zorder(%s,%s,%s) <= z_order
+            and entryid in ( {placeholders})
+            order by z_order asc
+            limit 100
+        ) data2
+    ) all_data
+    join codex_name_ref cnr on cnr.entryid = all_data.entryid
+    order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
+    """     
 
     res = {}
     res["sql"] = sql
@@ -74,8 +96,13 @@ def challenge_next(request):
             #endCoords=(ex, ey, ez)
             # lineDistance=(startCoords+endCoords)
             # limits=(offset,limit)
-
-            cursor.execute(sql, (x, y, z, cmdr, x, y, z))
+            params=[x,y,z]
+            params.extend([x,y,z])
+            params.extend(entries)
+            params.extend([x,y,z])
+            params.extend(entries)
+            params.extend([x,y,z])
+            cursor.execute(sql, tuple(params))
             # cursor.execute(sql,(sx,sy,sz,ex,ey,ez,sx,sy,sz,ex,ey,ez,jumpRange))
             cr = cursor.fetchall()
     except Exception as e:
