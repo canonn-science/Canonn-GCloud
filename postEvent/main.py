@@ -405,10 +405,10 @@ def insert_codex_systems(request_args):
         release = " (Horizons)"
 
     if hud != 'Unknown':
-        stmt = "insert ignore into codex_systems (system,x,y,z,entryid) values (%s,%s,%s,%s,%s)"
+        stmt = "insert ignore into codex_systems (system,x,y,z,entryid,z_order) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s))"
 
         with __get_cursor() as cursor:
-            cursor.execute(stmt, (system, x, y, z, entryid))
+            cursor.execute(stmt, (system, x, y, z, entryid, x, y, z))
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
                 codexsearch = "https://canonn-science.github.io/canonn-signals/index.html?system="
