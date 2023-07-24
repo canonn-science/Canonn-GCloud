@@ -12,7 +12,7 @@ from math import sqrt, trunc
 
 def getCoordinates(system):
     try:
-        url = 'https://www.edsm.net/api-v1/system?systemName={}&showCoordinates=1'
+        url = "https://www.edsm.net/api-v1/system?systemName={}&showCoordinates=1"
         r = requests.get(url.format(system))
         s = r.json()
         c = s.get("coords")
@@ -28,13 +28,12 @@ def challenge_next(request):
     py = request.args.get("y")
     pz = request.args.get("z")
     x, y, z = None, None, None
-    limit=""
-    if request.args.get("horizons") in ('Y','y'):
-        limit=" platform = 'legacy' and "
+    limit = ""
+    if request.args.get("horizons") in ("Y", "y"):
+        limit = " platform = 'legacy' and "
 
     if system:
         s = getCoordinates(system)
-
 
     if system and s:
         x = s[0]
@@ -48,8 +47,8 @@ def challenge_next(request):
     if x is None:
         return {"error": "cant find source system"}
 
-    entries=[]
-    entrysql=f"""
+    entries = []
+    entrysql = f"""
     select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
         (select 1 from codexreport cr where cmdrname = %s and cnr.entryid = cr.entryid)
     """
@@ -57,9 +56,8 @@ def challenge_next(request):
     with get_cursor() as cursor:
         cursor.execute(entrysql, cmdr)
         rows = cursor.fetchall()
-        entries = [row['entryid'] for row in rows]
-    placeholders = ', '.join(['%s'] * len(entries))
-    
+        entries = [row["entryid"] for row in rows]
+    placeholders = ", ".join(["%s"] * len(entries))
 
     sql = f"""
         select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
@@ -80,7 +78,7 @@ def challenge_next(request):
     ) all_data
     join codex_name_ref cnr on cnr.entryid = all_data.entryid
     order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
-    """     
+    """
 
     res = {}
     res["sql"] = sql
@@ -92,16 +90,16 @@ def challenge_next(request):
         # Remember to close SQL resources declared while running this function.
         # Keep any declared in global scope (e.g. mysql_conn) for later reuse.
         with get_cursor() as cursor:
-            #startCoords=(sx, sy, sz)
-            #endCoords=(ex, ey, ez)
+            # startCoords=(sx, sy, sz)
+            # endCoords=(ex, ey, ez)
             # lineDistance=(startCoords+endCoords)
             # limits=(offset,limit)
-            params=[x,y,z]
-            params.extend([x,y,z])
+            params = [x, y, z]
+            params.extend([x, y, z])
             params.extend(entries)
-            params.extend([x,y,z])
+            params.extend([x, y, z])
             params.extend(entries)
-            params.extend([x,y,z])
+            params.extend([x, y, z])
             cursor.execute(sql, tuple(params))
             # cursor.execute(sql,(sx,sy,sz,ex,ey,ez,sx,sy,sz,ex,ey,ez,jumpRange))
             cr = cursor.fetchall()
@@ -155,8 +153,14 @@ def challenge_status(request):
             h = val.get("hud_category")
             s = val.get("sub_class")
             if not data.get(s):
-                data[s] = {"hud_category": h, "types_found": [],
-                           "types_available": [], "types_missing": [], "codex_count": 0, "cmdr_count": 0}
+                data[s] = {
+                    "hud_category": h,
+                    "types_found": [],
+                    "types_available": [],
+                    "types_missing": [],
+                    "codex_count": 0,
+                    "cmdr_count": 0,
+                }
             if val.get("type_found"):
                 data[s]["types_found"].append(val.get("type_found"))
                 data[s]["cmdr_count"] = len(data[s]["types_found"])
@@ -168,15 +172,17 @@ def challenge_status(request):
 
         retval = []
         for r in data.keys():
-            retval.append({
-                "codex": str(data.get(r).get("codex_count")),
-                "cmdr": str(data.get(r).get("cmdr_count")),
-                "sub_class": r,
-                "hud_category": data.get(r).get("hud_category"),
-                "types_found": data.get(r).get("types_found"),
-                "types_available": data.get(r).get("types_available"),
-                "types_missing": data.get(r).get("types_missing")
-            })
+            retval.append(
+                {
+                    "codex": str(data.get(r).get("codex_count")),
+                    "cmdr": str(data.get(r).get("cmdr_count")),
+                    "sub_class": r,
+                    "hud_category": data.get(r).get("hud_category"),
+                    "types_found": data.get(r).get("types_found"),
+                    "types_available": data.get(r).get("types_available"),
+                    "types_missing": data.get(r).get("types_missing"),
+                }
+            )
         return retval
 
     def enrich_data(cr):
@@ -210,29 +216,53 @@ def challenge_status(request):
                 "types_found": types_found,
                 "types_available": types_available,
                 "types_missing": types_missing,
-                "percentage": int((int(val.get("cmdr"))/int(val.get("codex"))) * 1000)/10
+                "percentage": int((int(val.get("cmdr")) / int(val.get("codex"))) * 1000)
+                / 10,
             }
             if val.get("hud_category") in ("Cloud", "Anomaly", "Biology"):
                 codex_count += int(val.get("codex"))
                 cmdr_count += int(val.get("cmdr"))
 
-            if retval.get(hud_category) and hud_category not in ("Guardian", "Thargoid"):
+            if retval.get(hud_category) and hud_category not in (
+                "Guardian",
+                "Thargoid",
+            ):
                 retval[hud_category]["codex_count"] += int(val.get("codex"))
                 retval[hud_category]["cmdr_count"] += int(val.get("cmdr"))
-                retval[hud_category]["percentage"] = int((int(retval[hud_category].get(
-                    "cmdr_count"))/int(retval[hud_category].get("codex_count"))) * 1000)/10
+                retval[hud_category]["percentage"] = (
+                    int(
+                        (
+                            int(retval[hud_category].get("cmdr_count"))
+                            / int(retval[hud_category].get("codex_count"))
+                        )
+                        * 1000
+                    )
+                    / 10
+                )
 
-            if not retval.get(hud_category) and hud_category not in ("Guardian", "Thargoid"):
-                retval[hud_category] = {"codex_count": int(
-                    val.get("codex")), "cmdr_count": int(val.get("cmdr"))}
-                retval[hud_category]["percentage"] = int((int(retval[hud_category].get(
-                    "cmdr_count"))/int(retval[hud_category].get("codex_count"))) * 1000)/10
+            if not retval.get(hud_category) and hud_category not in (
+                "Guardian",
+                "Thargoid",
+            ):
+                retval[hud_category] = {
+                    "codex_count": int(val.get("codex")),
+                    "cmdr_count": int(val.get("cmdr")),
+                }
+                retval[hud_category]["percentage"] = (
+                    int(
+                        (
+                            int(retval[hud_category].get("cmdr_count"))
+                            / int(retval[hud_category].get("codex_count"))
+                        )
+                        * 1000
+                    )
+                    / 10
+                )
 
         # caclulate the canonn challenge percent
 
-        pct = int((cmdr_count/codex_count) * 1000)/10
-        retval["challenge"] = {"cmdr": cmdr_count,
-                               "codex": codex_count, "pct": pct}
+        pct = int((cmdr_count / codex_count) * 1000) / 10
+        retval["challenge"] = {"cmdr": cmdr_count, "codex": codex_count, "pct": pct}
 
         return retval
 
@@ -251,20 +281,20 @@ def challenge_svg(request):
     c = 0
     for group in data.keys():
         found = data.get(group).get("types_found")
-        #print(f"group {found}")
+        # print(f"group {found}")
         if data.get(group).get("types_available"):
             for name in data.get(group).get("types_found"):
                 c += 1
-                titles["I"+str(c)] = {"name": name, "class": "found"}
+                titles["I" + str(c)] = {"name": name, "class": "found"}
                 # print(titles["I"+str(c)])
             for name in data.get(group).get("types_missing"):
                 c += 1
-                titles["I"+str(c)] = {"name": name, "class": "missing"}
+                titles["I" + str(c)] = {"name": name, "class": "missing"}
     maxcol = trunc(sqrt(c))
-    width = maxcol*21
-    height = maxcol*21+100
+    width = maxcol * 21
+    height = maxcol * 21 + 100
 
-    svg_start = f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}px\" height=\"{height}px\" viewBox=\"0 0 {width} {height}\" style=\"background-color: black\" >"
+    svg_start = f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}px" height="{height}px" viewBox="0 0 {width} {height}" style="background-color: black" >'
     svg_header = """
         
            <style>
@@ -304,9 +334,8 @@ def challenge_svg(request):
         """
     svg_struct = ""
     for id in titles.keys():
-
         idstr = titles.get(id)
-        svg_struct = svg_struct + "\n" + '"'+id+'": '+str(idstr)+",\n"
+        svg_struct = svg_struct + "\n" + '"' + id + '": ' + str(idstr) + ",\n"
     script_end = """
                        
                     }  
@@ -337,22 +366,37 @@ def challenge_svg(request):
     maxcol = trunc(sqrt(c))
     for id in titles.keys():
         rectclass = titles.get(id).get("class")
-        svg_rects = svg_rects + '<rect id="'+id + \
-            '" x="'+str(x) + \
-            '" width="19" y="'+str(y)+'" height="19" class="' + \
-            rectclass+'" rx="3" ry="3"></rect>'
-        x = x+21
+        svg_rects = (
+            svg_rects
+            + '<rect id="'
+            + id
+            + '" x="'
+            + str(x)
+            + '" width="19" y="'
+            + str(y)
+            + '" height="19" class="'
+            + rectclass
+            + '" rx="3" ry="3"></rect>'
+        )
+        x = x + 21
         counter += 1
         if counter == maxcol:
             x = 0
-            y = y+21
+            y = y + 21
             counter = 0
     # print(titles["I1"])
     svg_trailer = "</svg>"
-    svg = svg_start + svg_header + svg_struct + \
-        script_end + svg_rects + svg_text + svg_trailer
+    svg = (
+        svg_start
+        + svg_header
+        + svg_struct
+        + script_end
+        + svg_rects
+        + svg_text
+        + svg_trailer
+    )
 
-    return flask.Response(svg, mimetype='image/svg+xml')
+    return flask.Response(svg, mimetype="image/svg+xml")
 
 
 def speed_challenge(request):
@@ -360,7 +404,7 @@ def speed_challenge(request):
     params = ()
     if request.args.get("cmdr"):
         where = "and cmdr = %s"
-        params = (request.args.get("cmdr"))
+        params = request.args.get("cmdr")
     limit = 10
     if request.args.get("_limit"):
         limit = request.args.get("_limit")
@@ -469,7 +513,7 @@ def fastest_scans(request):
     params = ()
     if request.args.get("cmdr"):
         where = "where cmdr = %s"
-        params = (request.args.get("cmdr"))
+        params = request.args.get("cmdr")
 
     setup_sql_conn()
     with get_cursor() as cursor:
@@ -499,7 +543,6 @@ def fastest_scans(request):
 
 
 def nearest_codex(request):
-
     if request.args.get("system"):
         x, y, z = getCoordinates(request.args.get("system"))
     else:
@@ -507,31 +550,60 @@ def nearest_codex(request):
         y = request.args.get("y", 0.0)
         z = request.args.get("z", 0.0)
 
-    if request.args.get("name"):
-        where = "where english_name like concat('%%',%s,'%%')"
-        params = (x, y, z, request.args.get("name"), x, y, z)
+    entries = []
+    entrysql = f"select entryid from codex_name_ref cnr where hud_category not in ('None') and english_name like concat('%%',%s,'%%')"
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        cursor.execute(entrysql, (request.args.get("name")))
+        rows = cursor.fetchall()
+        entries = [row["entryid"] for row in rows]
+
+    placeholders = ", ".join(["%s"] * len(entries))
+
+    if request.args.get("name") and len(entries) > 0:
+        where = f"and entryid in ({placeholders})"
     else:
-        where = "1=1"
-        params = (x, y, z, x, y, z)
+        where = " "
 
     if request.args.get("odyssey"):
-        if request.args.get("odyssey") == 'Y':
+        if request.args.get("odyssey") == "Y":
             where = f"{where} and  odyssey='Y'"
-        if request.args.get("odyssey") == 'N':
+        if request.args.get("odyssey") == "N":
             where = f"{where} and  odyssey='N'"
 
     setup_sql_conn()
     with get_cursor() as cursor:
         sql = f"""
-            select english_name,entryid,system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance
+            select cnr.english_name,cnr.entryid,data3.system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance
             from (
-            select distinct english_name,cs.entryid,system,x,y,z
-            from codexreport cs 
-            join codex_name_ref cnr on cnr.entryid = cs.entryid
-            {where}
-            order by (pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)) asc 
-            limit 20) data
+            	select * from (
+                    select * from codex_systems 
+                    where zorder(%s,%s,%s) > z_order
+                    {where}
+                    order by z_order desc
+                    limit 100
+                ) data
+                union
+                select * from (
+                    select * from codex_systems 
+                    where zorder(%s,%s,%s) <= z_order
+                    {where}
+                    order by z_order asc
+                    limit 100
+                ) data2            
+            ) data3
+            join codex_name_ref cnr on cnr.entryid=data3.entryid
+            order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc 
+            limit 20
         """
+
+        params = []
+        params.extend([x, y, z])
+        params.extend([x, y, z])
+        params.extend(entries)
+        params.extend([x, y, z])
+        params.extend(entries)
+        params.extend([x, y, z])
         cursor.execute(sql, params)
         r = cursor.fetchall()
         cursor.close()
