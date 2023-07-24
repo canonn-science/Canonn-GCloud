@@ -560,7 +560,10 @@ def nearest_codex(request):
 
     placeholders = ", ".join(["%s"] * len(entries))
 
-    if request.args.get("name") and len(entries) > 0:
+    if len(entries) == 0:
+        return {"error": "You must enter a valid name"}
+
+    if request.args.get("name"):
         where = f"and entryid in ({placeholders})"
     else:
         where = " "
