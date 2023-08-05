@@ -1,4 +1,3 @@
-
 import localpackage.dbutils
 from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
@@ -22,7 +21,7 @@ def uai_waypoints(uia=1):
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=844257496&single=true&output=tsv",
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=280976695&single=true&output=tsv",
             "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=1588175655&single=true&output=tsv",
-            "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=84085245&single=true&output=tsv"
+            "https://docs.google.com/spreadsheets/d/e/2PACX-1vSWfL7b8-lV8uFCA2iUrKDI3Q9dSSraj8gbrt_ng0WIh1_qrS_GXZycmYdoaO7a3c_OON0t8LlYSO3f/pub?gid=84085245&single=true&output=tsv",
         ]
 
         if uia > len(links):
@@ -32,9 +31,9 @@ def uai_waypoints(uia=1):
 
         retval = []
         r = requests.get(url)
-        lines = r.text.split('\r\n')
+        lines = r.text.split("\r\n")
         for line in lines:
-            l = line.split('\t')
+            l = line.split("\t")
             retval.append(l)
 
         return jsonify(retval)
@@ -43,7 +42,7 @@ def uai_waypoints(uia=1):
 
 
 def organic_scans(cmdr, system, odyssey):
-    if odyssey == 'N':
+    if odyssey == "N":
         return
 
     setup_sql_conn()
@@ -55,7 +54,13 @@ def organic_scans(cmdr, system, odyssey):
         entryid,english_name,hud_category,null as index_id,
         max(case when cmdr = %s then 'true' ELSE 'false' END) AS scanned
         from organic_scans os
-        left join codex_name_ref cnr on cnr.name = os.variant
+        left join codex_name_ref cnr on cnr.name = case 
+            when variant not like concat(replace(species,'_Name;',''),'%%') then
+                concat(
+	                replace(species,'_Name;',''),
+	                substr(variant,length(replace(species,'_Name;',''))+1))
+            else variant 
+        end
         where system = %s
         and variant is not null
         group by 
@@ -65,13 +70,11 @@ def organic_scans(cmdr, system, odyssey):
     """
 
     with get_cursor() as cursor:
-
         cursor.execute(sql, (cmdr, system))
         cr = cursor.fetchall()
 
     exclude = {}
     for entry in cr:
-
         if entry.get("body"):
             exclude[entry.get("entryid")] = True
 
@@ -90,10 +93,10 @@ def organic_scans(cmdr, system, odyssey):
 def codex_reports(cmdr, system, odyssey):
     setup_sql_conn()
 
-    if odyssey == 'N':
-        odycheck = 'N'
+    if odyssey == "N":
+        odycheck = "N"
     else:
-        odycheck = 'Y'
+        odycheck = "Y"
 
     print(f"odycheck {odycheck}")
 
@@ -153,14 +156,14 @@ def codex_reports(cmdr, system, odyssey):
         ) data
     """
     with get_cursor() as cursor:
-
-        cursor.execute(sql, (cmdr, odycheck, odycheck, system,
-                             odycheck, odycheck, odycheck, odycheck))
+        cursor.execute(
+            sql,
+            (cmdr, odycheck, odycheck, system, odycheck, odycheck, odycheck, odycheck),
+        )
         cr = cursor.fetchall()
 
     exclude = {}
     for entry in cr:
-
         if entry.get("body"):
             exclude[entry.get("entryid")] = True
 
@@ -178,7 +181,7 @@ def codex_reports(cmdr, system, odyssey):
 
 def saa_signals(system, odyssey):
     setup_sql_conn()
-    if odyssey == 'Y':
+    if odyssey == "Y":
         count = "species"
         alt = "sites"
     else:
@@ -211,7 +214,6 @@ def saa_signals(system, odyssey):
         and ifnull({count},{alt}) is not null
     """
     with get_cursor() as cursor:
-
         cursor.execute(sql, (system))
         cr = cursor.fetchall()
 
@@ -229,7 +231,6 @@ def fss_events(system, odyssey):
             and raw_json like '%%Fixed_Event_Life_%%'
     """
     with get_cursor() as cursor:
-
         cursor.execute(sql, (system))
         cr = cursor.fetchall()
 
@@ -259,7 +260,6 @@ def cmdr_poi(cmdr, system, odyssey):
         ) data
     """
     with get_cursor() as cursor:
-
         cursor.execute(sql, (cmdr, system))
         cr = cursor.fetchall()
 
@@ -267,19 +267,20 @@ def cmdr_poi(cmdr, system, odyssey):
 
 
 def calc_distance(lat_a, lon_a, lat_b, lon_b, radius):
-
     if radius is None:
         return 0.0
 
-    lat_a = lat_a * math.pi / 180.
-    lon_a = lon_a * math.pi / 180.
-    lat_b = lat_b * math.pi / 180.
-    lon_b = lon_b * math.pi / 180.
+    lat_a = lat_a * math.pi / 180.0
+    lon_a = lon_a * math.pi / 180.0
+    lat_b = lat_b * math.pi / 180.0
+    lon_b = lon_b * math.pi / 180.0
 
-    if(lat_a != lat_b or lon_b != lon_a):
+    if lat_a != lat_b or lon_b != lon_a:
         d_lambda = lon_b - lon_a
-        S_ab = math.acos(math.sin(lat_a)*math.sin(lat_b) +
-                         math.cos(lat_a)*math.cos(lat_b)*math.cos(d_lambda))
+        S_ab = math.acos(
+            math.sin(lat_a) * math.sin(lat_b)
+            + math.cos(lat_a) * math.cos(lat_b) * math.cos(d_lambda)
+        )
         return S_ab * radius
     else:
         return 0.0
@@ -291,22 +292,27 @@ def limitPois(data):
     def calculate_score(poi):
         max_distance = 0
         if poi is None:
-            #print("poi undefined")
+            # print("poi undefined")
             return 0
         if poi.get("latitude") is None or poi.get("longitude") is None:
-            #print(f"poi coords undefined {poi}")
+            # print(f"poi coords undefined {poi}")
             return 0
 
-        #print(f"new_data {new_data}")
+        # print(f"new_data {new_data}")
 
         for other in new_data:
-            if other and other.get("latitude") is not None and other.get("longitude") is not None:
+            if (
+                other
+                and other.get("latitude") is not None
+                and other.get("longitude") is not None
+            ):
                 distance = calc_distance(
                     float(poi.get("latitude")),
                     float(poi.get("longitude")),
                     float(other.get("latitude")),
                     float(other.get("longitude")),
-                    10000)
+                    10000,
+                )
                 max_distance = max(max_distance, distance)
             # else:
             #    print(f"What? {other}")
@@ -341,7 +347,7 @@ def samplePoi(codex, scans):
     grouped_data = defaultdict(list)
     retval = []
 
-    for item in codex+scans:
+    for item in codex + scans:
         body = item["body"]
         entryid = item["entryid"]
         grouped_data[(body, entryid)].append(item)
@@ -358,16 +364,11 @@ def samplePoi(codex, scans):
 
 
 def getSystemPoi(request):
-
     cmdr = request.args.get("cmdr")
     system = request.args.get("system")
     odyssey = request.args.get("odyssey")
     print(f"odyssey {odyssey}")
-    result = {
-        "cmdrName": cmdr,
-        "system": system,
-        "odyssey": odyssey
-    }
+    result = {"cmdrName": cmdr, "system": system, "odyssey": odyssey}
 
     codex = codex_reports(cmdr, system, odyssey)
     saa = saa_signals(system, odyssey)
