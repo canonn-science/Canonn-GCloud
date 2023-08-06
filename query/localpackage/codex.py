@@ -331,8 +331,20 @@ def guess_biology(body, codex):
 
                 distanceMatch = (float(species.get("mind")) <= float(
                     body.get("distanceToArrival")) <= float(species.get("maxd")))
+                
+                # if there are genuses recorded then only matching genus should be included in the guesses
+                if body.get("signals") and body.get("signals").get("genuses"):
+                    matchgenus=False
+                    genus=species.get("fdevname").split('_')[2]
+                    print(genus)
+                    for g in body.get("signals").get("genuses"):
+                        print(g)
+                        if g.split('_')[2] == genus:
+                            matchgenus=matchgenus or True
+                else:
+                    matchgenus=True
 
-                if (validStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and validMaterials and parentMatch and regionMatch):
+                if (matchgenus and validStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and validMaterials and parentMatch and regionMatch):
                     genus = species.get("name").split(' ')[0]
                     # print(genus)
                     #print(get_body_codex(codex, 'Biology', body.get("name")))
