@@ -55,12 +55,13 @@ def findRegion64(id):
     masscode = id64 & 7
     z = (((id64 >> 3) & (0x3FFF >> masscode)) << masscode) * 10 - 24105
     y = (((id64 >> (17 - masscode)) & (0x1FFF >> masscode)) << masscode) * 10 - 40985
-    x = (((id64 >> (30 - masscode * 2)) & (0x3FFF >> masscode))
-         << masscode) * 10 - 49985
+    x = (
+        ((id64 >> (30 - masscode * 2)) & (0x3FFF >> masscode)) << masscode
+    ) * 10 - 49985
     try:
         return findRegion(x, y, z)
     except:
-        return 0, 'Unknown'
+        return 0, "Unknown"
 
 
 def get_biostats(cache=True):
@@ -68,7 +69,8 @@ def get_biostats(cache=True):
     if not biostats or not cache:
         print("fetching stats")
         r = requests.get(
-            "https://drive.google.com/uc?id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj")
+            "https://drive.google.com/uc?id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj"
+        )
         biostats = r.json()
     else:
         print("stats cached")
@@ -83,15 +85,17 @@ def biostats_cache(cache):
 def get_spansh_by_id(id64):
     global spanshdump
 
-    cached = (spanshdump.get("system") and spanshdump.get("system").get(
-        "id64") and str(spanshdump.get("system").get("id64")) == str(id64))
+    cached = (
+        spanshdump.get("system")
+        and spanshdump.get("system").get("id64")
+        and str(spanshdump.get("system").get("id64")) == str(id64)
+    )
 
     # ignore caching as we want latest data
     # if not cached:
     if True:
         print("fetching from spansh")
-        r = requests.get(
-            f"https://spansh.co.uk/api/dump/{id64}")
+        r = requests.get(f"https://spansh.co.uk/api/dump/{id64}")
         spanshdump = r.json()
         if spanshdump.get("system"):
             if spanshdump.get("system").get("factions"):
@@ -100,8 +104,11 @@ def get_spansh_by_id(id64):
                 del spanshdump["system"]["stations"]
 
         # check that id64 matches
-        cached = (spanshdump.get("system") and spanshdump.get("system").get(
-            "id64") and str(spanshdump.get("system").get("id64")) == str(id64))
+        cached = (
+            spanshdump.get("system")
+            and spanshdump.get("system").get("id64")
+            and str(spanshdump.get("system").get("id64")) == str(id64)
+        )
         if not cached:
             spanshdump = {}
     else:
@@ -127,18 +134,17 @@ def get_primary_star(system):
 def get_parent_type(system, body):
     bodyName = body.get("name")
     systemName = system.get("name")
-    shortName = bodyName.replace(f"{systemName} ", '')
+    shortName = bodyName.replace(f"{systemName} ", "")
     bodies = system.get("bodies")
 
-    parts = shortName.split(' ')
+    parts = shortName.split(" ")
 
-    for n in range(len(parts)-1, -1, -1):
-
+    for n in range(len(parts) - 1, -1, -1):
         newpart = " ".join(parts[:n])
         if newpart.isupper():
             # print(f"converting newpart {newpart} to {newpart[0]}")
             newpart = newpart[0]
-        newname = systemName+" "+newpart
+        newname = systemName + " " + newpart
         # :qprint(newname)
         for b in bodies:
             if b.get("name") == newname and b.get("type") == "Star":
@@ -159,8 +165,12 @@ def get_system_codex(system):
             select distinct system,nullif(body,'') as body,english_name,hud_category from codexreport cr 
             join codex_name_ref cnr on cnr.entryid = cr.entryid
             where system = %s
+            union             
+            select distinct system,nullif(body,'') as body,english_name,hud_category from organic_scans cr 
+            join codex_name_ref cnr on cnr.name = cr.variant
+            where system = %s
         """
-        cursor.execute(sqltext, (system))
+        cursor.execute(sqltext, (system, system))
         r = cursor.fetchall()
         cursor.close()
         return r
@@ -171,7 +181,20 @@ def mat_species(species):
     id = species.get("id")
 
     if id:
-        for material in ("Technetium", "Molybdenum", "Ruthenium", "Tellurium",  "Antimony", "Tungsten", "Polonium", "Yttrium",  "Cadmium", "Niobium", "Mercury", "Tin"):
+        for material in (
+            "Technetium",
+            "Molybdenum",
+            "Ruthenium",
+            "Tellurium",
+            "Antimony",
+            "Tungsten",
+            "Polonium",
+            "Yttrium",
+            "Cadmium",
+            "Niobium",
+            "Mercury",
+            "Tin",
+        ):
             if material in id:
                 return True
     else:
@@ -195,7 +218,7 @@ def checkMats(body, species):
                 count += 1
 
         # if we have all required materials we should be good.
-        matmatch = ((count == target))
+        matmatch = count == target
         # the species id contains the key material that must be present
         # we shouldn't have to do this but there may be some misreported bodies
 
@@ -206,7 +229,7 @@ def checkMats(body, species):
                 break
 
     # We need matching materials and for our material to be present
-    matmatch = (matmatch and hasmat)
+    matmatch = matmatch and hasmat
 
     return matmatch
 
@@ -223,7 +246,7 @@ def checkStar(codex, system):
         h1, h1, genus, species, star, t = fdevname.split("_")
     except:
         # we don't know so let it got
-       # print(f"exception: {fdevname}")
+        # print(f"exception: {fdevname}")
         return True
 
     stars = {
@@ -249,10 +272,10 @@ def checkStar(codex, system):
             "White Dwarf (DBV) Star",
             "White Dwarf (DC) Star",
             "White Dwarf (DCV) Star",
-            "White Dwarf (DQ) Star"
+            "White Dwarf (DQ) Star",
         ],
         "N": ["Neutron Star"],
-        "Ae": ["Herbig Ae/Be Star"]
+        "Ae": ["Herbig Ae/Be Star"],
     }
     # if star is defined and in the star list we have a star class
     if star and stars.get(star):
@@ -262,7 +285,7 @@ def checkStar(codex, system):
                 return True
     else:
         # we don't know so let it through
-        #print(f"lookup failed: {codex}")
+        # print(f"lookup failed: {codex}")
         return True
     # We didn't find the right starclass
     return False
@@ -284,71 +307,104 @@ def guess_biology(body, codex):
     for key in biostats.keys():
         species = biostats.get(key)
 
-        if species.get("hud_category") == 'Biology':
-
+        if species.get("hud_category") == "Biology":
             validStar = checkStar(species, system)
 
-            odyssey = (species.get("platform") == 'odyssey')
+            odyssey = species.get("platform") == "odyssey"
 
             # don't match regions on odyssey bios
             # NB we now know that there is region specific biology
             # But we don't want to miss guesses we would have to build
             # some reference data
-            regionMatch = (odyssey or (species.get("regions")
-                                       and region_name in species.get("regions")))
+            regionMatch = odyssey or (
+                species.get("regions") and region_name in species.get("regions")
+            )
 
-            parentMatch = (parentType in species.get("localStars"))
+            parentMatch = parentType in species.get("localStars")
             # materials is highly dependednt on species
             validMaterials = checkMats(body, species)
 
             volcanismMatch = (
-                (body.get("volcanismType") or "No volcanism") in species.get("volcanism"))
+                body.get("volcanismType") or "No volcanism"
+            ) in species.get("volcanism")
 
             atmosphereTypeMatch = (
-                (body.get("atmosphereType") or "No atmosphere") in species.get("atmosphereType"))
+                body.get("atmosphereType") or "No atmosphere"
+            ) in species.get("atmosphereType")
 
-            mainstarMatch = (get_mainstar_type()
-                             in species.get("primaryStars"))
+            mainstarMatch = get_mainstar_type() in species.get("primaryStars")
 
             # use combined body and volcanism
-            #bodyMatch = (body.get("subType") in species.get("bodies"))
-            volcanicbodytype = body.get(
-                "subType") + " - " + (body.get("volcanismType") or "No volcanism")
-            if species.get("histograms").get("volcanic_body_types") and volcanicbodytype in species.get("histograms").get("volcanic_body_types").keys():
+            # bodyMatch = (body.get("subType") in species.get("bodies"))
+            volcanicbodytype = (
+                body.get("subType")
+                + " - "
+                + (body.get("volcanismType") or "No volcanism")
+            )
+            if (
+                species.get("histograms").get("volcanic_body_types")
+                and volcanicbodytype
+                in species.get("histograms").get("volcanic_body_types").keys()
+            ):
                 bodyMatch = True
             else:
                 bodyMatch = False
 
             if bodyMatch and species.get("ming"):
-                gravityMatch = (float(species.get("ming")) <= float(
-                    body.get("gravity")) <= float(species.get("maxg")))
+                gravityMatch = (
+                    float(species.get("ming"))
+                    <= float(body.get("gravity"))
+                    <= float(species.get("maxg"))
+                )
 
-                pressureMatch = (float(species.get("minp") or 0) <= float(
-                    (body.get("surfacePressure") or 0)) <= float(species.get("maxp") or 0))
+                pressureMatch = (
+                    float(species.get("minp") or 0)
+                    <= float((body.get("surfacePressure") or 0))
+                    <= float(species.get("maxp") or 0)
+                )
 
-                tempMatch = (float(species.get("mint")) <= float(
-                    body.get("surfaceTemperature")) <= float(species.get("maxt")))
+                tempMatch = (
+                    float(species.get("mint"))
+                    <= float(body.get("surfaceTemperature"))
+                    <= float(species.get("maxt"))
+                )
 
-                distanceMatch = (float(species.get("mind")) <= float(
-                    body.get("distanceToArrival")) <= float(species.get("maxd")))
-                
+                distanceMatch = (
+                    float(species.get("mind"))
+                    <= float(body.get("distanceToArrival"))
+                    <= float(species.get("maxd"))
+                )
+
                 # if there are genuses recorded then only matching genus should be included in the guesses
                 if body.get("signals") and body.get("signals").get("genuses"):
-                    matchgenus=False
-                    genus=species.get("fdevname").split('_')[2]
-                    print(genus)
-                    for g in body.get("signals").get("genuses"):
-                        print(g)
-                        if g.split('_')[2] == genus:
-                            matchgenus=matchgenus or True
-                else:
-                    matchgenus=True
-
-                if (matchgenus and validStar and mainstarMatch and bodyMatch and gravityMatch and tempMatch and atmosphereTypeMatch and volcanismMatch and pressureMatch and validMaterials and parentMatch and regionMatch):
-                    genus = species.get("name").split(' ')[0]
+                    matchgenus = False
+                    genus = species.get("fdevname").split("_")[2]
                     # print(genus)
-                    #print(get_body_codex(codex, 'Biology', body.get("name")))
-                    ba = get_body_codex(codex, 'Biology', body.get("name"))
+                    for g in body.get("signals").get("genuses"):
+                        # print(g)
+                        if g.split("_")[2] == genus:
+                            matchgenus = matchgenus or True
+                else:
+                    matchgenus = True
+
+                if (
+                    matchgenus
+                    and validStar
+                    and mainstarMatch
+                    and bodyMatch
+                    and gravityMatch
+                    and tempMatch
+                    and atmosphereTypeMatch
+                    and volcanismMatch
+                    and pressureMatch
+                    and validMaterials
+                    and parentMatch
+                    and regionMatch
+                ):
+                    genus = species.get("name").split(" ")[0]
+                    # print(genus)
+                    # print(get_body_codex(codex, 'Biology', body.get("name")))
+                    ba = get_body_codex(codex, "Biology", body.get("name"))
                     # if not genus in str(get_body_codex(codex, 'Biology', body.get("name"))):
                     #    print(f"using {genus} {ba}")
                     results.append(species.get("name"))
@@ -377,10 +433,12 @@ def landable(body):
     if body.get("isLandable"):
         return True
     signals = body.get("signals")
-    has_biology = (signals and body.get("signals").get(
-        "signals").get("$SAA_SignalType_Biological;"))
-    has_geology = (signals and body.get("signals").get(
-        "signals").get("$SAA_SignalType_Geological;"))
+    has_biology = signals and body.get("signals").get("signals").get(
+        "$SAA_SignalType_Biological;"
+    )
+    has_geology = signals and body.get("signals").get("signals").get(
+        "$SAA_SignalType_Geological;"
+    )
 
     if has_biology or has_geology:
         return True
@@ -424,8 +482,8 @@ def system_biostats(request):
     system = spanshdump.get("system")
     codex = get_system_codex(system.get("name"))
 
-    scloud = get_body_codex(codex, 'Cloud')
-    sanomaly = get_body_codex(codex, 'Anomaly')
+    scloud = get_body_codex(codex, "Cloud")
+    sanomaly = get_body_codex(codex, "Anomaly")
 
     region, region_name = findRegion64(system.get("id64"))
     spanshdump["system"]["region"] = {"region": region, "name": region_name}
@@ -439,7 +497,6 @@ def system_biostats(request):
             spanshdump["system"]["signals"]["anomaly"] = sanomaly
 
     for i, body in enumerate(system.get("bodies")):
-
         if landable(body):
             if not spanshdump["system"]["bodies"][i].get("signals"):
                 spanshdump["system"]["bodies"][i]["signals"] = {}
@@ -487,7 +544,6 @@ def codex_name_ref(request):
 
     res = {}
     if request.args.get("hierarchy"):
-
         for entry in r:
             hud = entry.get("hud_category")
             genus = entry.get("sub_class")
@@ -503,7 +559,7 @@ def codex_name_ref(request):
                     "category": entry.get("category"),
                     "sub_category": entry.get("sub_category"),
                     "platform": entry.get("platform"),
-                    "reward": entry.get("reward")
+                    "reward": entry.get("reward"),
                 }
 
     else:
@@ -527,7 +583,7 @@ def odyssey_subclass(request):
     res = {}
     totals = 0
     for entry in r:
-        totals = totals+int(entry.get("species"))
+        totals = totals + int(entry.get("species"))
         res[entry.get("sub_class")] = entry.get("species")
 
     res["* Total Species"] = totals
@@ -560,7 +616,7 @@ def species_prices(request):
     for entry in r:
         res[entry.get("sub_species")] = {
             "reward": entry.get("reward"),
-            "bonus": int(entry.get("reward"))*2
+            "bonus": int(entry.get("reward")) * 2,
         }
     return res
 
@@ -632,8 +688,10 @@ def codex_systems(request):
 
     for entry in r:
         if not res.get(entry.get("system")):
-            res[entry.get("system")] = {"codex": [], "coords": [
-                entry.get("x"), entry.get("y"), entry.get("z")]}
+            res[entry.get("system")] = {
+                "codex": [],
+                "coords": [entry.get("x"), entry.get("y"), entry.get("z")],
+            }
 
         res[entry.get("system")]["codex"].append(
             {
@@ -645,15 +703,17 @@ def codex_systems(request):
                 "platform": entry.get("platform"),
                 "sub_category": entry.get("sub_category"),
                 "sub_class": entry.get("sub_class"),
-                "species": entry.get("species")
+                "species": entry.get("species"),
             }
         )
     return res
 
     for entry in r:
         if not res.get(entry.get("system")):
-            res[entry.get("system")] = {"codex": [], "coords": [
-                entry.get("x"), entry.get("y"), entry.get("z")]}
+            res[entry.get("system")] = {
+                "codex": [],
+                "coords": [entry.get("x"), entry.get("y"), entry.get("z")],
+            }
 
         res[entry.get("system")]["codex"].append(
             {
@@ -664,7 +724,7 @@ def codex_systems(request):
                 "name": entry.get("name"),
                 "platform": entry.get("platform"),
                 "sub_category": entry.get("sub_category"),
-                "sub_class": entry.get("sub_class")
+                "sub_class": entry.get("sub_class"),
             }
         )
     return res
@@ -675,19 +735,21 @@ def capi_systems(request):
     data = codex_data(request)
     retval = []
     for r in data:
-        retval.append({
-            "system": {
-                "systemName": r.get("system"),
-                "edsmCoordX": r.get("x"),
-                "edsmCoordY": r.get("y"),
-                "edsmCoordZ": r.get("z"),
-            },
-            "type": {
-                "hud_category": r.get("hud_category"),
-                "species": r.get("species"),
-                "type": r.get("sub_class"),
-                "journalName": r.get("english_name"),
-                "journalID": r.get("entryid")
+        retval.append(
+            {
+                "system": {
+                    "systemName": r.get("system"),
+                    "edsmCoordX": r.get("x"),
+                    "edsmCoordY": r.get("y"),
+                    "edsmCoordZ": r.get("z"),
+                },
+                "type": {
+                    "hud_category": r.get("hud_category"),
+                    "species": r.get("species"),
+                    "type": r.get("sub_class"),
+                    "journalName": r.get("english_name"),
+                    "journalID": r.get("entryid"),
+                },
             }
-        })
+        )
     return jsonify(retval)
