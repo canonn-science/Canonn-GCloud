@@ -7,3 +7,4 @@ google.cloud.logging
 flask_cors
 pytz
 Pillow
+Werkzeug==2.2.2
