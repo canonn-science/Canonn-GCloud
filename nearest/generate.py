@@ -7,6 +7,7 @@ import os
 import time
 import datetime
 import gzip
+import csv
 
 services = set()
 systems_idx = []
@@ -34,16 +35,19 @@ compare the header from spansh with the current file. Upload only if new.
 
 
 def syncCheck(file_path):
-    remote_source = "https://downloads.spansh.co.uk/" + \
-        os.path.basename(file_path)
+    remote_source = "https://downloads.spansh.co.uk/" + os.path.basename(file_path)
     local_source = file_path
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36'}
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36"
+    }
     response = requests.head(remote_source, headers=headers)
     remote_source_last_modified = response.headers["last-modified"]
-    remote_source_last_modified = time.mktime(datetime.datetime.strptime(
-        remote_source_last_modified[:-4], "%a, %d %b %Y %H:%M:%S").timetuple())
+    remote_source_last_modified = time.mktime(
+        datetime.datetime.strptime(
+            remote_source_last_modified[:-4], "%a, %d %b %Y %H:%M:%S"
+        ).timetuple()
+    )
 
     try:
         if os.path.exists(local_source):
@@ -59,15 +63,18 @@ def syncCheck(file_path):
                 except:
                     print("couldnt remove file")
                 urlretrieve(remote_source, local_source)
-                os.utime(local_source, (remote_source_last_modified,
-                                        remote_source_last_modified))
+                os.utime(
+                    local_source,
+                    (remote_source_last_modified, remote_source_last_modified),
+                )
                 return True
 
         else:
             print("no galaxy file uploading")
             urlretrieve(remote_source, local_source)
-            os.utime(local_source, (remote_source_last_modified,
-                                    remote_source_last_modified))
+            os.utime(
+                local_source, (remote_source_last_modified, remote_source_last_modified)
+            )
             return True
 
     except HTTPError(e):
@@ -78,7 +85,7 @@ def syncCheck(file_path):
 
 class Index:
     def __init__(self, name):
-        self.file = gzip.open(name, 'wt', encoding='UTF-8')
+        self.file = gzip.open(name, "wt", encoding="UTF-8")
         self.file.write("[")
         self.first = True
 
@@ -111,9 +118,9 @@ def load_data():
     global systems_idx
     errors = []
 
-    basic_index = Index('function/system_idx.json.gz')
-    buying_index = Index('function/buying_idx.json.gz')
-    selling_index = Index('function/selling_idx.json.gz')
+    basic_index = Index("function/system_idx.json.gz")
+    buying_index = Index("function/buying_idx.json.gz")
+    selling_index = Index("function/selling_idx.json.gz")
 
     # we need to open a gzip to populate first
 
@@ -127,25 +134,30 @@ def load_data():
                 except:
                     j = json.loads(line[:-1])
                 system_basic = populate_basic(j)
-                system_buying = populate_commodities(j, 'buying')
-                system_selling = populate_commodities(j, 'selling')
+                system_buying = populate_commodities(j, "buying")
+                system_selling = populate_commodities(j, "selling")
 
-                has_stations = (system_basic.get("stations")
-                                and len(system_basic.get("stations")) > 0)
-                has_aliens = (system_basic.get("allegiance")
-                              in ("Thargoid", "Guardian"))
+                has_stations = (
+                    system_basic.get("stations")
+                    and len(system_basic.get("stations")) > 0
+                )
+                has_aliens = system_basic.get("allegiance") in ("Thargoid", "Guardian")
                 if has_stations or has_aliens:
                     # systems_idx.append(s)
                     basic_index.write(json.dumps(system_basic))
 
-                has_stations = (system_buying.get("stations")
-                                and len(system_buying.get("stations")) > 0)
+                has_stations = (
+                    system_buying.get("stations")
+                    and len(system_buying.get("stations")) > 0
+                )
                 if has_stations:
                     # systems_idx.append(s)
                     buying_index.write(json.dumps(system_buying))
 
-                has_stations = (system_selling.get("stations")
-                                and len(system_selling.get("stations")) > 0)
+                has_stations = (
+                    system_selling.get("stations")
+                    and len(system_selling.get("stations")) > 0
+                )
                 if has_stations:
                     # systems_idx.append(s)
                     selling_index.write(json.dumps(system_selling))
@@ -172,29 +184,87 @@ IF (primary_economy == "industrial") broker_type = "Human"; // human may be set 
 IF (secondary_economy == "hightech") broker_type = "Guardian";
 IF (secondary_economy != null AND secondary_economy != "hightech") broker_type = "Human"; // needs a confirmation"""
 
+def load_traders():
+    url="https://docs.google.com/spreadsheets/d/e/2PACX-1vRewVlCuLP07LVqy9PpzmjpVxU2kA-Xq7fbG-6zNCXtlZ2lCMmDJGVSv6SHlvkjYzzvSIDCvqRCLWOB/pub?gid=0&single=true&output=csv"
+    response = requests.get(url)
+    if response.status_code == 200:
+        content = response.text.splitlines()
+        reader = csv.DictReader(content, delimiter=',')
+        data_dict = {}
+        for row in reader:
+            key = (row['System'], row['Station'])
+            #values = {k: row[k] for k in row.keys() if 'Column' in k and 'A' not in k and 'B' not in k}
+            data_dict[key] = row
+        return data_dict
+    else:
+        print("Failed to fetch data. Status code:", response.status_code)
+        return None
 
-def trader(station, type):
-    material_trader = (type == "Material Trader")
-    technology_broker = (type == "Technology Broker")
+def trader(station, type, system):
+    global traders
+    material_trader = type == "Material Trader"
+    technology_broker = type == "Technology Broker"
 
     primary_economy = station.get("primaryEconomy")
-    secondary_economy = station.get("secondaryEconomy")
 
-    # print(f"{material_trader} {technology_broker} {primary_economy} {secondary_economy}")
+    secondary_economy = station.get("secondaryEconomy")
+    if station.get("economies"):
+        for economy in station.get("economies").keys():
+            if economy != primary_economy:
+                secondary_economy = economy
+
+    system_name = system["name"]
+    sys_primary_economy = system.get("primaryEconomy")
+    sys_secondary_economy = system.get("secondaryEconomy")
+
+    station_name = station.get("name")
 
     if material_trader:
-        if primary_economy == "High Tech" or primary_economy == "Military":
+        trade_cache=traders.get((system_name,station_name))
+
+        if trade_cache is not None:
+            trade=trade_cache["Actual Values"]
+            print("fetched trader from data")
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},{trade}"
+            )
+            return trade
+
+        if primary_economy in ("Refinery") and secondary_economy == "Tourism":
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},encoded_material_trader"
+            )
             return "encoded_material_trader"
-        if primary_economy == "Extraction" or primary_economy == "Refinery":
+        if primary_economy in ("High Tech", "Military", "Agriculture"):
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},encoded_material_trader"
+            )
+            return "encoded_material_trader"
+        if primary_economy in ("Extraction", "Refinery", "Colony"):
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},raw_material_trader"
+            )
             return "raw_material_trader"
-        if primary_economy == "Industrial":
+        if primary_economy in ("Industrial", "Service"):
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},manufactured_material_trader"
+            )
             return "manufactured_material_trader"
         if secondary_economy == "High Tech" or secondary_economy == "Military":
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},encoded_material_trader"
+            )
             return "encoded_material_trader"
         if secondary_economy == "Extraction" or secondary_economy == "Refinery":
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},raw_material_trader"
+            )
             return "raw_material_trader"
         if secondary_economy == "Industrial":
-            trader_type = "Manufactured"
+            print(
+                f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},manufactured_material_trader"
+            )
+            return "manufactured_material_trader"
     if technology_broker:
         if primary_economy == "High Tech":
             return "guardian_technology_broker"
@@ -205,11 +275,12 @@ def trader(station, type):
         if not secondary_economy is None or not secondary_economy == "High Tech":
             return "human_technology_broker"
         return "human_technology_broker"
-    station_name = station.get("name")
-    print(f"{station_name} {material_trader} {technology_broker} {primary_economy} {secondary_economy}")
+    print(
+        f"{system_name},{station_name},{type},{sys_primary_economy},{primary_economy},{sys_secondary_economy},{secondary_economy},unknown"
+    )
 
 
-def get_services(station, system):
+def get_services(station, system, record):
     global services
     global buying_stats
     global selling_stats
@@ -222,19 +293,18 @@ def get_services(station, system):
             retval.append(service_name)
 
             if service in ["Technology Broker", "Material Trader"]:
-
-                retval.append(trader(station, service))
+                retval.append(trader(station, service, record))
 
     # we will treat primary economy as a service
     if station.get("primaryEconomy"):
-        tag = station.get("primaryEconomy").lower().replace(
-            " ", "_").strip()+"_economy"
+        tag = (
+            station.get("primaryEconomy").lower().replace(" ", "_").strip() + "_economy"
+        )
         retval.append(tag)
 
     # we will treat allegiance as a name
-    if station.get('allegiance'):
-        tag = station.get('allegiance').lower().replace(
-            " ", "_").strip()+"_station"
+    if station.get("allegiance"):
+        tag = station.get("allegiance").lower().replace(" ", "_").strip() + "_station"
         retval.append(tag)
     else:
         retval.append("independent_station")
@@ -252,10 +322,9 @@ def isStation(station):
         # this is a DSSA Carrier we can treat it as a station
         return True
 
-    carrier = (station.get("controllingFaction") == "FleetCarrier")
-    carrier = (carrier and station.get(
-        "primaryEconomy") == "Private Enterprise")
-    carrier = (carrier and station.get("government") == "Private Ownership")
+    carrier = station.get("controllingFaction") == "FleetCarrier"
+    carrier = carrier and station.get("primaryEconomy") == "Private Enterprise"
+    carrier = carrier and station.get("government") == "Private Ownership"
 
     if carrier:
         return False
@@ -301,10 +370,8 @@ def populate_basic(record):
 
     if stations:
         for station in stations:
-
             types.add(station.get("type"))
             if isStation(station):
-
                 name = station.get("name")
                 if dssa.get(name):
                     name = name + " " + dssa.get(name).strip()
@@ -318,10 +385,10 @@ def populate_basic(record):
                         "name": name,
                         "type": station.get("type"),
                         "distance": station.get("distanceToArrival"),
-                        "services": get_services(station, system),
+                        "services": get_services(station, system, record),
                         # "outfitting": station.get("outfitting"),
                         "economy": station.get("primaryEconomy"),
-                        "pad": padsize(station.get("landingPads"))
+                        "pad": padsize(station.get("landingPads")),
                     }
                 )
     return system
@@ -341,11 +408,11 @@ def populate_commodities(record, direction):
     system["stations"] = []
     system["allegiance"] = record.get("allegiance")
 
-    if direction == 'buying':
+    if direction == "buying":
         price = "sellPrice"
         stock = "demand"
 
-    if direction == 'selling':
+    if direction == "selling":
         price = "buyPrice"
         stock = "supply"
 
@@ -353,10 +420,8 @@ def populate_commodities(record, direction):
 
     if stations:
         for station in stations:
-
             types.add(station.get("type"))
             if isStation(station):
-
                 name = station.get("name")
                 if dssa.get(name):
                     name = name + " " + dssa.get(name).strip()
@@ -367,15 +432,21 @@ def populate_commodities(record, direction):
 
                 has_commodity = False
                 if commodities:
-
                     shoppingList = {}
                     for commodity in commodities:
-
-                        if commodity.get(stock) > 0 and commodity.get(price) > 0:
-                            label = commodity.get(
-                                "name").lower().replace(" ", "_").strip()
-                            shoppingList[label] = {stock: commodity.get(
-                                stock), price: commodity.get(price)}
+                        if (
+                            commodity.get(stock) > 0
+                            and commodity.get(price) > 0
+                            #and commodity.get("name") == "Tritium"
+                            and direction=='selling'
+                        ):
+                            label = (
+                                commodity.get("name").lower().replace(" ", "_").strip()
+                            )
+                            shoppingList[label] = {
+                                stock: commodity.get(stock),
+                                price: commodity.get(price),
+                            }
 
                             has_commodity = True
                         # if direction == "buying" and commodity.get(price) > 0 and commodity.get(stock) > 1:
@@ -391,7 +462,7 @@ def populate_commodities(record, direction):
                                 "commodities": shoppingList,
                                 # "outfitting": station.get("outfitting"),
                                 "economy": station.get("primaryEconomy"),
-                                "pad": padsize(station.get("landingPads"))
+                                "pad": padsize(station.get("landingPads")),
                             }
                         )
     return system
@@ -400,14 +471,18 @@ def populate_commodities(record, direction):
 def store_data():
     global systems_idx
 
-    with zipfile.ZipFile('function/data.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_archive:
-        zip_archive.writestr('systems_idx.json', json.dumps(systems_idx))
+    with zipfile.ZipFile(
+        "function/data.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as zip_archive:
+        zip_archive.writestr("systems_idx.json", json.dumps(systems_idx))
         # for id in systems.keys():
         #    zip_archive.writestr(
         #        f"{id}.json",  # File to replace
         #        json.dumps(systems.get(id))   # Data
         #    )
 
+
+traders=load_traders()
 
 stations_updated = syncCheck("galaxy_stations.json.gz")
 
@@ -420,7 +495,10 @@ load_data()
 # we are going to create the file as we go along
 # store_data()
 
-services.remove(None)
+try:
+    services.remove(None)
+except:
+    print("No none services")
 
 for service in sorted(list(services)):
     print(service)
