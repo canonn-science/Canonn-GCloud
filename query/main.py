@@ -13,6 +13,7 @@ import localpackage.gnosis
 import localpackage.thargoids
 import localpackage.regionsvg
 import localpackage.events
+import localpackage.fyi
 
 
 import json
@@ -21,7 +22,7 @@ from math import sqrt
 
 app = current_app
 CORS(app)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
 
 
 @app.route("/uia/waypoints")
@@ -34,26 +35,31 @@ def uiawaypoints2(uia):
     return localpackage.poidata.uai_waypoints(int(uia))
 
 
+@app.route("/fyi/<path>")
+def canonn_fyi(path):
+    return localpackage.fyi.get_url(path)
+
+
 @app.route("/events")
 def getevents():
     return localpackage.events.fetch_events(request)
 
+
 @app.route("/collision_table")
 def collision_table():
-    
-    events=localpackage.events.collision_dates(request)
-    image_data=localpackage.tableutils.generate_table_image(events)
+    events = localpackage.events.collision_dates(request)
+    image_data = localpackage.tableutils.generate_table_image(events)
     headers = {
-        'Content-Type': 'image/png',
-        'Content-Disposition': 'inline; filename=table.png',
+        "Content-Type": "image/png",
+        "Content-Disposition": "inline; filename=table.png",
     }
     return image_data, 200, headers
-    
+
 
 @app.route("/events/<limit>/<page>")
 def pageevents(limit, page):
     system = request.args.get("system")
-    
+
     return localpackage.events.page_events(int(limit), int(page), system)
 
 
@@ -126,18 +132,20 @@ def nearest_codex():
 def gnosis():
     return localpackage.gnosis.entry_point(request)
 
+
 @app.route("/gnosis/schedule")
 def gnosis_schedule():
-    schedule=localpackage.gnosis.get_schedule()
+    schedule = localpackage.gnosis.get_schedule()
     return jsonify(schedule)
+
 
 @app.route("/gnosis/schedule/table")
 def gnosis_schedule_tab():
     system = request.args.get("system")
-    schedule=[]
-    data=localpackage.gnosis.get_schedule()
+    schedule = []
+    data = localpackage.gnosis.get_schedule()
     for item in data:
-        if system is None or system==item.get("system"):
+        if system is None or system == item.get("system"):
             schedule.append(
                 {
                     "Arrival": item.get("arrival"),
@@ -146,12 +154,13 @@ def gnosis_schedule_tab():
                     "Departure": item.get("departure"),
                 }
             )
-    image_data=localpackage.tableutils.generate_table_image(schedule)
+    image_data = localpackage.tableutils.generate_table_image(schedule)
     headers = {
-        'Content-Type': 'image/png',
-        'Content-Disposition': 'inline; filename=table.png',
+        "Content-Type": "image/png",
+        "Content-Disposition": "inline; filename=table.png",
     }
     return image_data, 200, headers
+
 
 @app.route("/region/<regions>/<size>")
 def region_svg(regions, size):
@@ -291,14 +300,15 @@ def raw_data():
         cursor.execute(sql, (params))
         r = cursor.fetchall()
         for row in r:
-            raw.append({
-                "system": row.get("systemName"),
-                "body": row.get("bodyName"),
-                "x": row.get("x"),
-                "y": row.get("y"),
-                "z": row.get("z"),
-                "raw_event": json.loads(row.get("raw_event"))
-            }
+            raw.append(
+                {
+                    "system": row.get("systemName"),
+                    "body": row.get("bodyName"),
+                    "x": row.get("x"),
+                    "y": row.get("y"),
+                    "z": row.get("z"),
+                    "raw_event": json.loads(row.get("raw_event")),
+                }
             )
         cursor.close()
 
