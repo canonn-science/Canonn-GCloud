@@ -374,7 +374,7 @@ def get_settlement(system):
 
     setup_sql_conn()
     sql = f"""
-        select bodyid,name,name_localised,cast(lat as char) lat,cast(lon as char) lon from settlements 
+        select bodyid,name,name_localised,cast(lat as char) lat,cast(lon as char) lon,market_id from settlements 
         where {col} = %s and is_beta != 'Y';
     """
 
