@@ -363,6 +363,28 @@ def samplePoi(codex, scans):
     return retval
 
 
+def get_settlement(system):
+
+    if system is None:
+        return []
+    if system.isdigit():
+        col = "id64"
+    else:
+        col = "systemName"
+
+    setup_sql_conn()
+    sql = f"""
+        select bodyid,name,name_localised,cast(lat as char) lat,cast(lon as char) lon from settlements 
+        where {col} = %s and is_beta != 'Y';
+    """
+
+    with get_cursor() as cursor:
+        cursor.execute(sql, (system))
+        cr = cursor.fetchall()
+
+    return cr
+
+
 def getSystemPoi(request):
     cmdr = request.args.get("cmdr")
     system = request.args.get("system")

@@ -85,7 +85,18 @@ This function will show you the nearest codex entry to your current position.
 * [Nearest Bark Mounds to Merope ](https://us-central1-canonn-api-236217.cloudfunctions.net/query/nearest/codex?system=Merope&name=Bark)
 
 
+# settlements
 
+## parameters
+
+* systemName|id64 
+
+For a given id64 or systemName get a list of settlements. NB id64 is less likely to contain errored values because the id64 is included in the event and not added by the EDDN client.
+
+## example
+
+* [Settlements in HR 1621 using id64](https://us-central1-canonn-api-236217.cloudfunctions.net/query/settlement/14199809196) 
+* [Settlements in Merope using systemName](https://us-central1-canonn-api-236217.cloudfunctions.net/query/settlement/Merope) 
 
 # getSystemPoi
 Accepts a system name a commander name and returns all the POI information for that system captured in the Canonn database. There is an optional odyssey flag that controls how data from Odyssey and Horizons is used. 

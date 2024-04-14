@@ -139,6 +139,12 @@ def gnosis_schedule():
     return jsonify(schedule)
 
 
+@app.route("/settlement/<id64>")
+def get_settlement(id64):
+    settlement = localpackage.poidata.get_settlement(id64)
+    return jsonify(settlement)
+
+
 @app.route("/gnosis/schedule/table")
 def gnosis_schedule_tab():
     system = request.args.get("system")
