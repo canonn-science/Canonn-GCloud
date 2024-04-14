@@ -9,3 +9,4 @@ pytz
 Pillow
 Werkzeug==2.2.2
 requests
+markupsafe
