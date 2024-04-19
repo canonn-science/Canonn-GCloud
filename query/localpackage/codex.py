@@ -535,10 +535,34 @@ def codex_name_ref(request):
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
             REPLACE(os.species,'_Name;','%%')
             ) DATA
-            GROUP BY entryid
+                 GROUP BY entryid
             ) AS data2 ON data2.entryid = c.entryid
+            WHERE 1 = 1 
         """
-        cursor.execute(sql, ())
+        hud_category = request.args.get("category")
+        sub_class = request.args.get("species")
+        english_name = None
+        if request.args.get("variant") is not None:
+            english_name = "%" + request.args.get("variant") + "%"
+
+        params = []
+        if hud_category is not None:
+            sql += " AND c.hud_category = %s"
+            params.append(hud_category)
+
+        # Check if sub_class is populated
+        if sub_class is not None:
+            sql += " AND c.sub_class = %s"
+            params.append(sub_class)
+
+        # Check if english_name is populated
+        if english_name is not None:
+            sql += " AND c.english_name like %s"
+            params.append(english_name)
+
+        print(sql)
+
+        cursor.execute(sql, params)
         r = cursor.fetchall()
         cursor.close()
 
