@@ -19,6 +19,8 @@ import localpackage.fyi
 import json
 import requests
 from math import sqrt
+from os import getenv
+
 
 app = current_app
 CORS(app)

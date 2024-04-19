@@ -543,8 +543,12 @@ def codex_name_ref(request):
         cursor.close()
 
     res = {}
-    if request.args.get("hierarchy"):
-        for entry in r:
+
+    for entry in r:
+        entry["dump"] = (
+            f"https://storage.googleapis.com/canonn-downloads/dumpr/{entry.get('hud_category')}/{entry.get('entryid')}.csv"
+        )
+        if request.args.get("hierarchy"):
             hud = entry.get("hud_category")
             genus = entry.get("sub_class")
             species = entry.get("english_name")
@@ -560,11 +564,11 @@ def codex_name_ref(request):
                     "sub_category": entry.get("sub_category"),
                     "platform": entry.get("platform"),
                     "reward": entry.get("reward"),
+                    "dump": entry.get("dump"),
                 }
-
-    else:
-        for entry in r:
-            res[entry.get("entryid")] = entry
+        else:
+            for entry in r:
+                res[entry.get("entryid")] = entry
     return res
 
 
