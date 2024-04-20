@@ -6,7 +6,7 @@ from os import getenv
 import pymysql
 from pymysql.err import OperationalError
 from math import sqrt, pow, trunc
-
+import functions_framework
 import google.cloud.logging
 import logging
 
@@ -227,6 +227,7 @@ def postDiscord(n, r):
                       "Content-Type": "application/json"})
 
 
+@functions_framework.http
 def payload(request):
     global mysql_conn
 

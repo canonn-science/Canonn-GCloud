@@ -12,6 +12,7 @@ import sys
 
 import google.cloud.logging
 import logging
+import functions_framework
 
 # Instantiates a client
 glogclient = google.cloud.logging.Client()
@@ -1437,6 +1438,7 @@ def buySuit(gs, entry, cmdr):
         raise
 
 
+@functions_framework.http
 def entrywrap(request):
 
     headers = {

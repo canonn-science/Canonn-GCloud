@@ -3,6 +3,8 @@ import pymysql
 import requests
 from os import getenv
 from pymysql.err import OperationalError
+import functions_framework
+
 
 CONNECTION_NAME = getenv('INSTANCE_CONNECTION_NAME',
                          'XXX')
@@ -59,7 +61,7 @@ def get_signal_stats(request_args):
                            "definition": json.loads(v.get("definition"))})
         return result
 
-
+@functions_framework.http
 def payload(request):
     global mysql_conn
 

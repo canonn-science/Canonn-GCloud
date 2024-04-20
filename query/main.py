@@ -14,7 +14,7 @@ import localpackage.thargoids
 import localpackage.regionsvg
 import localpackage.events
 import localpackage.fyi
-
+import functions_framework
 
 import json
 import requests
@@ -337,6 +337,6 @@ def raw_data():
 def root():
     return ""
 
-
+@functions_framework.http
 def payload(request):
     return "what happen"

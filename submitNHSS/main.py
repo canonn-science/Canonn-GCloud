@@ -8,6 +8,7 @@ from math import sqrt, pow, trunc
 
 import google.cloud.logging
 import logging
+import functions_framework
 
 # Instantiates a client
 glogclient = google.cloud.logging.Client()
@@ -181,7 +182,7 @@ def insertReport(request_args):
                        (cmdrName, systemName, x, y, z, threat_level))
         mysql_conn.commit()
 
-
+@functions_framework.http
 def payload(request):
     global mysql_conn
 

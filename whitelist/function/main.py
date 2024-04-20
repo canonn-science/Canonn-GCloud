@@ -11,7 +11,7 @@ from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
-
+import functions_framework
 
 import pymysql
 import socket
@@ -120,5 +120,6 @@ def root():
     return retval
 
 
+@functions_framework.http
 def payload(request):
     return "what happen?"

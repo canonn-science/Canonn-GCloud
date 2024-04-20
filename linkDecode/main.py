@@ -9,6 +9,8 @@ import json
 from flask import escape
 from os import getenv
 import logging
+import functions_framework
+
 
 #Distances of Merope and Col70
 M=numpy.array([-78.59,-149.63,-340.53])
@@ -312,7 +314,7 @@ def get_distance_result(O,r1,r2,r3,res):
         
     return res
 
-    
+@functions_framework.http
 def payload(request):
     
     # container for output

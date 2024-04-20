@@ -112,6 +112,14 @@ For a given id64 or systemName get a list of settlements. NB id64 is less likely
 * [Settlements in HR 1621 using id64](https://us-central1-canonn-api-236217.cloudfunctions.net/query/settlement/14199809196) 
 * [Settlements in Merope using systemName](https://us-central1-canonn-api-236217.cloudfunctions.net/query/settlement/Merope) 
 
+# get_gr_data
+
+This function returns a list of systems with Guardian ruins. Used by the 3D maps
+
+## example
+
+https://us-central1-canonn-api-236217.cloudfunctions.net/query/get_gr_data
+
 # getSystemPoi
 Accepts a system name a commander name and returns all the POI information for that system captured in the Canonn database. There is an optional odyssey flag that controls how data from Odyssey and Horizons is used. 
 

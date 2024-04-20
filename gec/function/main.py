@@ -6,6 +6,7 @@ from flask import current_app
 from flask import request, jsonify
 from flask_cors import CORS
 from flask import Response
+import functions_framework
 
 app = current_app
 CORS(app)
@@ -23,6 +24,6 @@ def publish(id):
 def root():
     return ""
 
-
+@functions_framework.http
 def payload(request):
     return "what happen"

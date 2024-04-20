@@ -6,6 +6,7 @@ import requests
 import zipfile
 from math import sqrt
 import gzip
+import functions_framework
 
 app = current_app
 CORS(app)
@@ -359,7 +360,7 @@ def root():
     load_data()
     return "Data Loaded"
 
-
+@functions_framework.http
 def payload(request):
     load_data()
     return "what happen"
