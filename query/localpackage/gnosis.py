@@ -105,12 +105,8 @@ def get_schedule():
     thursdays_count = count_thursdays(start_date)
     schedule = []
 
+    # sort the system list so the current week is first
     for r in range(len(systems)):
-        # arrival=datetime.strptime(start_date, "%y-%m-%d") + timedelta(days=(thursdays_count+r-1)*7)
-        # departure=datetime.strptime(start_date, "%y-%m-%d") + timedelta(days=(thursdays_count+r)*7)
-        # systems[r-1]['arrival']=arrival.strftime("%Y-%m-%d")
-        # systems[r-1]['departure']=departure.strftime("%Y-%m-%d")
-        # print(thedate.strftime("%Y-%m-%d"))
         schedule.append(cycle_list(systems, thursdays_count + r))
 
     arrival = last_thursday(datetime.now().date())
