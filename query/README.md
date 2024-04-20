@@ -219,9 +219,9 @@ This endpoint generates a png with the Gnosis Schedule. The schedule can be limi
 
 https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table
 
-![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?1)
+![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table)
 
 https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?system=Epsilon%20Indi
 
-![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?system=Epsilon%20Indi?1)
+![](https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule/table?system=Epsilon%20Indi)
 
