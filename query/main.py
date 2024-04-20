@@ -237,6 +237,11 @@ def system_biostats():
     return localpackage.codex.system_biostats(request)
 
 
+@app.route("/get_gr_data")
+def get_gr_data():
+    return localpackage.codex.get_gr_data()
+
+
 @app.route("/carrier/<serial>")
 def get_carrier(serial):
     setup_sql_conn()

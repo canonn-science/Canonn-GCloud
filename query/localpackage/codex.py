@@ -596,6 +596,19 @@ def codex_name_ref(request):
     return res
 
 
+def get_gr_data():
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        sql = """
+            select distinct systemName as system,cast(x as char) x,cast(y as char) y,cast(z as char) z
+            FROM guardian_settlements
+            WHERE name LIKE '$Ancient:%%';
+        """
+        cursor.execute(sql, ())
+        r = cursor.fetchall()
+        return jsonify(r)
+
+
 def odyssey_subclass(request):
     setup_sql_conn()
 
@@ -735,28 +748,6 @@ def codex_systems(request):
             }
         )
     return res
-
-    for entry in r:
-        if not res.get(entry.get("system")):
-            res[entry.get("system")] = {
-                "codex": [],
-                "coords": [entry.get("x"), entry.get("y"), entry.get("z")],
-            }
-
-        res[entry.get("system")]["codex"].append(
-            {
-                "category": entry.get("category"),
-                "english_name": entry.get("english_name"),
-                "entryid": entry.get("entryid"),
-                "hud_category": entry.get("hud_category"),
-                "name": entry.get("name"),
-                "platform": entry.get("platform"),
-                "sub_category": entry.get("sub_category"),
-                "sub_class": entry.get("sub_class"),
-            }
-        )
-    return res
-    # return jsonify(codex_data(request))
 
 
 def capi_systems(request):
