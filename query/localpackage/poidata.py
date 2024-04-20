@@ -410,3 +410,42 @@ def getSystemPoi(request):
     #    result["ScanOrganic"] = scans
 
     return result
+
+
+def get_compres(request):
+    systems = tuple(request.args.get("systems").split(","))
+
+    placeholders = []
+
+    for _ in systems:
+        placeholders.append("%s")
+
+    placeholder = ",".join(placeholders)
+
+    print(f"get_compres how many systems? {len(systems)}")
+
+    sql = """
+        select distinct  
+        fss.system,
+        case 
+            when signalname = '$MULTIPLAYER_SCENARIO78_TITLE;' then 'Resource Extraction Site [High]' 
+            when signalname = '$MULTIPLAYER_SCENARIO79_TITLE;' then 'Resource Extraction Site [Hazardous]' 
+            when signalname = '$MULTIPLAYER_SCENARIO80_TITLE;' then 'Compromised Nav Beacon' 
+        end as interesting
+        from fss_events fss where signalname in (
+            '$MULTIPLAYER_SCENARIO78_TITLE;',
+            '$MULTIPLAYER_SCENARIO79_TITLE;',
+            '$MULTIPLAYER_SCENARIO80_TITLE;'
+        ) and fss.system in (
+        {}
+        )
+    """.format(
+        placeholder
+    )
+
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        cursor.execute(sql, (systems))
+        cr = cursor.fetchall()
+
+    return jsonify(cr)

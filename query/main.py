@@ -188,6 +188,11 @@ def biostats():
     return localpackage.codex.biostats_cache(True)
 
 
+@app.route("/get_compres")
+def get_compromised():
+    return localpackage.poidata.get_compres(request)
+
+
 @app.route("/survey/temperature")
 def temperature():
     setup_sql_conn()

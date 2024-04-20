@@ -51,6 +51,20 @@ This function will return a data structure showing all codex types and the comma
 
 Gets a structure of all codex entries used by EDMC-Canonn
 
+## parameters
+
+* hierarchy=1 (An optional parameter that displays the data as a hierarchy)
+* category (restricts the query to a category, eg Biology or Geology)
+* species (restricts the query to species eg Anomaly or Stratum)
+* variant (searches the variant name to filter the results)
+
+##example
+[Get Everything](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref)
+[With Hierarchy](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?hierarchy=1)
+[Just Geology](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?category=Geology)
+[Just Anemones](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?species=Anemone)
+[Anything with Yellow in the name](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?variant=Yellow)
+
 # challenge/fastest_scans
 
 Canonn Challenge Fastest Scans: Gives fastest times between log and analyse for a specifc commander or the top 20 commanders if no parameter
@@ -164,6 +178,23 @@ NB: this is limited to the first 1000
 * [Get Hyperdiction reports for Asterope](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?system=Asterope)
 * [Get the next thousand Hyperdiction reports starting with 1000](https://us-central1-canonn-api-236217.cloudfunctions.net/query/thargoid/hyperdiction/reports?_start=1000&_limit=1000)
 
+
+# get_compres
+
+Gets the following informations for all systems in a list. Used by the 3D maps.
+
+* Resource Extraction Site [High]
+* Resource Extraction Site [Hazardous]
+* Compromised Nav Beacon
+
+# parameters
+
+systems (a comma seperated list of system names)
+
+# example
+
+* [Get Values for Varati and Canonnia](https://us-central1-canonn-api-236217.cloudfunctions.net/query/get_compres?systems=Varati,Canonnia)
+
 # gnosis
 
 Returns a json with the current location of the Gnosis
@@ -175,7 +206,6 @@ https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis
 returns a json array with the current schedule
 
 https://us-central1-canonn-api-236217.cloudfunctions.net/query/gnosis/schedule
-
 
 # gnosis/schedule/table
 
