@@ -722,6 +722,27 @@ def codex_data(request):
     return r
 
 
+## replaces /poiListSignals used by Triumvitate
+def poi_list_signals(request):
+    setup_sql_conn()
+    systemName = request.args.get("system")
+    with get_cursor() as cursor:
+        sql = """
+          select distinct cnr.hud_category,cnr.english_name,cr.body
+          from codexreport cr 
+          join codex_name_ref cnr 
+          on cnr.entryid = cr.entryid 
+          where cr.system  = %s
+        """
+        cursor.execute(sql, (systemName))
+        r = cursor.fetchall()
+        cursor.close()
+
+        return jsonify(r)
+
+    return jsonify([])
+
+
 def codex_systems(request):
     r = codex_data(request)
 

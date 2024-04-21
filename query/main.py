@@ -12,6 +12,7 @@ import localpackage.poidata
 import localpackage.gnosis
 import localpackage.thargoids
 import localpackage.regionsvg
+import localpackage.linkdecoder
 import localpackage.events
 import localpackage.fyi
 import functions_framework
@@ -25,6 +26,16 @@ from os import getenv
 app = current_app
 CORS(app)
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
+
+
+@app.route("/poiListSignals")
+def poiListSignals():
+    return localpackage.codex.poi_list_signals(request)
+
+
+@app.route("/linkDecode")
+def link_decode():
+    return localpackage.linkdecoder.decodeit(request)
 
 
 @app.route("/uia/waypoints")
@@ -336,6 +347,7 @@ def raw_data():
 @app.route("/")
 def root():
     return ""
+
 
 @functions_framework.http
 def payload(request):
