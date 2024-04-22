@@ -2,6 +2,7 @@ from flask import current_app
 from flask import request, jsonify
 from flask_cors import CORS
 from flask import Flask, g
+from flask import url_for
 import paramiko
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
@@ -12,9 +13,12 @@ from localpackage.dbutils import get_cursor
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
 import functions_framework
+from functools import wraps
 
 import pymysql
 import socket
+import uuid
+import base64
 
 import json
 import requests
@@ -36,6 +40,19 @@ app.tunnel_config = {
     "local_port": int(getenv("MYSQL_PORT", "3308")),
     "remote_port": int(getenv("TUNNEL_PORT", "3306")),
 }
+
+# This should identify the instance so I can see if the crashed instance is being closed
+app.canonn_cloud_id = base64.urlsafe_b64encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+def wrap_route(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        route_name = url_for(f.__name__)
+        print(f"Route: {url_for(f.__name__)} {app.canonn_cloud_id}")
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 def is_database_up(host, port):
@@ -135,7 +152,14 @@ def submitKills(cmdrName, systemName, isBeta, reward, victimFaction):
     )
 
 
+@app.route("/test")
+@wrap_route
+def test_route():
+    return "test finished"
+
+
 @app.route("/")
+@wrap_route
 def root():
     """
     This function is used for submitting Thargoid kills to the Canonn database from the FactionKillBond
