@@ -98,8 +98,6 @@ def codex_reports(cmdr, system, odyssey):
     else:
         odycheck = "Y"
 
-    print(f"odycheck {odycheck}")
-
     sql = """
         SELECT 
             case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end as body,
@@ -389,7 +387,6 @@ def getSystemPoi(request):
     cmdr = request.args.get("cmdr")
     system = request.args.get("system")
     odyssey = request.args.get("odyssey")
-    print(f"odyssey {odyssey}")
     result = {"cmdrName": cmdr, "system": system, "odyssey": odyssey}
 
     codex = codex_reports(cmdr, system, odyssey)
