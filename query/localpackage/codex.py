@@ -560,8 +560,6 @@ def codex_name_ref(request):
             sql += " AND c.english_name like %s"
             params.append(english_name)
 
-        print(sql)
-
         cursor.execute(sql, params)
         r = cursor.fetchall()
         cursor.close()
@@ -638,16 +636,20 @@ def species_prices(request):
     with get_cursor() as cursor:
         sql = """
             SELECT
-				replace(sub_species->"$.p[0]",'"','') as sub_species,cast(SUBSTRING_INDEX( GROUP_CONCAT(reward ORDER BY created_at DESC), ',', 1) as SIGNED) as reward,sub_class
-                from (
-                select
-                cast(concat('{"p": ["',replace(english_name,' - ','","'),'"]}') as json) sub_species,reward,sub_class,created_at
-            FROM organic_sales os
-            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
-            REPLACE(os.species,'_Name;','%%')
+                REPLACE(JSON_EXTRACT(sub_species, '$.p[0]'),'"','') as sub_species,
+                CAST(SUBSTRING_INDEX(GROUP_CONCAT(reward ORDER BY created_at DESC), ',', 1) as SIGNED) as reward,
+                sub_class
+            FROM (
+                SELECT
+                    CAST(CONCAT('{"p": ["', REPLACE(english_name,' - ','","'),'"]}') as JSON) sub_species,
+                    reward,
+                    sub_class,
+                    created_at
+                FROM organic_sales os
+                JOIN codex_name_ref cnr ON cnr.name LIKE REPLACE(os.species,'_Name;','%%')
             ) data
-            group by replace(sub_species->"$.p[0]",'"',''),sub_class
-            ORDER BY reward DESC            
+            GROUP BY REPLACE(JSON_EXTRACT(sub_species, '$.p[0]'),'"',''), sub_class
+            ORDER BY reward DESC;       
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()
