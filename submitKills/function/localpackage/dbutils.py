@@ -44,7 +44,7 @@ def get_cursor():
 """
 
 
-def setup_sql_conn():
+def setup_sql():
     global mysql_conn
     if not mysql_conn:
         try:
@@ -58,4 +58,16 @@ def setup_sql_conn():
             mysql_conn = pymysql.connect(**mysql_config)
     else:
         print("already connected to mysql")
-    mysql_conn.ping()
+
+
+def setup_sql_conn():
+    global mysql_conn
+
+    # setup the sql
+    setup_sql()
+    ## try and pingh it. If it fails re-establish the connection
+    try:
+        mysql_conn.ping(reconnect=True)
+    except:
+        mysql_conn = None
+        setup_sql()
