@@ -16,6 +16,10 @@ import localpackage.linkdecoder
 import localpackage.events
 import localpackage.fyi
 import functions_framework
+from functools import wraps
+from flask import url_for
+import uuid
+import base64
 
 import json
 import requests
@@ -26,39 +30,63 @@ from os import getenv
 app = current_app
 CORS(app)
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
+app.canonn_cloud_id = base64.urlsafe_b64encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+"""
+Decorator to record data about the route
+"""
+
+
+def wrap_route(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        route_name = url_for(f.__name__)
+        # print route and instance id
+        print(f"Route: {url_for(f.__name__)} {app.canonn_cloud_id}")
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 @app.route("/poiListSignals")
+@wrap_route
 def poiListSignals():
     return localpackage.codex.poi_list_signals(request)
 
 
 @app.route("/linkDecode")
+@wrap_route
 def link_decode():
     return localpackage.linkdecoder.decodeit(request)
 
 
 @app.route("/uia/waypoints")
+@wrap_route
 def uiawaypoints():
     return localpackage.poidata.uai_waypoints()
 
 
 @app.route("/uia/waypoints/<uia>")
+@wrap_route
 def uiawaypoints2(uia):
     return localpackage.poidata.uai_waypoints(int(uia))
 
 
 @app.route("/fyi/<path>")
+@wrap_route
 def canonn_fyi(path):
     return localpackage.fyi.get_url(path)
 
 
 @app.route("/events")
+@wrap_route
 def getevents():
     return localpackage.events.fetch_events(request)
 
 
 @app.route("/collision_table")
+@wrap_route
 def collision_table():
     events = localpackage.events.collision_dates(request)
     image_data = localpackage.tableutils.generate_table_image(events)
@@ -70,6 +98,7 @@ def collision_table():
 
 
 @app.route("/events/<limit>/<page>")
+@wrap_route
 def pageevents(limit, page):
     system = request.args.get("system")
 
@@ -77,56 +106,67 @@ def pageevents(limit, page):
 
 
 @app.route("/getSystemPoi")
+@wrap_route
 def getSystemPoi():
     return localpackage.poidata.getSystemPoi(request)
 
 
 @app.route("/codex/prices")
+@wrap_route
 def codex_prices():
     return localpackage.codex.species_prices(request)
 
 
 @app.route("/codex/systems")
+@wrap_route
 def codex_systems():
     return localpackage.codex.codex_systems(request)
 
 
 @app.route("/codex/capi")
+@wrap_route
 def codex_capi():
     return localpackage.codex.capi_systems(request)
 
 
 @app.route("/codex/odyssey/subclass")
+@wrap_route
 def codex_odyssey_subclass():
     return localpackage.codex.odyssey_subclass(request)
 
 
 @app.route("/codex/ref")
+@wrap_route
 def codex_ref():
     return localpackage.codex.codex_name_ref(request)
 
 
 @app.route("/challenge/next")
+@wrap_route
 def challenge_next():
     return localpackage.challenge.challenge_next(request)
 
 
 @app.route("/challenge/svg")
+@wrap_route
 def challenge_svg():
     return localpackage.challenge.challenge_svg(request)
 
 
 @app.route("/challenge/fastest_scans")
+@wrap_route
 def challenge_fastest_scans():
     return localpackage.challenge.fastest_scans(request)
 
 
 @app.route("/challenge/speed")
+@wrap_route
 def challenge_speed():
     return localpackage.challenge.speed_challenge(request)
 
 
 @app.route("/challenge/status")
+@wrap_route
 def challenge_status():
     return localpackage.challenge.challenge_status(request)
 
@@ -137,28 +177,33 @@ def challenge_status():
 
 
 @app.route("/nearest/codex")
+@wrap_route
 def nearest_codex():
     return localpackage.challenge.nearest_codex(request)
 
 
 @app.route("/gnosis")
+@wrap_route
 def gnosis():
     return localpackage.gnosis.entry_point(request)
 
 
 @app.route("/gnosis/schedule")
+@wrap_route
 def gnosis_schedule():
     schedule = localpackage.gnosis.get_schedule()
     return jsonify(schedule)
 
 
 @app.route("/settlement/<id64>")
+@wrap_route
 def get_settlement(id64):
     settlement = localpackage.poidata.get_settlement(id64)
     return jsonify(settlement)
 
 
 @app.route("/gnosis/schedule/table")
+@wrap_route
 def gnosis_schedule_tab():
     system = request.args.get("system")
     schedule = []
@@ -182,11 +227,13 @@ def gnosis_schedule_tab():
 
 
 @app.route("/region/<regions>/<size>")
+@wrap_route
 def region_svg(regions, size):
     return localpackage.regionsvg.region_svg(regions, size)
 
 
 @app.route("/biostats/<entryid>")
+@wrap_route
 def get_stats_by_id(entryid):
     if entryid.isnumeric():
         return localpackage.codex.get_stats_by_id(entryid)
@@ -195,16 +242,19 @@ def get_stats_by_id(entryid):
 
 
 @app.route("/biostats")
+@wrap_route
 def biostats():
     return localpackage.codex.biostats_cache(True)
 
 
 @app.route("/get_compres")
+@wrap_route
 def get_compromised():
     return localpackage.poidata.get_compres(request)
 
 
 @app.route("/survey/temperature")
+@wrap_route
 def temperature():
     setup_sql_conn()
 
@@ -229,31 +279,37 @@ def temperature():
 
 
 @app.route("/thargoid/nhss/systems")
+@wrap_route
 def get_nhss_systems():
     return localpackage.thargoids.get_nhss_systems(request)
 
 
 @app.route("/thargoid/nhss/reports")
+@wrap_route
 def get_nhss_reports():
     return localpackage.thargoids.get_nhss_reports(request)
 
 
 @app.route("/thargoid/hyperdiction/reports")
+@wrap_route
 def get_hd_reports():
     return localpackage.thargoids.get_hyperdiction_detections(request)
 
 
 @app.route("/codex/biostats")
+@wrap_route
 def system_biostats():
     return localpackage.codex.system_biostats(request)
 
 
 @app.route("/get_gr_data")
+@wrap_route
 def get_gr_data():
     return localpackage.codex.get_gr_data()
 
 
 @app.route("/carrier/<serial>")
+@wrap_route
 def get_carrier(serial):
     setup_sql_conn()
 
@@ -288,6 +344,7 @@ def get_carrier(serial):
 
 
 @app.route("/raw")
+@wrap_route
 def raw_data():
     setup_sql_conn()
 
@@ -345,6 +402,7 @@ def raw_data():
 
 
 @app.route("/")
+@wrap_route
 def root():
     return ""
 
