@@ -41,9 +41,9 @@ Decorator to record data about the route
 def wrap_route(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        route_name = url_for(f.__name__)
-        # print route and instance id
-        print(f"Route: {url_for(f.__name__)} {app.canonn_cloud_id}")
+        route_name = url_for(f.__name__, **kwargs)
+        # Print route and instance id
+        print(f"Route: {route_name} {app.canonn_cloud_id}")
         return f(*args, **kwargs)
 
     return decorated_function
@@ -235,6 +235,7 @@ def region_svg(regions, size):
 @app.route("/biostats/<entryid>")
 @wrap_route
 def get_stats_by_id(entryid):
+    
     if entryid.isnumeric():
         return localpackage.codex.get_stats_by_id(entryid)
     else:
