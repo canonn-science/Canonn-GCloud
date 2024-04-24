@@ -25,6 +25,17 @@ mysql_config = {
 mysql_conn = None
 
 
+def close_mysql():
+    global mysql_conn
+    # just close it
+    try:
+        print("Closing mysql connection")
+        mysql_conn.close()
+        mysql_conn = None
+    except:
+        pass
+
+
 def get_cursor():
     """
     Helper function to get a cursor

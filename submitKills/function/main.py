@@ -2,7 +2,6 @@ from flask import current_app
 from flask import request, jsonify
 from flask_cors import CORS
 from flask import Flask, g
-from flask import url_for
 import paramiko
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
@@ -10,21 +9,26 @@ from sshtunnel import SSHTunnelForwarder
 import localpackage.dbutils
 from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
+from localpackage.dbutils import close_mysql
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
 import functions_framework
-from functools import wraps
 
 import pymysql
 import socket
-import uuid
-import base64
 
 import json
 import requests
 from math import sqrt
 import logging
 from os import getenv
+import functions_framework
+from functools import wraps
+from flask import url_for
+import uuid
+import base64
+import logging
+
 
 app = current_app
 CORS(app)
@@ -48,9 +52,28 @@ app.canonn_cloud_id = base64.urlsafe_b64encode(uuid.uuid4().bytes).decode("utf-8
 def wrap_route(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        route_name = url_for(f.__name__)
-        print(f"Route: {url_for(f.__name__)} {app.canonn_cloud_id}")
-        return f(*args, **kwargs)
+        # going to run the route and close down connections if it fails
+        try:
+            route_name = url_for(f.__name__, **kwargs)
+            # Print route and instance id
+            print(f"Route: {route_name} {app.canonn_cloud_id}")
+            return f(*args, **kwargs)
+        except Exception as e:
+            # Log the error
+            logging.error(f"An error occurred: {str(e)}")
+            # close mysql
+            close_mysql()
+            # close the tunnel
+            if app.tunnel:
+                try:
+                    app.tunnel.close()
+                    app.tunnel = None
+                    print("Tunnel closed down")
+                except Exception as t:
+                    logging.error(f"Tunnel closure failure: {str(t)}")
+            # close the mysql connection
+
+            return "I'm sorry Dave I'm afraid I can't do that", 500
 
     return decorated_function
 
@@ -110,6 +133,8 @@ def before_request():
             else:
                 print("Retry tunnel")
                 app.tunnel = create_tunnel()
+    """Setup the mysql connection before each request (lazy)"""
+    setup_sql_conn()
 
 
 def submitKills(cmdrName, systemName, isBeta, reward, victimFaction):
