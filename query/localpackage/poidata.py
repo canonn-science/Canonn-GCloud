@@ -42,7 +42,7 @@ def uai_waypoints(uia=1):
 
 
 def organic_scans(cmdr, system, odyssey):
-    if odyssey == "N":
+    if odyssey == "N" or odyssey == False:
         return []
 
     setup_sql_conn()
@@ -133,7 +133,7 @@ def codex_reports(cmdr, system, odyssey):
                         (   
                             %s = 'Y'
                             or
-                            (odyssey = 'N' or odyssey is NULL) and %s = 'N'
+                            ((odyssey = 'N' or odyssey is NULL) and %s = 'N')
                         )
                     )
                     GROUP BY 
@@ -151,12 +151,23 @@ def codex_reports(cmdr, system, odyssey):
                     english_name,
                     hud_category,
                     index_id
-        ) data
+        ) data where entryid in (select entryid from  codex_name_ref where %s = 'Y' or  (%s = 'N' and platform != 'odyssey'))
     """
     with get_cursor() as cursor:
         cursor.execute(
             sql,
-            (cmdr, odycheck, odycheck, system, odycheck, odycheck, odycheck, odycheck),
+            (
+                cmdr,
+                odycheck,
+                odycheck,
+                system,
+                odycheck,
+                odycheck,
+                odycheck,
+                odycheck,
+                odycheck,
+                odycheck,
+            ),
         )
         cr = cursor.fetchall()
 
