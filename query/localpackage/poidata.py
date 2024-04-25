@@ -43,13 +43,13 @@ def uai_waypoints(uia=1):
 
 def organic_scans(cmdr, system, odyssey):
     if odyssey == "N":
-        return
+        return []
 
     setup_sql_conn()
     sql = """
     SELECT 
         distinct 
-        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE replace(body,concat(system,' '),'') end as body,
+        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE replace(body,concat(os.system,' '),'') end as body,
         latitude,longitude,
         entryid,english_name,hud_category,null as index_id,
         max(case when cmdr = %s then 'true' ELSE 'false' END) AS scanned
@@ -61,7 +61,7 @@ def organic_scans(cmdr, system, odyssey):
 	                substr(variant,length(replace(species,'_Name;',''))+1))
             else variant 
         end
-        where system = %s
+        where os.system = %s
         and variant is not null
         group by 
         case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end,
@@ -111,7 +111,7 @@ def codex_reports(cmdr, system, odyssey):
             FROM (
                 SELECT  
                     max(case when cmdrname = %s then 'true' ELSE 'false' END) AS scanned,
-                    replace(body,concat(system,' '),'') as body,
+                    replace(body,concat(cr.system,' '),'') as body,
                     cast(
                         case 
                             when odyssey = 'N' and %s = 'Y' then null
@@ -127,7 +127,7 @@ def codex_reports(cmdr, system, odyssey):
                     index_id
                     FROM codexreport cr 
                     JOIN codex_name_ref cnr ON cnr.entryid = cr.entryid
-                    WHERE system = %s and cr.entryid in (select cs.entryid from codex_systems cs where system = cr.system)
+                    WHERE cr.system = %s and cr.entryid in (select cs.entryid from codex_systems cs where cs.system = cr.system)
                     and hud_category != 'None'
                     and (
                         (   
@@ -146,7 +146,7 @@ def codex_reports(cmdr, system, odyssey):
                             when hud_category in ('Thargoid','Guardian') then null
                             else CONCAT('{"latitude": ',cast(latitude as CHAR),', "longitude":', cast(longitude as CHAR),'}') 
                     end AS JSON),
-                    replace(body,concat(system,' '),''),
+                    replace(body,concat(cr.system,' '),''),
                     cr.entryid,
                     english_name,
                     hud_category,
@@ -188,7 +188,7 @@ def saa_signals(system, odyssey):
     sql = f"""
         select 
             distinct 
-            case when replace(body,concat(system,' '),'') LIKE '%% Ring' then SUBSTR(replace(body,concat(system,' '),''),1,LENGTH(replace(body,concat(system,' '),''))-5) ELSE replace(body,concat(system,' '),'') end as body,
+            case when replace(body,concat(saa.system,' '),'') LIKE '%% Ring' then SUBSTR(replace(body,concat(saa.system,' '),''),1,LENGTH(replace(body,concat(saa.system,' '),''))-5) ELSE replace(body,concat(saa.system,' '),'') end as body,
             case 
                 when type not like '%%SAA%%' then 'Ring' 
                 when type like '%%Biological%%' then 'Biology' 
@@ -208,7 +208,7 @@ def saa_signals(system, odyssey):
                 else 'Unknown' 
             end as english_name,
             ifnull({count},{alt}) count 
-        from SAASignals where system = %s
+        from SAASignals saa where saa.system = %s
         and ifnull({count},{alt}) is not null
     """
     with get_cursor() as cursor:
@@ -224,8 +224,8 @@ def fss_events(system, odyssey):
         SELECT 
             signalname,
             signalnamelocalised,
-            raw_json->"$.IsStation" AS isStation 
-            FROM fss_events WHERE system = %s
+            JSON_EXTRACT(raw_json, '$.IsStation') AS isStation 
+            FROM fss_events fss WHERE fss.system = %s
             and raw_json like '%%Fixed_Event_Life_%%'
     """
     with get_cursor() as cursor:
@@ -245,7 +245,7 @@ def cmdr_poi(cmdr, system, odyssey):
                 comment description,
                 category        
         from (
-            select replace(body,concat(system,' '),'') as body,
+            select replace(body,concat(s.system,' '),'') as body,
             cast(max(
                 case 
                 when latitude is null or longitude is null then null 
@@ -253,7 +253,7 @@ def cmdr_poi(cmdr, system, odyssey):
             end) AS JSON) as coords,s.comment,s.category
             from status_reports s  where 
             cmdr = %s
-            and system = %s
+            and s.system = %s
             group by category,comment 
         ) data
     """
