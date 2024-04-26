@@ -424,6 +424,8 @@ def get_status(request):
     setup_sql_conn()
 
     cmdr = request.args.get("cmdr")
+    if cmdr is None:
+        cmdr = ""
 
     with get_cursor() as cursor:
         sqltext = """
