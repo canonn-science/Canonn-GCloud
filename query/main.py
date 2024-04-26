@@ -49,6 +49,12 @@ def wrap_route(f):
     return decorated_function
 
 
+@app.route("/get_cmdr_status")
+@wrap_route
+def get_cmdr_status():
+    return localpackage.poidata.get_status(request)
+
+
 @app.route("/poiListSignals")
 @wrap_route
 def poiListSignals():
@@ -235,7 +241,7 @@ def region_svg(regions, size):
 @app.route("/biostats/<entryid>")
 @wrap_route
 def get_stats_by_id(entryid):
-    
+
     if entryid.isnumeric():
         return localpackage.codex.get_stats_by_id(entryid)
     else:

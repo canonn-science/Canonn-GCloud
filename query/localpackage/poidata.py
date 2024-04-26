@@ -420,6 +420,39 @@ def getSystemPoi(request):
     return result
 
 
+def get_status(request):
+    setup_sql_conn()
+
+    cmdr = request.args.get("cmdr")
+
+    with get_cursor() as cursor:
+        sqltext = """
+            SELECT 
+            CAST(created_at as CHAR) as created_at,
+                system,
+                CAST(x AS CHAR) x,
+                CAST(y as CHAR) y,
+                CAST(z AS  CHAR) z,
+                body,
+                CAST(latitude  as CHAR) latitude,
+                CAST(longitude as CHAR) longitude,
+                raw_status,
+                heading,
+                altitude,
+                category,
+                index_id,
+                comment
+            FROM  status_reports 
+            where cmdr = %s
+    """
+        cursor.execute(sqltext, (cmdr))
+        r = cursor.fetchall()
+        # num_rows_affected = cursor.rowcount
+        cursor.close()
+
+    return jsonify(r)
+
+
 def get_compres(request):
     systems = tuple(request.args.get("systems").split(","))
 
