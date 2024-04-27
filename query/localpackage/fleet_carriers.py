@@ -42,6 +42,7 @@ def show_all():
 
 
 def show_serial(serial):
+    setup_sql_conn()
     results = []
     sql = """
         select 
@@ -73,6 +74,7 @@ def show_serial(serial):
 
 
 def show_systems(systems):
+    setup_sql_conn()
     system_names_list = systems.split(",")
     placeholders = ", ".join(["%s" for _ in system_names_list])
     sql = f"""
@@ -103,6 +105,7 @@ def show_systems(systems):
 
 
 def show_nearest(x, y, z):
+    setup_sql_conn()
     sql = """
         select 
             serial_no,

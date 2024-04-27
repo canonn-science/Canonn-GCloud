@@ -21,6 +21,40 @@ When executed from the live environment routes must be preceeded by "/query" eg 
 
 In the local environment you don't need "/query"
 
+# fleetCarrier/<serial>
+
+This function will return the last known location of a specific fleet carrier by serial number
+
+## example
+
+* [CRV Flower of Agatea : Q1L-N1K](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/Q1L-N1K)
+
+# fleetCarriers/nearest
+
+Given a set of x,y,z coordinates it will show you the nearest known fleet carriers
+
+## parameters
+
+* x,y,z (The coordinates of the reference system)
+
+## example
+
+* [Nearest Carriers to Graveyard Ghosts](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/nearest?x=0&y=0&z=1000) A GEC POI at [edastro.com/gec](https://edastro.com/gec/view/502)
+
+
+# fleetCarriers
+
+This will display fleet carriers at one or most system names
+
+## parameters
+
+* systems (a optional comma seperates list of system names)
+
+## examples
+
+* [Show all](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers) 
+* [Merope and Varati](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers?systems=Merope,Varati) 
+
 # challenge/next
 
 This function will look up the nearest system containing an unscanned codex entry for a given commander and location. The performance of this function is very  slow because it has to scan codex entries for distance. Please do not execute frequently.
