@@ -51,6 +51,12 @@ def wrap_route(f):
     return decorated_function
 
 
+@app.route("/fleetCarriers/<path>/<name>")
+@wrap_route
+def getFleetNamed(path, name):
+    return localpackage.fleet_carriers.show_name(path, name)
+
+
 @app.route("/fleetCarrier/<serial>")
 @wrap_route
 def getFleetSerial(serial):

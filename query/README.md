@@ -29,6 +29,20 @@ This function will return the last known location of a specific fleet carrier by
 
 * [CRV Flower of Agatea : Q1L-N1K](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/Q1L-N1K)
 
+# fleetCarrier/<beginning|ending|like|named>/<text>
+
+This function will search for fleet carriers names in the text. 
+
+## examples
+
+* [Search for Canonn Carriers beginning with CRV](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/beginning/CRV)
+* [Search for Canonn Carriers ending with Inc.](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/ending/Inc.)
+* [Search for Canonn Carriers with Tharg in the name](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/like/Tharg)
+* [Search for Canonn Carriers named "Fleet Carrier"](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarrier/named/Fleet$20Carrier)
+
+
+
+
 # fleetCarriers/nearest
 
 Given a set of x,y,z coordinates it will show you the nearest known fleet carriers
