@@ -15,7 +15,9 @@ import localpackage.regionsvg
 import localpackage.linkdecoder
 import localpackage.events
 import localpackage.fyi
+import localpackage.fleet_carriers
 import functions_framework
+
 from functools import wraps
 from flask import url_for
 import uuid
@@ -47,6 +49,31 @@ def wrap_route(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+@app.route("/fleetCarrier/<serial>")
+@wrap_route
+def getFleetSerial(serial):
+    return localpackage.fleet_carriers.show_serial(serial)
+
+
+@app.route("/fleetCarriers/nearest")
+@wrap_route
+def getFleetNearest():
+    x = request.args.get("x")
+    y = request.args.get("y")
+    z = request.args.get("z")
+    return localpackage.fleet_carriers.show_nearest(x, y, z)
+
+
+@app.route("/fleetCarriers")
+@wrap_route
+def getFleetSystems():
+    systems = request.args.get("systems")
+    if systems is None:
+        return localpackage.fleet_carriers.show_all()
+    else:
+        return localpackage.fleet_carriers.show_systems(systems)
 
 
 @app.route("/get_cmdr_status")
