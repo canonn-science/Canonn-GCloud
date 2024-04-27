@@ -38,7 +38,7 @@ This function will search for fleet carriers names in the text.
 * [Search for Canonn Carriers beginning with CRV](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/beginning/CRV)
 * [Search for Canonn Carriers ending with Inc.](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/ending/Inc.)
 * [Search for Canonn Carriers with Tharg in the name](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/like/Tharg)
-* [Search for Canonn Carriers named "Fleet Carrier"](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/named/Fleet$20Carrier)
+* [Search for Canonn Carriers named "Fleet Carrier"](https://us-central1-canonn-api-236217.cloudfunctions.net/query/fleetCarriers/named/Fleet%20Carrier)
 
 
 
