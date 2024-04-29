@@ -1,6 +1,7 @@
 #!/bin/bash
 entrypoint=payload
 cd function
+cp $HOME/.ssh/gcf_rsa.prv .
 
 if [[ "$1" == "local" ]] ; then
     unset INSTANCE_CONNECTION_NAME
