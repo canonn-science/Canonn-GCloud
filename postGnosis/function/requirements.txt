@@ -1,0 +1,8 @@
+# Function dependencies, for example:
+# package>=version
+flask<3.0
+pymysql>=0.9
+flask_cors
+sshtunnel
+paramiko
+requests
