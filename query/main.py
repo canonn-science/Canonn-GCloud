@@ -51,6 +51,18 @@ def wrap_route(f):
     return decorated_function
 
 
+@app.route("/typeahead")
+@wrap_route
+def typeahead():
+    if request.args.get("q"):
+        r = requests.get(
+            "https://spansh.co.uk/api/systems/field_values/system_names?q="
+            + request.args.get("q")
+        )
+        return jsonify(r.json())
+    return jsonify({})
+
+
 @app.route("/fleetCarriers/<path>/<name>")
 @wrap_route
 def getFleetNamed(path, name):
