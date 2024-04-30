@@ -124,6 +124,7 @@ def event_handled(event, gs):
             "definition": {"event": "CarrierJump", "StationType": "FleetCarrier"},
         },
         {"description": "Organic Scans", "definition": {"event": "ScanOrganic"}},
+        {"description": "Organic Sales", "definition": {"event": "SellOrganicData"}},
         {"description": "All Codex Events", "definition": {"event": "CodexEntry"}},
         {
             "description": "Signals Found Scanning Bodies",
@@ -751,32 +752,48 @@ def extendOrganicScans(gs, event, cmdr):
 
         x, y, z = gs.get("systemCoordinates")
 
-        sqlparm = (
-            cmdr,
-            gs.get("systemName"),
-            event.get("SystemAddress"),
-            bodyName,
-            event.get("Body"),
-            x,
-            y,
-            z,
-            gs.get("latitude"),
-            gs.get("longitude"),
-            event.get("ScanType"),
-            event.get("Species"),
-            event.get("Species_Localised"),
-            event.get("Genus"),
-            event.get("Genus_Localised"),
-            event.get("Variant"),
-            event.get("Variant_Localised"),
-            json.dumps(event),
-            clientVersion,
-            timestamp,
-            beta,
-            gs.get("temperature"),
-            gs.get("gravity"),
-        )
-        results.append(sqlparm)
+        # need to prevent too many entries being made
+        with __get_cursor() as cursor:
+            cursor.execute(
+                """
+                select count(*) as quantity from (
+                select 1 from organic_scans c where c.SystemAddress  = %s and ifnull(body,'nobody') = ifnull(%s,'nobody') and species = %s limit 50) data
+            """,
+                (event.get("SystemAddress"), bodyName, event.get("Species")),
+            )
+            row = cursor.fetchone()
+            quantity = row.get("quantity")
+            if quantity == 50:
+                print(f"too many scans {gs.get('systemName')} body {bodyName}")
+                return results
+            else:
+                print(f"{quantity} scans {gs.get('systemName')} body {bodyName}")
+                sqlparm = (
+                    cmdr,
+                    gs.get("systemName"),
+                    event.get("SystemAddress"),
+                    bodyName,
+                    event.get("Body"),
+                    x,
+                    y,
+                    z,
+                    gs.get("latitude"),
+                    gs.get("longitude"),
+                    event.get("ScanType"),
+                    event.get("Species"),
+                    event.get("Species_Localised"),
+                    event.get("Genus"),
+                    event.get("Genus_Localised"),
+                    event.get("Variant"),
+                    event.get("Variant_Localised"),
+                    json.dumps(event),
+                    clientVersion,
+                    timestamp,
+                    beta,
+                    gs.get("temperature"),
+                    gs.get("gravity"),
+                )
+                results.append(sqlparm)
     return results
 
 
