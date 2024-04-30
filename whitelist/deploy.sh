@@ -1,6 +1,9 @@
 #!/bin/bash
 entrypoint=payload
+fname=$(basename $(pwd))
+
 cd function
+cp $HOME/.ssh/gcf_rsa.prv .
 
 if [[ "$1" == "local" ]] ; then
     unset INSTANCE_CONNECTION_NAME
@@ -9,7 +12,7 @@ fi
 
 if [[ "$1" == "oldlive" ]] ; then
     INSTANCE_CONNECTION_NAME=canonn-api-236217:europe-north1:canonnpai ; export INSTANCE_CONNECTION_NAME
-    gcloud functions deploy whitelist  \
+    gcloud functions deploy $fname  \
         --allow-unauthenticated \
         --runtime python312 \
         --entry-point $entrypoint \
@@ -37,7 +40,7 @@ if [[ "$1" == "live" ]] ; then
     #We will set up a tunnel on 3308
     #If the database connection is 3308 then the tunnel will route to the destination on 3306
     #So MYSQL_PORT = local_port = 3308
-    gcloud functions deploy whitelist  \
+    gcloud functions deploy $fname  \
         --allow-unauthenticated \
         --runtime python312 \
         --entry-point $entrypoint \
