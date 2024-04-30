@@ -1,5 +1,4 @@
 from pymysql.err import OperationalError
-from flask import escape
 import json
 import logging
 from math import pow, sqrt, trunc
@@ -8,35 +7,27 @@ from urllib.parse import quote_plus
 import requests
 import pymysql
 import sys
-
-
-import google.cloud.logging
 import logging
 import functions_framework
-
-# Instantiates a client
-glogclient = google.cloud.logging.Client()
-glogclient.get_default_handler()
-glogclient.setup_logging(log_level=logging.INFO)
 
 
 # TODO(developer): specify SQL connection details
 CONNECTION_NAME = getenv(
-    'INSTANCE_CONNECTION_NAME',
-    'canonn-api-236217:europe-north1:canonnpai')
-DB_USER = getenv('MYSQL_USER', 'canonn')
-DB_PASSWORD = getenv('MYSQL_PASSWORD', 'secret')
-DB_NAME = getenv('MYSQL_DATABASE', 'canonn')
-DB_HOST = getenv('MYSQL_HOST', 'localhost')
+    "INSTANCE_CONNECTION_NAME", "canonn-api-236217:europe-north1:canonnpai"
+)
+DB_USER = getenv("MYSQL_USER", "canonn")
+DB_PASSWORD = getenv("MYSQL_PASSWORD", "secret")
+DB_NAME = getenv("MYSQL_DATABASE", "canonn")
+DB_HOST = getenv("MYSQL_HOST", "localhost")
 
 mysql_config = {
-    'user': DB_USER,
-    'password': DB_PASSWORD,
-    'db': DB_NAME,
-    'host': DB_HOST,
-    'charset': 'utf8mb4',
-    'cursorclass': pymysql.cursors.DictCursor,
-    'autocommit': True
+    "user": DB_USER,
+    "password": DB_PASSWORD,
+    "db": DB_NAME,
+    "host": DB_HOST,
+    "charset": "utf8mb4",
+    "cursorclass": pymysql.cursors.DictCursor,
+    "autocommit": True,
 }
 
 # Create SQL connection globally to enable reuse
@@ -78,8 +69,12 @@ def __get_whitelist():
             result = []
             cursor.close()
         for v in r:
-            result.append({"description": v.get("description"),
-                           "definition": json.loads(v.get("definition"))})
+            result.append(
+                {
+                    "description": v.get("description"),
+                    "definition": json.loads(v.get("definition")),
+                }
+            )
         whitelist = result
 
     return whitelist
@@ -115,29 +110,58 @@ def get_webhooks():
 def event_handled(event, gs):
 
     wl = [
-        {"description": "FC Docked", "definition": {
-            "event": "Docked", "StationType": "FleetCarrier"}},
-        {"description": "Approached Settlements", "definition": {
-            "event": "ApproachSettlement"}},
+        {
+            "description": "FC Docked",
+            "definition": {"event": "Docked", "StationType": "FleetCarrier"},
+        },
+        {
+            "description": "Approached Settlements",
+            "definition": {"event": "ApproachSettlement"},
+        },
         {"description": "Promotion", "definition": {"event": "Promotion"}},
-        {"description": "FC Jumped", "definition": {
-            "event": "CarrierJump", "StationType": "FleetCarrier"}},
+        {
+            "description": "FC Jumped",
+            "definition": {"event": "CarrierJump", "StationType": "FleetCarrier"},
+        },
         {"description": "Organic Scans", "definition": {"event": "ScanOrganic"}},
         {"description": "All Codex Events", "definition": {"event": "CodexEntry"}},
-        {"description": "Signals Found Scanning Bodies",
-            "definition": {"event": "SAASignalsFound"}},
-        {"description": "Signals Found Scanning Bodies",
-            "definition": {"event": "FSSBodySignals"}},
-        {"description": "Commander event for codex reports",
-            "definition": {"event": "Commander"}},
-        {"description": "Cloud NSP", "definition": {
-            "event": "FSSSignalDiscovered", "SignalName": "$Fixed_Event_Life_Cloud;"}},
-        {"description": "Ring NSP", "definition": {
-            "event": "FSSSignalDiscovered", "SignalName": "$Fixed_Event_Life_Ring;"}},
-        {"description": "Belt NSP", "definition": {"event": "FSSSignalDiscovered",
-                                                   "SignalName": "$Fixed_Event_Life_Belt;"}},
-        {"description": "Stations",            "definition": {
-            "event": "FSSSignalDiscovered",                "IsStation": True}},
+        {
+            "description": "Signals Found Scanning Bodies",
+            "definition": {"event": "SAASignalsFound"},
+        },
+        {
+            "description": "Signals Found Scanning Bodies",
+            "definition": {"event": "FSSBodySignals"},
+        },
+        {
+            "description": "Commander event for codex reports",
+            "definition": {"event": "Commander"},
+        },
+        {
+            "description": "Cloud NSP",
+            "definition": {
+                "event": "FSSSignalDiscovered",
+                "SignalName": "$Fixed_Event_Life_Cloud;",
+            },
+        },
+        {
+            "description": "Ring NSP",
+            "definition": {
+                "event": "FSSSignalDiscovered",
+                "SignalName": "$Fixed_Event_Life_Ring;",
+            },
+        },
+        {
+            "description": "Belt NSP",
+            "definition": {
+                "event": "FSSSignalDiscovered",
+                "SignalName": "$Fixed_Event_Life_Belt;",
+            },
+        },
+        {
+            "description": "Stations",
+            "definition": {"event": "FSSSignalDiscovered", "IsStation": True},
+        },
     ]
     return event_parse(wl, event, gs)
 
@@ -148,7 +172,9 @@ def event_parse(wl, event, gs):
     for wlevent in wl:
         keycount = len(wlevent.get("definition").keys())
         for wlkey in wlevent.get("definition").keys():
-            if event.get(wlkey) and event.get(wlkey) == wlevent["definition"].get(wlkey):
+            if event.get(wlkey) and event.get(wlkey) == wlevent["definition"].get(
+                wlkey
+            ):
                 keymatch += 1
         if keymatch == keycount:
             return True
@@ -164,8 +190,8 @@ def event_known(event, gs):
 
 
 def notNone(value):
-    if value == 'None':
-        return ''
+    if value == "None":
+        return ""
     else:
         return value
 
@@ -190,19 +216,19 @@ def insertCodexReport(request_args):
     }
     """
 
-    cmdrName = request_args.get("cmdr"),
-    system = request_args.get("system"),
-    x = request_args.get("x"),
-    y = request_args.get("y"),
-    z = request_args.get("z"),
-    latitude = request_args.get("lat"),
-    longitude = request_args.get("lon"),
-    body = request_args.get("body"),
-    client = request_args.get("client"),
+    cmdrName = (request_args.get("cmdr"),)
+    system = (request_args.get("system"),)
+    x = (request_args.get("x"),)
+    y = (request_args.get("y"),)
+    z = (request_args.get("z"),)
+    latitude = (request_args.get("lat"),)
+    longitude = (request_args.get("lon"),)
+    body = (request_args.get("body"),)
+    client = (request_args.get("client"),)
     if request_args.get("beta") == True:
-        beta = 'Y'
+        beta = "Y"
     else:
-        beta = 'N'
+        beta = "N"
     raw_json = json.dumps(request_args.get("entry"))
     entryid = request_args.get("entry").get("EntryID")
     name = request_args.get("entry").get("Name")
@@ -210,8 +236,7 @@ def insertCodexReport(request_args):
     category = request_args.get("entry").get("Category")
     category_localised = request_args.get("entry").get("Category_Localised")
     sub_category = request_args.get("entry").get("SubCategory")
-    sub_category_localised = request_args.get(
-        "entry").get("SubCategory_Localised")
+    sub_category_localised = request_args.get("entry").get("SubCategory_Localised")
     region_name = request_args.get("entry").get("Region")
     region_name_localised = request_args.get("entry").get("Region_Localised")
     nearest_destination = request_args.get("entry").get("NearestDestination")
@@ -227,20 +252,36 @@ def insertCodexReport(request_args):
     # if set and we have an index then we can decode
     if nearest_destination and "index" in nearest_destination:
         signal_type = None
-        ndarray = nearest_destination.split('#')
+        ndarray = nearest_destination.split("#")
         if len(ndarray) == 2:
-            dummy, c = nearest_destination.split('#')
+            dummy, c = nearest_destination.split("#")
             dummy, index_id = c.split("=")
             index_id = index_id[:-1]
         else:
-            dummy, b, c = nearest_destination.split('#')
+            dummy, b, c = nearest_destination.split("#")
             dummy, signal_type = b.split("=")
             dummy, index_id = c.split("=")
             signal_type = signal_type[:-1]
             index_id = index_id[:-1]
 
+    # if there are 50 or more entries already we will skip writing
     with __get_cursor() as cursor:
-        cursor.execute('''
+        cursor.execute(
+            """
+            select count(*) as quantity from (
+            select 1 from codexreport c where c.system  = %s and ifnull(body,'nobody') = ifnull(%s,'nobody') and entryid = %s limit 50) data
+        """,
+            (system, body, entryid),
+        )
+        row = cursor.fetchone()
+        quantity = row.get("quantity")
+        if quantity == 50:
+            cursor.close()
+            return False
+
+    with __get_cursor() as cursor:
+        cursor.execute(
+            """
             insert ignore into codexreport (
                 cmdrName,
                 system,
@@ -293,33 +334,44 @@ def insertCodexReport(request_args):
 	            nullif(%s,''),
 	            nullif(%s,''),
                 %s
-                )''', (
-            cmdrName,
-            system,
-            x,
-            y,
-            z,
-            body,
-            latitude,
-            longitude,
-            entryid,
-            name, name_localised,
-            category, category_localised,
-            sub_category, sub_category_localised,
-            region_name, region_name_localised,
-            beta,
-            raw_json,
-            index_id,
-            signal_type,
-            client,
-            reported_at,
-            platform,
-            odyssey,
-            id64,
-            temperature
-        ))
+                )""",
+            (
+                cmdrName,
+                system,
+                x,
+                y,
+                z,
+                body,
+                latitude,
+                longitude,
+                entryid,
+                name,
+                name_localised,
+                category,
+                category_localised,
+                sub_category,
+                sub_category_localised,
+                region_name,
+                region_name_localised,
+                beta,
+                raw_json,
+                index_id,
+                signal_type,
+                client,
+                reported_at,
+                platform,
+                odyssey,
+                id64,
+                temperature,
+            ),
+        )
+        retval = False
+        if cursor.rowcount == 1:
+            retval = True
+
         mysql_conn.commit()
         cursor.close()
+        return retval
 
 
 def insertCodex(request_args):
@@ -328,41 +380,59 @@ def insertCodex(request_args):
     system = request_args.get("system")
     name_localised = request_args.get("entry").get("Name_Localised")
     category_localised = request_args.get("entry").get("Category_Localised")
-    sub_category_localised = request_args.get(
-        "entry").get("SubCategory_Localised")
+    sub_category_localised = request_args.get("entry").get("SubCategory_Localised")
     region = request_args.get("entry").get("Region_Localised")
 
     if name_localised is None:
-        name_localised = request_args.get("entry").get("Name").replace(
-            "$Codex_Ent_", "").replace("_Name;", "").replace("_", " ")
+        name_localised = (
+            request_args.get("entry")
+            .get("Name")
+            .replace("$Codex_Ent_", "")
+            .replace("_Name;", "")
+            .replace("_", " ")
+        )
 
     release = ""
-    if request_args.get("odyssey") == 'Y':
+    if request_args.get("odyssey") == "Y":
         release = " (Odyssey)"
-    if request_args.get("odyssey") == 'N':
+    if request_args.get("odyssey") == "N":
         release = " (Horizons)"
 
     webhooks = get_webhooks()
 
     webhook = webhooks.get("Codex")
 
-    stmt = 'insert ignore into codex_entries (entryid) values(%s)'
+    stmt = "insert ignore into codex_entries (entryid) values(%s)"
     with __get_cursor() as cursor:
         cursor.execute(stmt, (entryid))
         if cursor.rowcount == 1:
             canonnsearch = "https://canonn.science/?s="
-            codexsearch = "https://canonn-science.github.io/canonn-signals/index.html?system="
+            codexsearch = (
+                "https://canonn-science.github.io/canonn-signals/index.html?system="
+            )
 
             content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
-                cmdrName, name_localised, canonnsearch, quote_plus(
-                    name_localised),
-                entryid, system, codexsearch, quote_plus(system),
-                region, category_localised, sub_category_localised, release)
+                cmdrName,
+                name_localised,
+                canonnsearch,
+                quote_plus(name_localised),
+                entryid,
+                system,
+                codexsearch,
+                quote_plus(system),
+                region,
+                category_localised,
+                sub_category_localised,
+                release,
+            )
             payload = {}
             payload["content"] = content
 
-            requests.post(webhook, data=json.dumps(payload), headers={
-                "Content-Type": "application/json"})
+            requests.post(
+                webhook,
+                data=json.dumps(payload),
+                headers={"Content-Type": "application/json"},
+            )
         cursor.close()
 
 
@@ -385,44 +455,62 @@ def insert_codex_systems(request_args):
     system = request_args.get("system")
     name_localised = request_args.get("entry").get("Name_Localised")
     category_localised = request_args.get("entry").get("Category_Localised")
-    sub_category_localised = request_args.get(
-        "entry").get("SubCategory_Localised")
+    sub_category_localised = request_args.get("entry").get("SubCategory_Localised")
     region = request_args.get("entry").get("Region_Localised")
     x = request_args.get("x")
     y = request_args.get("y")
     z = request_args.get("z")
 
     if name_localised is None:
-        name_localised = request_args.get("entry").get("Name").replace(
-            "$Codex_Ent_", "").replace("_Name;", "").replace("_", " ")
+        name_localised = (
+            request_args.get("entry")
+            .get("Name")
+            .replace("$Codex_Ent_", "")
+            .replace("_Name;", "")
+            .replace("_", " ")
+        )
 
     hud, english_name = get_hud_category(entryid, name_localised)
     webhooks = get_webhooks()
 
     release = ""
-    if request_args.get("odyssey") == 'Y':
+    if request_args.get("odyssey") == "Y":
         release = " (Odyssey)"
-    if request_args.get("odyssey") == 'N':
+    if request_args.get("odyssey") == "N":
         release = " (Horizons)"
 
-    if hud != 'Unknown':
+    if hud != "Unknown":
         stmt = "insert ignore into codex_systems (system,x,y,z,entryid,z_order) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s))"
 
         with __get_cursor() as cursor:
             cursor.execute(stmt, (system, x, y, z, entryid, x, y, z))
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
-                codexsearch = "https://canonn-science.github.io/canonn-signals/index.html?system="
+                codexsearch = (
+                    "https://canonn-science.github.io/canonn-signals/index.html?system="
+                )
 
                 content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {} {}".format(
-                    cmdrName, english_name, canonnsearch, quote_plus(
-                        english_name),
-                    entryid, system, codexsearch, quote_plus(system),
-                    region, category_localised, sub_category_localised, release)
+                    cmdrName,
+                    english_name,
+                    canonnsearch,
+                    quote_plus(english_name),
+                    entryid,
+                    system,
+                    codexsearch,
+                    quote_plus(system),
+                    region,
+                    category_localised,
+                    sub_category_localised,
+                    release,
+                )
                 payload = {}
                 payload["content"] = content
-                requests.post(webhooks.get(hud), data=json.dumps(
-                    payload), headers={"Content-Type": "application/json"})
+                requests.post(
+                    webhooks.get(hud),
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                )
             cursor.close()
 
 
@@ -436,7 +524,7 @@ def setup_sql_conn():
             mysql_conn = pymysql.connect(**mysql_config)
         except OperationalError:
             # If production settings fail, use local development ones
-            mysql_config['unix_socket'] = f'/cloudsql/{CONNECTION_NAME}'
+            mysql_config["unix_socket"] = f"/cloudsql/{CONNECTION_NAME}"
             mysql_conn = pymysql.connect(**mysql_config)
     mysql_conn.ping()
 
@@ -462,33 +550,39 @@ def get_events(one, many):
 
 def gamestate(row):
     gs = row.get("gameState")
-    if 'Journal Limpet' in gs.get("clientVersion"):
+    if "Journal Limpet" in gs.get("clientVersion"):
         gs["autoupdate"] = True
     return gs
 
 
 def postCodex(payload):
+
     eventType = payload.get("eventType")
     entry = payload.get("entry")
 
     if eventType == "CodexEntry":
         name = entry.get("Name")
-        stellar_bodies = (entry.get("Category") ==
-                          '$Codex_Category_StellarBodies;')
-        green_giant = (stellar_bodies and "Green" in name)
+        stellar_bodies = entry.get("Category") == "$Codex_Category_StellarBodies;"
+        green_giant = stellar_bodies and "Green" in name
         if not stellar_bodies or green_giant:
-            insertCodexReport(payload)
+            retval = insertCodexReport(payload)
             insertCodex(payload)
             insert_codex_systems(payload)
         else:
             logging.info(f"Ignoring codex entry: {name}")
+            return False
 
-        return True
+        if not retval:
+            print("Too many entries")
+
+        return retval
+
     else:
         return False
 
 
 def extendCodex(gs, entry, cmdr):
+
     results = []
     if entry.get("event") == "CodexEntry":
         try:
@@ -498,6 +592,10 @@ def extendCodex(gs, entry, cmdr):
             logging.error(entry)
             logging.error("No System Coordinates")
             return results
+
+        bodyname = gs.get("bodyName")
+        if entry.get("BodyName"):
+            bodyname = entry.get("bodyName")
 
         payload = {
             "eventType": entry.get("event"),
@@ -517,25 +615,27 @@ def extendCodex(gs, entry, cmdr):
             "autoupdate": gs.get("autoupdate"),
             "platform": gs.get("platform"),
             "odyssey": is_odyssey(gs.get("odyssey")),
-            "temperature": gs.get("temperature")
+            "temperature": gs.get("temperature"),
         }
         if postCodex(payload):
-            results.append((
-                entry.get("event"),
-                cmdr,
-                gs.get("isBeta"),
-                gs.get("systemName"),
-                gs.get("station"),
-                x,
-                y,
-                z,
-                gs.get("bodyName"),
-                entry.get("Latitude") or gs.get("latitude"),
-                entry.get("Longitude") or gs.get("longitude"),
-                entry,
-                gs.get("clientVersion"),
-                entry.get("timestamp"),
-                gs.get("autoupdate"))
+            results.append(
+                (
+                    entry.get("event"),
+                    cmdr,
+                    gs.get("isBeta"),
+                    gs.get("systemName"),
+                    gs.get("station"),
+                    x,
+                    y,
+                    z,
+                    gs.get("bodyName"),
+                    entry.get("Latitude") or gs.get("latitude"),
+                    entry.get("Longitude") or gs.get("longitude"),
+                    entry,
+                    gs.get("clientVersion"),
+                    entry.get("timestamp"),
+                    gs.get("autoupdate"),
+                )
             )
     return results
 
@@ -552,9 +652,9 @@ def extendCommanders(gs, event, cmdr):
             autoupdate = "N"
 
         if gs.get("isBeta") == True:
-            beta = 'Y'
+            beta = "Y"
         else:
-            beta = 'N'
+            beta = "N"
 
         results.append((cmdr, clientVersion, reported_at, autoupdate, beta))
 
@@ -574,15 +674,15 @@ def extendLife(gs, event, cmdr):
     vNum = float(f"{v1}.{v2}")
 
     if vNum < 6.2:
-        #print("Not accepting FSS events from < 6.2.0")
+        # print("Not accepting FSS events from < 6.2.0")
         return results
 
     if event.get("event") == "FSSSignalDiscovered":
 
         if gs.get("isBeta") == True:
-            beta = 'Y'
+            beta = "Y"
         else:
-            beta = 'N'
+            beta = "N"
 
         signalName = event.get("SignalName")
 
@@ -599,7 +699,7 @@ def extendLife(gs, event, cmdr):
                 z,
                 json.dumps(event),
                 beta,
-                gs.get("clientVersion")
+                gs.get("clientVersion"),
             )
             results.append(sqlparm)
     return results
@@ -607,12 +707,15 @@ def extendLife(gs, event, cmdr):
 
 def extendOrganicScans(gs, event, cmdr):
     results = []
-    if event.get("event") == "ScanOrganic" and event.get("ScanType") in ("Log","Sample"):
+    if event.get("event") == "ScanOrganic" and event.get("ScanType") in (
+        "Log",
+        "Sample",
+    ):
 
         if gs.get("isBeta") == True:
-            beta = 'Y'
+            beta = "Y"
         else:
-            beta = 'N'
+            beta = "N"
 
         timestamp = event.get("timestamp")
         clientVersion = gs.get("clientVersion")
@@ -629,7 +732,9 @@ def extendOrganicScans(gs, event, cmdr):
             event.get("SystemAddress"),
             bodyName,
             event.get("Body"),
-            x, y, z,
+            x,
+            y,
+            z,
             gs.get("latitude"),
             gs.get("longitude"),
             event.get("ScanType"),
@@ -644,7 +749,7 @@ def extendOrganicScans(gs, event, cmdr):
             timestamp,
             beta,
             gs.get("temperature"),
-            gs.get("gravity")
+            gs.get("gravity"),
         )
         results.append(sqlparm)
     return results
@@ -680,8 +785,21 @@ def extendRawEvents(gs, entry, cmdr):
         clientVersion = gs.get("clientVersion")
 
         results.append(
-            (cmdr, systemName, bodyName, station, x, y, z,
-             lat, lon, event, json.dumps(entry), clientVersion, timestamp)
+            (
+                cmdr,
+                systemName,
+                bodyName,
+                station,
+                x,
+                y,
+                z,
+                lat,
+                lon,
+                event,
+                json.dumps(entry),
+                clientVersion,
+                timestamp,
+            )
         )
 
     return results
@@ -720,11 +838,28 @@ def extendSettlements(gs, entry, cmdr):
         clientVersion = gs.get("clientVersion")
 
         results.append(
-            (cmdr,	id64,	systemName,	bodyName,	bodyID,	name,	name_localised,
-             market_id,	lat,	lon,	x,	y,	z,	json.dumps(entry),	clientVersion, timestamp)
+            (
+                cmdr,
+                id64,
+                systemName,
+                bodyName,
+                bodyID,
+                name,
+                name_localised,
+                market_id,
+                lat,
+                lon,
+                x,
+                y,
+                z,
+                json.dumps(entry),
+                clientVersion,
+                timestamp,
+            )
         )
 
     return results
+
 
 # create an array of settlement values
 
@@ -744,19 +879,23 @@ def extendGuardianSettlements(gs, entry, cmdr):
     if entry.get("event") in ("CodexEntry", "ApproachSettlement"):
         if name and "index" in name:
             signal_type = None
-            ndarray = name.split('#')
+            ndarray = name.split("#")
             if len(ndarray) == 2:
-                dummy, c = name.split('#')
+                dummy, c = name.split("#")
                 dummy, index_id = c.split("=")
                 index_id = index_id[:-1]
             else:
-                dummy, b, c = name.split('#')
+                dummy, b, c = name.split("#")
                 dummy, signal_type = b.split("=")
                 dummy, index_id = c.split("=")
                 signal_type = signal_type[:-1]
                 index_id = index_id[:-1]
 
-    if entry.get("event") in ("CodexEntry", "ApproachSettlement") and name and "$Ancient" in name:
+    if (
+        entry.get("event") in ("CodexEntry", "ApproachSettlement")
+        and name
+        and "$Ancient" in name
+    ):
 
         market_id = entry.get("MarketID")
         systemName = entry.get("StarSystem")
@@ -788,8 +927,26 @@ def extendGuardianSettlements(gs, entry, cmdr):
         clientVersion = gs.get("clientVersion")
 
         results.append(
-            (cmdr,	event, id64,	systemName,	bodyName,	bodyID,	name,	name_localised,
-             market_id,	lat,	lon, index_id,	x,	y,	z,	json.dumps(entry),	clientVersion, timestamp)
+            (
+                cmdr,
+                event,
+                id64,
+                systemName,
+                bodyName,
+                bodyID,
+                name,
+                name_localised,
+                market_id,
+                lat,
+                lon,
+                index_id,
+                x,
+                y,
+                z,
+                json.dumps(entry),
+                clientVersion,
+                timestamp,
+            )
         )
 
     return results
@@ -809,25 +966,28 @@ def extendCarriersFSS(gs, event, cmdr):
     vNum = float(f"{v1}.{v2}")
 
     if vNum < 6.2:
-        #print("Not accepting FSS events from < 6.2.0")
+        # print("Not accepting FSS events from < 6.2.0")
         return results
 
-    bCarrierJump = (event.get("event") == "CarrierJump" and event.get(
-        "StationType") == "FleetCarrier")
-    bCarrierDock = (event.get("event") == "Docked" and event.get(
-        "StationType") == "FleetCarrier")
+    bCarrierJump = (
+        event.get("event") == "CarrierJump"
+        and event.get("StationType") == "FleetCarrier"
+    )
+    bCarrierDock = (
+        event.get("event") == "Docked" and event.get("StationType") == "FleetCarrier"
+    )
 
-    bFSSSignalDiscovered = (event.get("event") == "FSSSignalDiscovered")
+    bFSSSignalDiscovered = event.get("event") == "FSSSignalDiscovered"
 
     bIsStation = event.get("IsStation")
 
     try:
         bFleetCarrier = (
-            bFSSSignalDiscovered and
-            bIsStation and
-            event.get("SignalName") and
-            event.get("SignalName")[-4] == '-' and
-            event.get("SignalName")[-8] == ' '
+            bFSSSignalDiscovered
+            and bIsStation
+            and event.get("SignalName")
+            and event.get("SignalName")[-4] == "-"
+            and event.get("SignalName")[-8] == " "
         )
     except:
         bFleetCarrier = False
@@ -863,8 +1023,19 @@ def extendCarriersFSS(gs, event, cmdr):
 
             ev = event.get("event")
 
-            results.append((serial_no, name, timestamp, system,
-                            x, y, z, json.dumps(service_list.split(',')), serial_no))
+            results.append(
+                (
+                    serial_no,
+                    name,
+                    timestamp,
+                    system,
+                    x,
+                    y,
+                    z,
+                    json.dumps(service_list.split(",")),
+                    serial_no,
+                )
+            )
 
     return results
 
@@ -880,9 +1051,9 @@ def extendOrganicSales(gs, entry, cmdr):
         market_id = entry.get("MarketID")
         clientVersion = gs.get("clientVersion")
         if gs.get("isBeta") == True:
-            beta = 'Y'
+            beta = "Y"
         else:
-            beta = 'N'
+            beta = "N"
 
         for bioData in entry.get("BioData"):
             species = bioData.get("Species")
@@ -890,20 +1061,25 @@ def extendOrganicSales(gs, entry, cmdr):
             reward = bioData.get("Value")
             bonus = bioData.get("Bonus")
 
-            results.append((
-                cmdr,
-                system,
-                body,
-                station,
-                market_id,
-                species,
-                genus,
-                reward,
-                bonus,
-                clientVersion,
-                reported_at,
-                beta, x, y, z
-            ))
+            results.append(
+                (
+                    cmdr,
+                    system,
+                    body,
+                    station,
+                    market_id,
+                    species,
+                    genus,
+                    reward,
+                    bonus,
+                    clientVersion,
+                    reported_at,
+                    beta,
+                    x,
+                    y,
+                    z,
+                )
+            )
 
     return results
 
@@ -923,43 +1099,64 @@ def extendSignals(gs, event, cmdr):
         signals = event.get("Signals")
         client = gs.get("clientVersion")
         if gs.get("odyssey") is None:
-            odyssey = 'X'
+            odyssey = "X"
         if gs.get("odyssey") == True:
-            odyssey = 'Y'
+            odyssey = "Y"
         if gs.get("odyssey") == False:
-            odyssey = 'N'
+            odyssey = "N"
 
         if gs.get("isBeta"):
-            beta = 'Y'
+            beta = "Y"
         else:
-            beta = 'N'
+            beta = "N"
 
         for signal in signals:
             sigtype = signal.get("Type")
-            if sigtype != '$SAA_SignalType_Human;':
+            if sigtype != "$SAA_SignalType_Human;":
 
-                biology = (sigtype == '$SAA_SignalType_Biological;')
-                geology = (sigtype == '$SAA_SignalType_Geological;')
-                alien = (sigtype == '$SAA_SignalType_Thargoid;' or sigtype ==
-                         '$SAA_SignalType_Guardian;')
+                biology = sigtype == "$SAA_SignalType_Biological;"
+                geology = sigtype == "$SAA_SignalType_Geological;"
+                alien = (
+                    sigtype == "$SAA_SignalType_Thargoid;"
+                    or sigtype == "$SAA_SignalType_Guardian;"
+                )
 
-                if (odyssey in ('N', 'X') or alien):
+                if odyssey in ("N", "X") or alien:
                     update_type = "sites"
-                elif (odyssey == 'Y' and (biology or geology)):
+                elif odyssey == "Y" and (biology or geology):
                     update_type = "species"
                 else:
                     update_type = "sites"
 
                 type_localised = signal.get("Type_Localised")
                 count = signal.get("Count")
-                results.append((cmdr, system, system_address, x, y, z, body, body_id, sigtype, type_localised,
-                                count, client, beta,
-                                update_type, count,
-                                update_type, count,
-                                update_type, count,
-                                count, count,
-                                update_type, count)
-                               )
+                results.append(
+                    (
+                        cmdr,
+                        system,
+                        system_address,
+                        x,
+                        y,
+                        z,
+                        body,
+                        body_id,
+                        sigtype,
+                        type_localised,
+                        count,
+                        client,
+                        beta,
+                        update_type,
+                        count,
+                        update_type,
+                        count,
+                        update_type,
+                        count,
+                        count,
+                        count,
+                        update_type,
+                        count,
+                    )
+                )
 
             else:
                 logging.info("Skipping Human Event")
@@ -967,40 +1164,44 @@ def extendSignals(gs, event, cmdr):
 
 
 def postRawEvents(values):
-    return execute_many("postRawEvents",
-                        """
+    return execute_many(
+        "postRawEvents",
+        """
             insert into raw_events (cmdrName,systemName,bodyName,station,x,y,z,lat,lon,event,raw_event,clientVersion,created_at)
             values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postSettlements(values):
-    return execute_many("postSettlements",
-                        """
+    return execute_many(
+        "postSettlements",
+        """
             insert ignore into settlements (cmdr,id64,systemName,bodyName,bodyid,Name,name_localised,market_id,lat,lon,x,y,z,raw_event,clientVersion,created_at)
             values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postGuardianSettlements(values):
-    return execute_many("postGuardianSettlements",
-                        """
+    return execute_many(
+        "postGuardianSettlements",
+        """
             insert ignore into guardian_settlements (cmdr,event,id64,systemName,bodyName,bodyid,Name,name_localised,market_id,lat,lon,index_id,x,y,z,raw_event,clientVersion,created_at)
             values (nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),nullif(%s,''),str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def updateNameRef():
     values = None
 
-    return execute_many("updateNameRef",
-                        """
+    return execute_many(
+        "updateNameRef",
+        """
             insert into codex_name_ref
             select name,entryid,category,sub_category,name_localised,'Biology' as hud_category,replace(name_components->"$.value[0]",'"','') as sub_class,'odyssey' as platform  from (
                 select
@@ -1018,14 +1219,15 @@ def updateNameRef():
             ) data2
             )
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postOrganicScans(values):
 
-    return execute_many("postOrganicScans",
-                        """
+    return execute_many(
+        "postOrganicScans",
+        """
             insert ignore into organic_scans (
                 cmdr,
                 system,
@@ -1073,14 +1275,15 @@ def postOrganicScans(values):
                 %s
                 )
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postOrganicSales(values):
 
-    return execute_many("postOrganicSales",
-                        """
+    return execute_many(
+        "postOrganicSales",
+        """
             insert ignore into organic_sales (
                 cmdr,
                 system,
@@ -1112,35 +1315,38 @@ def postOrganicSales(values):
                 %s
                 )
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postLifeEvents(values):
 
-    return execute_many("postLifeEvents",
-                        """
+    return execute_many(
+        "postLifeEvents",
+        """
             insert ignore into fss_events (signalname,signalNameLocalised,cmdr,system,x,y,z,raw_json,beta,clientVersion)
             values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postCommanders(values):
-    return execute_many("postCommanders",
-                        """
+    return execute_many(
+        "postCommanders",
+        """
             insert ignore into client_reports (cmdr,client,day,autoupdate,is_beta)
             values (%s,%s,date(str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ')),%s,%s)
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postSignals(values):
 
-    return execute_many("postSignals",
-                        """
+    return execute_many(
+        "postSignals",
+        """
             insert into SAASignals (
                 cmdr,
                 system,
@@ -1186,14 +1392,15 @@ def postSignals(values):
                     else sites
                 end
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def postCarriers(values):
 
-    return execute_many("postCarriers",
-                        """
+    return execute_many(
+        "postCarriers",
+        """
             INSERT INTO fleet_carriers (
                 serial_no,
                 name,
@@ -1272,17 +1479,13 @@ def postCarriers(values):
                     else last_jump_dt
                 end;
         """,
-                        values
-                        )
+        values,
+    )
 
 
 def collateCodex(values):
     value_count = len(values)
-    retval = {
-        "name": "collateCodex",
-        "rows": value_count,
-        "inserted": value_count
-    }
+    retval = {"name": "collateCodex", "rows": value_count, "inserted": value_count}
     # updateNameRef()
     return retval
 
@@ -1291,19 +1494,12 @@ def execute_many(function, sqltext, sqlparm):
     global mysql_conn
     try:
         value_count = len(sqlparm)
-        retval = {
-            "name": function,
-            "rows": value_count,
-            "inserted": 0
-        }
+        retval = {"name": function, "rows": value_count, "inserted": 0}
         if value_count == 0:
             return retval
 
         with __get_cursor() as cursor:
-            cursor.executemany(
-                sqltext,
-                sqlparm
-            )
+            cursor.executemany(sqltext, sqlparm)
             mysql_conn.commit()
             retval["inserted"] = cursor.rowcount
     except Exception as e:
@@ -1329,9 +1525,7 @@ def entrypoint(request):
     try:
         return entrywrap(request)
     except Exception as e:
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        headers = {"Content-Type": "application/json"}
 
         retval["error"] = str(e)
         logging.exception("message")
@@ -1341,42 +1535,92 @@ def entrypoint(request):
 def Promotion(gs, entry, cmdr):
     ranks = {
         "Exobiologist": [
-            "Directionless", "Mostly Directionless", "Compiler",
-            "Collector", "Cataloguer", "Taxonomist",
-            "Ecologist", "Geneticist", "Elite",
-            "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
+            "Directionless",
+            "Mostly Directionless",
+            "Compiler",
+            "Collector",
+            "Cataloguer",
+            "Taxonomist",
+            "Ecologist",
+            "Geneticist",
+            "Elite",
+            "Elite I",
+            "Elite II",
+            "Elite III",
+            "Elite IV",
+            "Elite V",
         ],
         "Soldier": [
-            "Defenceless", "Mostly Defenceless", "Rookie",
-            "Soldier", "Gunslinger", "Warrior",
-            "Gladiator", "Deadeye", "Elite",
-            "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
+            "Defenceless",
+            "Mostly Defenceless",
+            "Rookie",
+            "Soldier",
+            "Gunslinger",
+            "Warrior",
+            "Gladiator",
+            "Deadeye",
+            "Elite",
+            "Elite I",
+            "Elite II",
+            "Elite III",
+            "Elite IV",
+            "Elite V",
         ],
         "Trade": [
-            "Penniless", "Mostly Penniless", "Peddler",
-            "Dealer", "Merchant", "Broker",
-            "Entrepreneur", "Tycoon", "Elite",
-            "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
+            "Penniless",
+            "Mostly Penniless",
+            "Peddler",
+            "Dealer",
+            "Merchant",
+            "Broker",
+            "Entrepreneur",
+            "Tycoon",
+            "Elite",
+            "Elite I",
+            "Elite II",
+            "Elite III",
+            "Elite IV",
+            "Elite V",
         ],
         "Combat": [
-            "Harmless", "Mostly Harmless", "Novice",
-            "Competent", "Expert", "Master",
-            "Dangerous", "Deadly", "Elite",
-            "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
+            "Harmless",
+            "Mostly Harmless",
+            "Novice",
+            "Competent",
+            "Expert",
+            "Master",
+            "Dangerous",
+            "Deadly",
+            "Elite",
+            "Elite I",
+            "Elite II",
+            "Elite III",
+            "Elite IV",
+            "Elite V",
         ],
         "Explore": [
-            "Aimless", "Mostly Aimless", "Scout",
-            "Surveyor", "Trailblazer", "Pathfinder",
-            "Ranger", "Pioneer", "Elite",
-            "Elite I", "Elite II", "Elite III", "Elite IV", "Elite V"
-        ]
+            "Aimless",
+            "Mostly Aimless",
+            "Scout",
+            "Surveyor",
+            "Trailblazer",
+            "Pathfinder",
+            "Ranger",
+            "Pioneer",
+            "Elite",
+            "Elite I",
+            "Elite II",
+            "Elite III",
+            "Elite IV",
+            "Elite V",
+        ],
     }
     names = {
         "Explore": "Explorer",
         "Soldier": "Mercenary",
         "Trade": "Trade",
         "Combat": "Combat",
-        "Exobiologist": "Exobiologist"
+        "Exobiologist": "Exobiologist",
     }
 
     rank = None
@@ -1391,10 +1635,15 @@ def Promotion(gs, entry, cmdr):
         webhook = webhooks.get("Promotion")
 
         payload = {}
-        payload["content"] = f"Congratulations Cmdr {cmdr} on your promotion to {role}: {rank}"
+        payload["content"] = (
+            f"Congratulations Cmdr {cmdr} on your promotion to {role}: {rank}"
+        )
 
-        requests.post(webhook, data=json.dumps(payload), headers={
-            "Content-Type": "application/json"})
+        requests.post(
+            webhook,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"},
+        )
 
 
 def buySuit(gs, entry, cmdr):
@@ -1408,9 +1657,8 @@ def buySuit(gs, entry, cmdr):
 
             suit_type, suit_class = entry.get("Name").split("_")
 
-            has_mods = (entry.get("SuitMods") and len(
-                entry.get("SuitMods")) > 0)
-            upper_class = (not suit_class == "Class1")
+            has_mods = entry.get("SuitMods") and len(entry.get("SuitMods")) > 0
+            upper_class = not suit_class == "Class1"
 
             if has_mods or upper_class:
 
@@ -1431,8 +1679,11 @@ def buySuit(gs, entry, cmdr):
                 payload = {}
                 payload["content"] = content
 
-                requests.post(webhook, data=json.dumps(payload), headers={
-                              "Content-Type": "application/json"})
+                requests.post(
+                    webhook,
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                )
     except Exception as e:
         logging.exception("message")
         raise
@@ -1441,13 +1692,11 @@ def buySuit(gs, entry, cmdr):
 @functions_framework.http
 def entrywrap(request):
 
-    headers = {
-        'Content-Type': 'application/json'
-    }
+    headers = {"Content-Type": "application/json"}
 
     retval = {}
 
-    if request.method != 'POST':
+    if request.method != "POST":
         return (json.dumps({"error": "only POST operations allowed"}), 500, headers)
 
     setup_sql_conn()
@@ -1477,8 +1726,8 @@ def entrywrap(request):
 
             cmdr = row.get("cmdrName")
             events = get_events(row.get("rawEvent"), row.get("rawEvents"))
-            banned = ("BETA" in cmdr)
-            notbeta = (not gs.get("isBeta") or gs.get("isBeta") == "N")
+            banned = "BETA" in cmdr
+            notbeta = not gs.get("isBeta") or gs.get("isBeta") == "N"
 
             if notbeta and not banned:
                 for event in events:
@@ -1494,7 +1743,8 @@ def entrywrap(request):
                     rawevents.extend(extendRawEvents(gs, event, cmdr))
                     settlements.extend(extendSettlements(gs, event, cmdr))
                     guardian_settlements.extend(
-                        extendGuardianSettlements(gs, event, cmdr))
+                        extendGuardianSettlements(gs, event, cmdr)
+                    )
                     # we will actually post the codex events and collate results
                     codexevents.extend(extendCodex(gs, event, cmdr))
                     organicscans.extend(extendOrganicScans(gs, event, cmdr))
@@ -1527,5 +1777,5 @@ def entrywrap(request):
     logging.info(retval)
     # we will always return 200 because errors
     # are logged and we want to stay in memory
-    #print(json.dumps(retval, indent=4))
+    # print(json.dumps(retval, indent=4))
     return (json.dumps(retval), 200, headers)
