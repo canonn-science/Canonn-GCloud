@@ -279,6 +279,31 @@ def insertCodexReport(request_args):
             cursor.close()
             return False
 
+    hud, english_name = get_hud_category(entryid, name_localised)
+    # Things that live in space do not need coordinates
+    space_category = hud in ("Cloud", "Anomaly", "None", "Tourist")
+    space_entry = entryid in (
+        3101300,
+        3200800,
+        3100401,
+        3100402,
+        3100403,
+        3100404,
+        3100801,
+        3100802,
+        3100803,
+        3100804,
+        3100406,
+        3100501,
+        3100502,
+        3100702,
+    )
+
+    if space_category or space_entry:
+        print("Excluding Coordinates")
+        latitude = None
+        longitude = None
+
     with __get_cursor() as cursor:
         cursor.execute(
             """
@@ -573,7 +598,7 @@ def postCodex(payload):
             return False
 
         if not retval:
-            print("Too many entries")
+            print(f"Too many entries {payload.get('system')} {payload.get('body')}")
 
         return retval
 
