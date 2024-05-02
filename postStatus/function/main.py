@@ -223,17 +223,6 @@ def insertReport(request_args):
         )
 
 
-@app.route("/cleanup")
-@wrap_route
-def cleanup():
-    with get_cursor() as cursor:
-        cursor.execute("delete from nhsssystems where systemName = 'TEST'", ())
-        deleted_rows = cursor.rowcount
-        cursor.execute("delete from nhssreports  where systemName = 'TEST'", ())
-        deleted_rows += cursor.rowcount
-    return f"{deleted_rows} rows deleted"
-
-
 @app.route("/", methods=["POST"])
 @wrap_route
 def root():
