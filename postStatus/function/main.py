@@ -175,7 +175,7 @@ def insertReport(request_args):
             """
             insert into status_reports (
                 cmdr,
-                system,
+                `system`,
                 x,
                 y,
                 z,
