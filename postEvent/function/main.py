@@ -8,34 +8,134 @@ import requests
 import pymysql
 import sys
 import logging
+from functools import wraps
+from flask import url_for
+import uuid
+import base64
+import paramiko
+import socket
+
+from flask import current_app
+from flask import request, jsonify
+from flask_cors import CORS
+from flask import Flask, g
+
+
+import localpackage.dbutils
+from localpackage.dbutils import setup_sql_conn
+from localpackage.dbutils import get_cursor
+from localpackage.dbutils import close_mysql
+from paramiko import RSAKey
+from sshtunnel import SSHTunnelForwarder
 import functions_framework
-
-
-# TODO(developer): specify SQL connection details
-CONNECTION_NAME = getenv(
-    "INSTANCE_CONNECTION_NAME", "canonn-api-236217:europe-north1:canonnpai"
-)
-DB_USER = getenv("MYSQL_USER", "canonn")
-DB_PASSWORD = getenv("MYSQL_PASSWORD", "secret")
-DB_NAME = getenv("MYSQL_DATABASE", "canonn")
-DB_HOST = getenv("MYSQL_HOST", "localhost")
-
-mysql_config = {
-    "user": DB_USER,
-    "password": DB_PASSWORD,
-    "db": DB_NAME,
-    "host": DB_HOST,
-    "charset": "utf8mb4",
-    "cursorclass": pymysql.cursors.DictCursor,
-    "autocommit": True,
-}
-
-# Create SQL connection globally to enable reuse
-# PyMySQL does not include support for connection pooling
-mysql_conn = None
 
 whitelist = []
 hooklist = {}
+
+app = current_app
+CORS(app)
+
+
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
+
+# get tunnel config from the environment
+app.tunnel_config = {
+    "host": getenv("TUNNEL_HOST", None),
+    "keyfile": getenv("TUNNEL_KEY", None),
+    "user": getenv("TUNNEL_USER", "tunneluser"),
+    "local_port": int(getenv("MYSQL_PORT", "3308")),
+    "remote_port": int(getenv("TUNNEL_PORT", "3306")),
+}
+
+# This should identify the instance so I can see if the crashed instance is being closed
+app.canonn_cloud_id = base64.urlsafe_b64encode(uuid.uuid4().bytes).decode("utf-8")
+
+
+def wrap_route(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # going to run the route and close down connections if it fails
+        try:
+            route_name = url_for(f.__name__, **kwargs)
+            # Print route and instance id
+            print(f"Route: {route_name} {app.canonn_cloud_id}")
+            return f(*args, **kwargs)
+        except Exception as e:
+            # Log the error
+            logging.error(f"An error occurred: {str(e)}")
+            # close mysql
+            close_mysql()
+            # close the tunnel
+            if app.tunnel:
+                try:
+                    app.tunnel.close()
+                    app.tunnel = None
+                    print("Tunnel closed down")
+                except Exception as t:
+                    logging.error(f"Tunnel closure failure: {str(t)}")
+            # close the mysql connection
+
+            return "I'm sorry Dave I'm afraid I can't do that", 500
+
+    return decorated_function
+
+
+def is_database_up(host, port):
+    # Create a socket object
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        # Attempt to connect to the MySQL server
+        s.connect((host, port))
+        s.close()  # Close the socket
+        return True  # Connection successful, database is up
+    except ConnectionRefusedError:
+        print(
+            "Connection failed, database is not up or not listening on the specified port"
+        )
+        return False  # Connection failed, database is not up or not listening on the specified port
+
+
+def create_tunnel():
+
+    if app.tunnel_config.get("keyfile") is not None:
+        print("create tunnel")
+        key = RSAKey.from_private_key_file(app.tunnel_config.get("keyfile"))
+
+        tunnel = SSHTunnelForwarder(
+            ssh_address_or_host=(app.tunnel_config.get("host"), 22),
+            ssh_username=app.tunnel_config.get("user"),
+            ssh_pkey=key,
+            local_bind_address=("localhost", app.tunnel_config.get("local_port")),
+            remote_bind_address=("localhost", app.tunnel_config.get("remote_port")),
+            compression=True,
+        )
+        try:
+            tunnel.start()
+            print("tunnel started")
+        except:
+            print("Failed to start tunnel")
+
+        return tunnel
+    return None
+
+
+@app.before_request
+def before_request():
+    """Establishes the SSH tunnel before each request."""
+    if not hasattr(app, "tunnel") or app.tunnel is None:
+        app.tunnel = create_tunnel()
+    else:
+        # we created a tunnel but is it still working?
+        if not is_database_up("localhost", app.tunnel_config.get("local_port")):
+            print("database or tunnel is down")
+            app.tunnel.check_tunnels()
+            if next(iter(app.tunnel.tunnel_is_up.values())):
+                print("Tunnel is up")
+            else:
+                print("Retry tunnel")
+                app.tunnel = create_tunnel()
+    """Lazy sql connection"""
+    setup_sql_conn()
 
 
 def is_odyssey(value):
@@ -46,23 +146,10 @@ def is_odyssey(value):
     return
 
 
-def __get_cursor():
-    """
-    Helper function to get a cursor
-      PyMySQL does NOT automatically reconnect,
-      so we must reconnect explicitly using ping()
-    """
-    try:
-        return mysql_conn.cursor()
-    except OperationalError:
-        mysql_conn.ping(reconnect=True)
-        return mysql_conn.cursor()
-
-
 def __get_whitelist():
     global whitelist
     if not whitelist:
-        with __get_cursor() as cursor:
+        with get_cursor() as cursor:
             sql = """select * from postEvent_whitelist"""
             cursor.execute(sql, ())
             r = cursor.fetchall()
@@ -83,7 +170,7 @@ def __get_whitelist():
 def get_webhooks():
     global hooklist
     if not hooklist:
-        with __get_cursor() as cursor:
+        with get_cursor() as cursor:
             sql = """select * from webhooks"""
             cursor.execute(sql, ())
             r = cursor.fetchall()
@@ -266,7 +353,7 @@ def insertCodexReport(request_args):
             index_id = index_id[:-1]
 
     # if there are 50 or more entries already we will skip writing
-    with __get_cursor() as cursor:
+    with get_cursor() as cursor:
         cursor.execute(
             """
             select count(*) as quantity from (
@@ -305,12 +392,12 @@ def insertCodexReport(request_args):
         latitude = None
         longitude = None
 
-    with __get_cursor() as cursor:
+    with get_cursor() as cursor:
         cursor.execute(
             """
             insert ignore into codexreport (
                 cmdrName,
-                system,
+                `system`,
                 x,
                 y,
                 z,
@@ -395,7 +482,6 @@ def insertCodexReport(request_args):
         if cursor.rowcount == 1:
             retval = True
 
-        mysql_conn.commit()
         cursor.close()
         return retval
 
@@ -429,7 +515,7 @@ def insertCodex(request_args):
     webhook = webhooks.get("Codex")
 
     stmt = "insert ignore into codex_entries (entryid) values(%s)"
-    with __get_cursor() as cursor:
+    with get_cursor() as cursor:
         cursor.execute(stmt, (entryid))
         if cursor.rowcount == 1:
             canonnsearch = "https://canonn.science/?s="
@@ -464,7 +550,7 @@ def insertCodex(request_args):
 
 def get_hud_category(entryid, name_localised):
     stmt = "select hud_category,english_name from codex_name_ref where entryid = %s"
-    with __get_cursor() as cursor:
+    with get_cursor() as cursor:
         cursor.execute(stmt, (entryid))
         row = cursor.fetchone()
         if row:
@@ -506,9 +592,9 @@ def insert_codex_systems(request_args):
         release = " (Horizons)"
 
     if hud != "Unknown":
-        stmt = "insert ignore into codex_systems (system,x,y,z,entryid,z_order) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s))"
+        stmt = "insert ignore into codex_systems (`system`,x,y,z,entryid,z_order) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s))"
 
-        with __get_cursor() as cursor:
+        with get_cursor() as cursor:
             cursor.execute(stmt, (system, x, y, z, entryid, x, y, z))
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
@@ -538,21 +624,6 @@ def insert_codex_systems(request_args):
                     headers={"Content-Type": "application/json"},
                 )
             cursor.close()
-
-
-def setup_sql_conn():
-    global mysql_conn
-    # Initialize connections lazily, in case SQL access isn't needed for this
-    # GCF instance. Doing so minimizes the number of active SQL connections,
-    # which helps keep your GCF instances under SQL connection limits.
-    if not mysql_conn:
-        try:
-            mysql_conn = pymysql.connect(**mysql_config)
-        except OperationalError:
-            # If production settings fail, use local development ones
-            mysql_config["unix_socket"] = f"/cloudsql/{CONNECTION_NAME}"
-            mysql_conn = pymysql.connect(**mysql_config)
-    mysql_conn.ping()
 
 
 def get_records(value):
@@ -753,7 +824,7 @@ def extendOrganicScans(gs, event, cmdr):
         x, y, z = gs.get("systemCoordinates")
 
         # need to prevent too many entries being made
-        with __get_cursor() as cursor:
+        with get_cursor() as cursor:
             cursor.execute(
                 """
                 select count(*) as quantity from (
@@ -1272,7 +1343,7 @@ def postOrganicScans(values):
         """
             insert ignore into organic_scans (
                 cmdr,
-                system,
+                `system`,
                 systemAddress,
                 body,
                 body_id,
@@ -1328,7 +1399,7 @@ def postOrganicSales(values):
         """
             insert ignore into organic_sales (
                 cmdr,
-                system,
+                `system`,
                 body,
                 station,
                 market_id,
@@ -1366,7 +1437,7 @@ def postLifeEvents(values):
     return execute_many(
         "postLifeEvents",
         """
-            insert ignore into fss_events (signalname,signalNameLocalised,cmdr,system,x,y,z,raw_json,beta,clientVersion)
+            insert ignore into fss_events (signalname,signalNameLocalised,cmdr,`system`,x,y,z,raw_json,beta,clientVersion)
             values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         values,
@@ -1391,7 +1462,7 @@ def postSignals(values):
         """
             insert into SAASignals (
                 cmdr,
-                system,
+                `system`,
                 system_address,
                 x,y,z,
                 body,
@@ -1533,16 +1604,15 @@ def collateCodex(values):
 
 
 def execute_many(function, sqltext, sqlparm):
-    global mysql_conn
     try:
         value_count = len(sqlparm)
         retval = {"name": function, "rows": value_count, "inserted": 0}
         if value_count == 0:
             return retval
 
-        with __get_cursor() as cursor:
+        with get_cursor() as cursor:
             cursor.executemany(sqltext, sqlparm)
-            mysql_conn.commit()
+
             retval["inserted"] = cursor.rowcount
     except Exception as e:
         logging.exception("message")
@@ -1560,18 +1630,6 @@ def compress_results(values, rj):
     if len(result) == 0:
         logging.info(rj)
     return result
-
-
-def entrypoint(request):
-    retval = {}
-    try:
-        return entrywrap(request)
-    except Exception as e:
-        headers = {"Content-Type": "application/json"}
-
-        retval["error"] = str(e)
-        logging.exception("message")
-        return (json.dumps(retval), 500, headers)
 
 
 def Promotion(gs, entry, cmdr):
@@ -1731,8 +1789,9 @@ def buySuit(gs, entry, cmdr):
         raise
 
 
-@functions_framework.http
-def entrywrap(request):
+@app.route("/", methods=["POST"])
+@wrap_route
+def entrywrap():
 
     headers = {"Content-Type": "application/json"}
 
@@ -1821,3 +1880,9 @@ def entrywrap(request):
     # are logged and we want to stay in memory
     # print(json.dumps(retval, indent=4))
     return (json.dumps(retval), 200, headers)
+
+
+@functions_framework.http
+def payload(request):
+
+    return "404 not found", 404
