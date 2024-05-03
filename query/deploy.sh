@@ -1,4 +1,5 @@
 #!/bin/bash
+cd function
 entrypoint=payload
 
 if [[ "$1" == "local" ]] ; then
