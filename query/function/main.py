@@ -34,6 +34,7 @@ import localpackage.fleet_carriers
 import functions_framework
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
+import logging
 
 from functools import wraps
 from flask import url_for
