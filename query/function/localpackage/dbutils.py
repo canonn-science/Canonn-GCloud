@@ -1,6 +1,8 @@
 import pymysql
 from pymysql.err import OperationalError
 from os import getenv
+import os
+
 
 CONNECTION_NAME = getenv("INSTANCE_CONNECTION_NAME", None)
 DB_USER = getenv("MYSQL_USER", "canonn")
@@ -23,6 +25,17 @@ mysql_config = {
 mysql_conn = None
 
 
+def close_mysql():
+    global mysql_conn
+    # just close it
+    try:
+        print("Closing mysql connection")
+        mysql_conn.close()
+        mysql_conn = None
+    except:
+        pass
+
+
 def get_cursor():
     """
     Helper function to get a cursor
@@ -42,7 +55,7 @@ def get_cursor():
 """
 
 
-def setup_sql_conn():
+def setup_sql():
     global mysql_conn
     if not mysql_conn:
         try:
@@ -54,4 +67,18 @@ def setup_sql_conn():
             if CONNECTION_NAME is not None:
                 mysql_config["unix_socket"] = f"/cloudsql/{CONNECTION_NAME}"
             mysql_conn = pymysql.connect(**mysql_config)
-    mysql_conn.ping()
+    else:
+        print("already connected to mysql")
+
+
+def setup_sql_conn():
+    global mysql_conn
+
+    # setup the sql
+    setup_sql()
+    ## try and pingh it. If it fails re-establish the connection
+    try:
+        mysql_conn.ping(reconnect=True)
+    except:
+        mysql_conn = None
+        setup_sql()

@@ -60,7 +60,7 @@ def challenge_next(request):
     placeholders = ", ".join(["%s"] * len(entries))
 
     sql = f"""
-        select system,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
+        select `system`,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
         select * from (
             select * from codex_systems 
             where zorder(%s,%s,%s) > z_order
@@ -481,7 +481,7 @@ max(case when species = '$Codex_Ent_Fungoids_02_Name;' then reported_at else nul
 max(case when species = '$Codex_Ent_Tussocks_11_Name;' then reported_at else null end) as g,
 max(case when species = '$Codex_Ent_Conchas_01_Name;' then reported_at else null end) as h,
 max(case when species = '$Codex_Ent_Shrubs_02_Name;' then reported_at else null end) as i
-from organic_scans where system = 'Tucanae Sector AF-A d71' and body_id = 23 {where}
+from organic_scans where `system` = 'Tucanae Sector AF-A d71' and body_id = 23 {where}
 group by cmdr,scantype
 ) data
 group by cmdr) data2
@@ -519,13 +519,13 @@ def fastest_scans(request):
     with get_cursor() as cursor:
         sql = f"""
         select distinct data2.cmdr,data2.system,data2.body,ifnull(cnr.english_name,data2.species_localised) as species,data2.diff as seconds from (
-        select cmdr,system,body,species,species_localised,started,ended,TIMESTAMPDIFF(SECOND,started,ended) as diff 
+        select cmdr,`system`,body,species,species_localised,started,ended,TIMESTAMPDIFF(SECOND,started,ended) as diff 
         from (
-        select cmdr,system,body,species,species_localised,
+        select cmdr,`system`,body,species,species_localised,
         max(case when scantype = 'Log' then reported_at else null end) as started,
         min(case when scantype = 'Analyse' then reported_at else null end) as ended
         from organic_scans {where}
-        group by cmdr,system,body,species,species_localised
+        group by cmdr,`system`,body,species,species_localised
         having min(case when scantype = 'Analyse' then reported_at else null end) is not null
         ) data1
         where started is not null and ended is not null and TIMESTAMPDIFF(SECOND,started,ended) > 0

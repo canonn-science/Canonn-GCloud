@@ -431,7 +431,7 @@ def get_status(request):
         sqltext = """
             SELECT 
             CAST(created_at as CHAR) as created_at,
-                system,
+                `system`,
                 CAST(x AS CHAR) x,
                 CAST(y as CHAR) y,
                 CAST(z AS  CHAR) z,

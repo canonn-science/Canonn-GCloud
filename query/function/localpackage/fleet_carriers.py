@@ -75,7 +75,7 @@ def show_name(path, name):
         sqltext = sql + " where name like %s"
     if path == "named":
         sqltext = sql + " where name = %s"
-    print(sqltext.replace("%s", name))
+
     with get_cursor() as cursor:
         cursor.execute(sqltext, (name))
         results = cursor.fetchall()
