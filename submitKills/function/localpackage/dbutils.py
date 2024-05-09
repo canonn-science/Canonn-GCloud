@@ -2,6 +2,7 @@ import pymysql
 from pymysql.err import OperationalError
 from os import getenv
 import os
+import logging
 
 
 CONNECTION_NAME = getenv("INSTANCE_CONNECTION_NAME", None)
@@ -33,7 +34,8 @@ def close_mysql():
         mysql_conn.close()
         mysql_conn = None
     except:
-        pass
+        logging.error("Could not close connection")
+    mysql_conn = None
 
 
 def get_cursor():
