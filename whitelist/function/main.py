@@ -66,8 +66,8 @@ def wrap_route(f):
                     app.tunnel.close()
                     print("Tunnel closed down")
                 except Exception as t:
-                    app.tunnel = None
                     logging.error(f"Tunnel closure failure: {str(t)}")
+                app.tunnel = None
             # close the mysql connection
 
             return "I'm sorry Dave I'm afraid I can't do that", 500
