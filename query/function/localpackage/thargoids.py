@@ -3,6 +3,7 @@ from localpackage.dbutils import setup_sql_conn
 from localpackage.dbutils import get_cursor
 import pymysql
 from pymysql.err import OperationalError
+
 # from EDRegionMap.RegionMap import findRegion
 import requests
 import json
@@ -16,19 +17,26 @@ COALSACK = [423.5625, 0.5, 277.75]  # Musca Dark Region PJ-P b6-8
 WITCHHEAD = [355.75, -400.5, -707.21875]  # Ronemar
 CALIFORNIA = [-299.0625, -229.25, -876.125]  # HIP 18390
 CONESECTOR = [609.4375, 154.25, -1503.59375]  # Outotz ST-I d9-4
-WAYPOINT1 = [686.125,   -372.875, -1832.375]  # Oochorrs UF-J c11-0
-WAYPOINT2 = [658.625,   -384.21875, -1783.53125]  # Oochorrs CS-F c13-0
-WAYPOINT3 = [650.46875,	-382.9375,	-1777.0625]
-WAYPOINT4 = [619.25,	-358.375,	-1721]
-WAYPOINT5 = [634.25,	-349.9375,	-1700.40625]
-WAYPOINT6 = [642.625,	-345.5,	    -1676.125]
-UIA2_1 = [-2016.65625,	-654.6875,	-2637.65625]
-UIA2_2 = [-2000.40625,	-640.75,	-2624.5625]
-UIA2_3 = [-1977.1875,	-651.375,	-2581.5625]
+WAYPOINT1 = [686.125, -372.875, -1832.375]  # Oochorrs UF-J c11-0
+WAYPOINT2 = [658.625, -384.21875, -1783.53125]  # Oochorrs CS-F c13-0
+WAYPOINT3 = [650.46875, -382.9375, -1777.0625]
+WAYPOINT4 = [619.25, -358.375, -1721]
+WAYPOINT5 = [634.25, -349.9375, -1700.40625]
+WAYPOINT6 = [642.625, -345.5, -1676.125]
+UIA2_1 = [-2016.65625, -654.6875, -2637.65625]
+UIA2_2 = [-2000.40625, -640.75, -2624.5625]
+UIA2_3 = [-1977.1875, -651.375, -2581.5625]
 
 
 def getDistance(a, b):
-    return round(sqrt(pow(float(a[0])-float(b[0]), 2)+pow(float(a[1])-float(b[1]), 2)+pow(float(a[2])-float(b[2]), 2)), 1)
+    return round(
+        sqrt(
+            pow(float(a[0]) - float(b[0]), 2)
+            + pow(float(a[1]) - float(b[1]), 2)
+            + pow(float(a[2]) - float(b[2]), 2)
+        ),
+        1,
+    )
 
 
 """ replace with an array or dict """
@@ -39,36 +47,77 @@ def getNearest(r):
     y = r.get("y")
     z = r.get("z")
     d = [
-        {"name": "Sol", "distance": getDistance(
-            [x, y, z], SOL), "coords": SOL},
-        {"name": "Merope", "distance": getDistance(
-            [x, y, z], MEROPE), "coords": MEROPE},
-        {"name": "Coalsack", "distance": getDistance(
-            [x, y, z], COALSACK), "coords": COALSACK},
-        {"name": "Witchhead", "distance": getDistance(
-            [x, y, z], WITCHHEAD), "coords": WITCHHEAD},
-        {"name": "California", "distance": getDistance(
-            [x, y, z], CALIFORNIA), "coords": CALIFORNIA},
-        {"name": "Cone Sector", "distance": getDistance(
-            [x, y, z], CONESECTOR), "coords": CONESECTOR},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT1), "coords": WAYPOINT1},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT2), "coords": WAYPOINT2},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT3), "coords": WAYPOINT3},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT4), "coords": WAYPOINT4},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT5), "coords": WAYPOINT5},
-        {"name": "UIA Route", "distance": getDistance(
-            [x, y, z], WAYPOINT6), "coords": WAYPOINT6},
-        {"name": "UIA Route 2", "distance": getDistance(
-            [x, y, z], UIA2_1), "coords": UIA2_1},
-        {"name": "UIA Route 2", "distance": getDistance(
-            [x, y, z], UIA2_2), "coords": UIA2_2},
-        {"name": "UIA Route 2", "distance": getDistance(
-            [x, y, z], UIA2_3), "coords": UIA2_3},
+        {"name": "Sol", "distance": getDistance([x, y, z], SOL), "coords": SOL},
+        {
+            "name": "Merope",
+            "distance": getDistance([x, y, z], MEROPE),
+            "coords": MEROPE,
+        },
+        {
+            "name": "Coalsack",
+            "distance": getDistance([x, y, z], COALSACK),
+            "coords": COALSACK,
+        },
+        {
+            "name": "Witchhead",
+            "distance": getDistance([x, y, z], WITCHHEAD),
+            "coords": WITCHHEAD,
+        },
+        {
+            "name": "California",
+            "distance": getDistance([x, y, z], CALIFORNIA),
+            "coords": CALIFORNIA,
+        },
+        {
+            "name": "Cone Sector",
+            "distance": getDistance([x, y, z], CONESECTOR),
+            "coords": CONESECTOR,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT1),
+            "coords": WAYPOINT1,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT2),
+            "coords": WAYPOINT2,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT3),
+            "coords": WAYPOINT3,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT4),
+            "coords": WAYPOINT4,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT5),
+            "coords": WAYPOINT5,
+        },
+        {
+            "name": "UIA Route",
+            "distance": getDistance([x, y, z], WAYPOINT6),
+            "coords": WAYPOINT6,
+        },
+        {
+            "name": "UIA Route 2",
+            "distance": getDistance([x, y, z], UIA2_1),
+            "coords": UIA2_1,
+        },
+        {
+            "name": "UIA Route 2",
+            "distance": getDistance([x, y, z], UIA2_2),
+            "coords": UIA2_2,
+        },
+        {
+            "name": "UIA Route 2",
+            "distance": getDistance([x, y, z], UIA2_3),
+            "coords": UIA2_3,
+        },
     ]
     d.sort(key=lambda dx: dx["distance"], reverse=False)
 
@@ -155,7 +204,7 @@ def get_nhss_systems(request):
                 "y": str(row.get("y")),
                 "z": str(row.get("z")),
                 "bubble": nearest.get("name"),
-                "bubble_distance": nearest.get("distance")
+                "bubble_distance": nearest.get("distance"),
             }
             data.append(entry)
 
@@ -196,7 +245,7 @@ def get_nhss_reports(request):
           cast(created_at as char) as created_at, 
 		  cast(found_at as char) as found_at,          
 		  cmdrName as cmdr,
-          systemName as system,
+          systemName as `system`,
           cast(x as char) as x,
           cast(y as char) as y,
           cast(z as char) as z,
@@ -223,7 +272,7 @@ def get_nhss_reports(request):
                 "z": str(row.get("z")),
                 "threat_level": row.get("threat_level"),
                 "bubble": nearest.get("name"),
-                "bubble_distance": nearest.get("distance")
+                "bubble_distance": nearest.get("distance"),
             }
             data.append(entry)
 
@@ -278,19 +327,21 @@ def get_hyperdiction_detections(request):
                     "x": str(row.get("x")),
                     "y": str(row.get("y")),
                     "z": str(row.get("z")),
-                    "nearest": getNearest(row)
+                    "nearest": getNearest(row),
                 },
                 "destination": {
                     "system": row.get("destination"),
                     "x": str(row.get("dx")),
                     "y": str(row.get("dy")),
                     "z": str(row.get("dz")),
-                    "nearest": getNearest({
-                        "x": row.get("dx"),
-                        "y": row.get("dy"),
-                        "z": row.get("dz"),
-                    })
-                }
+                    "nearest": getNearest(
+                        {
+                            "x": row.get("dx"),
+                            "y": row.get("dy"),
+                            "z": row.get("dz"),
+                        }
+                    ),
+                },
             }
             data.append(entry)
 

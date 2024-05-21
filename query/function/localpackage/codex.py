@@ -158,7 +158,6 @@ def get_parent_type(system, body):
 
 
 def get_system_codex(system):
-    setup_sql_conn()
 
     with get_cursor() as cursor:
         sqltext = """
@@ -522,7 +521,6 @@ def system_biostats(request):
 
 
 def codex_name_ref(request):
-    setup_sql_conn()
 
     with get_cursor() as cursor:
         sql = """
@@ -600,10 +598,10 @@ def codex_name_ref(request):
 
 
 def get_gr_data():
-    setup_sql_conn()
+
     with get_cursor() as cursor:
         sql = """
-            select distinct systemName as system,cast(x as char) x,cast(y as char) y,cast(z as char) z
+            select distinct systemName as `system`,cast(x as char) x,cast(y as char) y,cast(z as char) z
             FROM guardian_settlements
             WHERE name LIKE '$Ancient:%%';
         """
@@ -613,11 +611,10 @@ def get_gr_data():
 
 
 def odyssey_subclass(request):
-    setup_sql_conn()
 
     with get_cursor() as cursor:
         sql = """
-            select sub_class,count(*) as species from codex_name_ref where platform="odyssey"
+            select sub_class,count(*) as species from codex_name_ref where platform='odyssey'
             group by sub_class
         """
         cursor.execute(sql, ())
@@ -635,7 +632,6 @@ def odyssey_subclass(request):
 
 
 def species_prices(request):
-    setup_sql_conn()
 
     r = None
     with get_cursor() as cursor:
@@ -670,7 +666,6 @@ def species_prices(request):
 
 
 def codex_data(request):
-    setup_sql_conn()
 
     hud = request.args.get("hud_category")
     sub = request.args.get("sub_class")
@@ -709,7 +704,7 @@ def codex_data(request):
 
     with get_cursor() as cursor:
         sql = f"""
-        select system,entryid,cast(x as char) x,cast(y as char) y,cast(z as char) z,
+        select `system`,entryid,cast(x as char) x,cast(y as char) y,cast(z as char) z,
             cr.*,trim(SUBSTRING_INDEX(cr.english_name,'-',1)) as species
             FROM codex_systems cs
             INNER JOIN codex_name_ref as cr using (entryid)
@@ -720,7 +715,7 @@ def codex_data(request):
                         where 1 = 1
                         {clause}
             limit %s,%s)
-            AS my_results USING(system,entryid)
+            AS my_results USING(`system`,entryid)
         """
         cursor.execute(sql, (params))
         r = cursor.fetchall()
@@ -731,7 +726,7 @@ def codex_data(request):
 
 ## replaces /poiListSignals used by Triumvitate
 def poi_list_signals(request):
-    setup_sql_conn()
+
     systemName = request.args.get("system")
     with get_cursor() as cursor:
         sql = """

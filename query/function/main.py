@@ -424,16 +424,19 @@ def temperature():
 
     with get_cursor() as cursor:
         sql = """
-            select 
+            SELECT 
                 cmdr,
-                system,
+                `system`,
                 body,
-                cast(latitude as CHAR) as latitude,
-                cast(longitude as CHAR) as longitude,
+                CAST(latitude AS CHAR) AS latitude,
+                CAST(longitude AS CHAR) AS longitude,
                 comment,
-                cast(raw_status->"$.Temperature" as CHAR) as temperature, 
-                cast(raw_status->"$.Gravity" as CHAR) as gravity 
-            from status_reports where raw_status->"$.Temperature" is not null
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw_status, '$.Temperature')) AS CHAR) AS temperature,
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(raw_status, '$.Gravity')) AS CHAR) AS gravity
+            FROM 
+                status_reports 
+            WHERE 
+                JSON_EXTRACT(raw_status, '$.Temperature') IS NOT NULL
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()

@@ -83,4 +83,6 @@ def setup_sql_conn():
         mysql_conn.ping(reconnect=True)
     except:
         mysql_conn = None
+        # if the tunnel failed thenm this is a problem
+        # we need to work with the tunnel code here
         setup_sql()

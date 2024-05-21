@@ -1,5 +1,5 @@
 import localpackage.dbutils
-from localpackage.dbutils import setup_sql_conn
+
 from localpackage.dbutils import get_cursor
 import pymysql
 from pymysql.err import OperationalError
@@ -45,7 +45,6 @@ def organic_scans(cmdr, system, odyssey):
     if odyssey == "N" or odyssey == False:
         return []
 
-    setup_sql_conn()
     sql = """
     SELECT 
         distinct 
@@ -91,7 +90,125 @@ def organic_scans(cmdr, system, odyssey):
 
 
 def codex_reports(cmdr, system, odyssey):
-    setup_sql_conn()
+    if odyssey == "N":
+        odycheck = "N"
+    else:
+        odycheck = "Y"
+
+    # first we are going to get the entrids from codex_systems
+
+    entrysql = """
+        SELECT cr.entryid,cr.body,cnr.english_name,cnr.hud_category,cnr.platform
+        FROM codexreport cr
+        JOIN codex_name_ref cnr ON cnr.entryid = cr.entryid
+        WHERE cr.system = %s
+        AND (
+            %s = 'Y' AND cnr.platform IN ('odyssey', 'legacy')
+            OR %s != 'Y' AND cnr.platform = 'legacy'
+        )
+        and hud_category != 'None'
+        group by cr.entryid,cr.body
+
+    """
+
+    filtered_data = []
+    with get_cursor() as cursor:
+        print((system, odycheck, odycheck))
+        cursor.execute(entrysql, (system, odycheck, odycheck))
+        cr = cursor.fetchall()
+        print(cr)
+        # filter out entries where the body is None, but only if there is at least one other entry with the same entryid where body is not None
+        entryid_with_non_none_body = set(
+            entry["entryid"] for entry in cr if entry["body"] is not None
+        )
+
+        filtered_data = [
+            entry
+            for entry in cr
+            if entry["body"] is not None
+            or entry["entryid"] not in entryid_with_non_none_body
+        ]
+
+    # now we should have a list of entryid and body we can use to select the data we want
+    result = []
+    for params in filtered_data:
+        bodytext = "body is null"
+        sqlparams = (system, params.get("entryid"))
+        if params.get("body") is not None:
+            bodytext = "body = %s"
+
+            sqlparams = (system, params.get("body"), params.get("entryid"))
+
+        # We will grab the first 1000 records. If what we need isn't there then tough
+        # we can't sort because it will slow us down when there are thousands of records
+        sqltext = f"""
+            select 
+                body,
+                latitude,
+                longitude, 
+                entryid,
+                index_id,
+                cmdrName,
+                odyssey 
+            from codexreport cr
+            where cr.system = %s and
+            {bodytext} and
+            cr.entryid = %s
+            limit 1000
+        """
+
+        print(
+            f"{params.get('body')} {params.get('english_name')} {params.get('entryid')}"
+        )
+
+        with get_cursor() as cursor:
+            cursor.execute(sqltext, sqlparams)
+            cr = cursor.fetchall()
+
+            # we will need to convert the output to match this
+            # body,latitude,longitude,entryid,english_name,hud_category,index_id,scanned
+
+            # Initialize the variable
+            scanned = "false"
+            # Check if any entry has cmdrName == 'Me'
+            if any(entry.get("cmdrName") == cmdr for entry in cr):
+                scanned = "true"
+
+            for entry in cr:
+                record = {}
+
+                # display rings as bodies
+                if entry.get("body") and entry["body"].endswith(" Ring"):
+                    bodyName = entry["body"][:-5]
+                else:
+                    bodyName = entry.get("body")
+
+                record["body"] = bodyName.replace(f"{system} ", "")
+
+                record["latitude"] = entry.get("latitude")
+                record["longitude"] = entry.get("longitude")
+                # lat and long depends on whether we are odyssey or guardian or thargoid
+                if (
+                    entry.get("odyssey") == "N"
+                    and odycheck == "Y"
+                    or entry.get("odyssey") == "Y"
+                    and odycheck == "N"
+                    or entry.get("odyssey") is None
+                    or params.get("hud_category") not in ("Biology", "Geology")
+                ):
+                    record["latitude"] = None
+                    record["longitude"] = None
+
+                record["entryid"] = params.get("entryid")
+                record["english_name"] = params.get("english_name")
+                record["hud_category"] = params.get("hud_category")
+                record["index_id"] = entry.get("index_id")
+                record["scanned"] = scanned
+                result.append(record)
+    return result
+
+
+def codex_reports_old(cmdr, system, odyssey):
 
     if odyssey == "N":
         odycheck = "N"
@@ -189,7 +306,7 @@ def codex_reports(cmdr, system, odyssey):
 
 
 def saa_signals(system, odyssey):
-    setup_sql_conn()
+
     if odyssey == "Y":
         count = "species"
         alt = "sites"
@@ -230,7 +347,7 @@ def saa_signals(system, odyssey):
 
 
 def fss_events(system, odyssey):
-    setup_sql_conn()
+
     sql = """
         SELECT 
             signalname,
@@ -247,7 +364,7 @@ def fss_events(system, odyssey):
 
 
 def cmdr_poi(cmdr, system, odyssey):
-    setup_sql_conn()
+
     sql = """
         SELECT 
                 case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end as body,
@@ -381,7 +498,6 @@ def get_settlement(system):
     else:
         col = "systemName"
 
-    setup_sql_conn()
     sql = f"""
         select bodyid,name,name_localised,cast(lat as char) lat,cast(lon as char) lon,market_id from settlements 
         where {col} = %s and is_beta != 'Y';
@@ -421,7 +537,6 @@ def getSystemPoi(request):
 
 
 def get_status(request):
-    setup_sql_conn()
 
     cmdr = request.args.get("cmdr")
     if cmdr is None:
@@ -486,7 +601,6 @@ def get_compres(request):
         placeholder
     )
 
-    setup_sql_conn()
     with get_cursor() as cursor:
         cursor.execute(sql, (systems))
         cr = cursor.fetchall()
