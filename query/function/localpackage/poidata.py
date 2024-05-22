@@ -98,7 +98,7 @@ def codex_reports(cmdr, system, odyssey):
     # first we are going to get the entrids from codex_systems
 
     entrysql = """
-        SELECT cr.entryid,cr.body,cnr.english_name,cnr.hud_category,cnr.platform
+        SELECT cr.entryid,cnr.english_name,cnr.hud_category,cnr.platform,count(*) as total
         FROM codexreport cr
         JOIN codex_name_ref cnr ON cnr.entryid = cr.entryid
         WHERE cr.system = %s
@@ -107,41 +107,31 @@ def codex_reports(cmdr, system, odyssey):
             OR %s != 'Y' AND cnr.platform = 'legacy'
         )
         and hud_category != 'None'
-        group by cr.entryid,cr.body
+        group by cr.entryid
 
     """
 
     filtered_data = []
     with get_cursor() as cursor:
-        print((system, odycheck, odycheck))
+        print((cmdr, system, odycheck))
         cursor.execute(entrysql, (system, odycheck, odycheck))
         cr = cursor.fetchall()
-        print(cr)
-        # filter out entries where the body is None, but only if there is at least one other entry with the same entryid where body is not None
-        entryid_with_non_none_body = set(
-            entry["entryid"] for entry in cr if entry["body"] is not None
-        )
-
-        filtered_data = [
-            entry
-            for entry in cr
-            if entry["body"] is not None
-            or entry["entryid"] not in entryid_with_non_none_body
-        ]
 
     # now we should have a list of entryid and body we can use to select the data we want
     result = []
-    for params in filtered_data:
-        bodytext = "body is null"
-        sqlparams = (system, params.get("entryid"))
+    for params in cr:
+        sqlparams = []
         if params.get("body") is not None:
-            bodytext = "body = %s"
-
-            sqlparams = (system, params.get("body"), params.get("entryid"))
+            bodytext = "body = %s and"
+            sqlparams.append(params.get("body"))
+        sqlparams.append(system)
+        sqlparams.append(params.get("entryid"))
 
         # We will grab the first 1000 records. If what we need isn't there then tough
         # we can't sort because it will slow us down when there are thousands of records
+        # Sadly this means that for systems with a lot of data we may not see all results
         sqltext = f"""
+            
             select 
                 body,
                 latitude,
@@ -151,17 +141,18 @@ def codex_reports(cmdr, system, odyssey):
                 cmdrName,
                 odyssey 
             from codexreport cr
-            where cr.system = %s and
-            {bodytext} and
+            where 
+            cr.system = %s and
             cr.entryid = %s
-            limit 1000
+            limit 20000
         """
 
         print(
-            f"{params.get('body')} {params.get('english_name')} {params.get('entryid')}"
+            f"{system} {params.get('english_name')} {params.get('entryid')} {params.get('total')}"
         )
 
         with get_cursor() as cursor:
+
             cursor.execute(sqltext, sqlparams)
             cr = cursor.fetchall()
 
@@ -175,6 +166,10 @@ def codex_reports(cmdr, system, odyssey):
                 scanned = "true"
 
             for entry in cr:
+
+                if entry is None:
+                    break
+
                 record = {}
 
                 # display rings as bodies
@@ -183,7 +178,10 @@ def codex_reports(cmdr, system, odyssey):
                 else:
                     bodyName = entry.get("body")
 
-                record["body"] = bodyName.replace(f"{system} ", "")
+                if entry.get("body"):
+                    record["body"] = bodyName.replace(f"{system} ", "")
+                else:
+                    record["body"] = None
 
                 record["latitude"] = entry.get("latitude")
                 record["longitude"] = entry.get("longitude")

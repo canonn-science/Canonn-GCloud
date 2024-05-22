@@ -18,6 +18,7 @@ if [[ "$1" == "live" ]] ; then
         --runtime python312 \
         --entry-point $entrypoint \
         --trigger-http  \
+        --timeout 90  \
         --max-instances 10 \
         --set-env-vars=MYSQL_USER=$MYSQL_USER,MYSQL_PASSWORD=$MYSQL_PASSWORD,INSTANCE_CONNECTION_NAME=canonn-api-236217:europe-north1:canonnpai
 fi
@@ -46,6 +47,7 @@ if [[ "$1" == "newlive" ]] ; then
         --runtime python312 \
         --entry-point $entrypoint \
         --trigger-http  \
+        --timeout 90  \
         --max-instances 10 \
         --set-env-vars=MYSQL_USER=$MYSQL_USER,MYSQL_PASSWORD=$TEST_PASSWORD,TUNNEL_KEY=$TUNNEL_KEY,TUNNEL_HOST=$TUNNEL_HOST,MYSQL_HOST=localhost,MYSQL_PORT=3308
 

@@ -3,6 +3,7 @@ from pymysql.err import OperationalError
 from os import getenv
 import os
 import logging
+import pymysql.cursors
 
 
 CONNECTION_NAME = getenv("INSTANCE_CONNECTION_NAME", None)

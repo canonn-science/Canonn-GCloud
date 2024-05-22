@@ -45,6 +45,7 @@ import json
 import requests
 from math import sqrt
 from os import getenv
+import traceback
 
 
 app = current_app
@@ -77,6 +78,7 @@ def wrap_route(f):
         except Exception as e:
             # Log the error
             logging.error(f"An error occurred: {str(e)}")
+            traceback.print_exc()
             # close mysql
             close_mysql()
             # close the tunnel
@@ -86,6 +88,7 @@ def wrap_route(f):
                     print("Tunnel closed down")
                 except Exception as t:
                     logging.error(f"Tunnel closure failure: {str(t)}")
+                    traceback.print_exc()
                 app.tunnel = None
             # close the mysql connection
 
