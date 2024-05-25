@@ -29,6 +29,9 @@ import uuid
 import base64
 import logging
 from math import sqrt, pow, trunc
+import traceback
+
+
 
 SOL = [0, 0, 0]
 MEROPE = [-78.59375, -149.625, -340.53125]
@@ -69,80 +72,18 @@ def wrap_route(f):
             return f(*args, **kwargs)
         except Exception as e:
             # Log the error
+            stack_trace = traceback.format_exc()
             logging.error(f"An error occurred: {str(e)}")
+            logging.error(stack_trace)
             # close mysql
             close_mysql()
-            # close the tunnel
-            if app.tunnel:
-                try:
-                    app.tunnel.close()
-                    print("Tunnel closed down")
-                except Exception as t:
-                    logging.error(f"Tunnel closure failure: {str(t)}")
-                app.tunnel = None
-            # close the mysql connection
-
             return "I'm sorry Dave I'm afraid I can't do that", 500
 
     return decorated_function
 
 
-def is_database_up(host, port):
-    # Create a socket object
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        # Attempt to connect to the MySQL server
-        s.connect((host, port))
-        s.close()  # Close the socket
-        return True  # Connection successful, database is up
-    except ConnectionRefusedError:
-        print(
-            "Connection failed, database is not up or not listening on the specified port"
-        )
-        return False  # Connection failed, database is not up or not listening on the specified port
-
-
-def create_tunnel():
-    # f
-
-    if app.tunnel_config.get("keyfile") is not None:
-        print("create tunnel")
-        key = RSAKey.from_private_key_file(app.tunnel_config.get("keyfile"))
-
-        tunnel = SSHTunnelForwarder(
-            ssh_address_or_host=(app.tunnel_config.get("host"), 22),
-            ssh_username=app.tunnel_config.get("user"),
-            ssh_pkey=key,
-            local_bind_address=("localhost", app.tunnel_config.get("local_port")),
-            remote_bind_address=("localhost", app.tunnel_config.get("remote_port")),
-            compression=True,
-        )
-        try:
-            tunnel.start()
-            print("tunnel started")
-        except:
-            print("Failed to start tunnel")
-
-        return tunnel
-    return None
-
-
 @app.before_request
 def before_request():
-    """Establishes the SSH tunnel before each request."""
-    if not hasattr(app, "tunnel") or app.tunnel is None:
-        app.tunnel = create_tunnel()
-    else:
-        # we created a tunnel but is it still working?
-        if not is_database_up("localhost", app.tunnel_config.get("local_port")):
-            print("database or tunnel is down")
-            app.tunnel.check_tunnels()
-            if next(iter(app.tunnel.tunnel_is_up.values())):
-                print("Tunnel is up")
-            else:
-                print("Retry tunnel")
-                app.tunnel = create_tunnel()
-    """Lazy sql connection"""
     setup_sql_conn()
 
 
