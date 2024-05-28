@@ -11,7 +11,7 @@ if [[ "$1" == "local" ]] ; then
     functions-framework  --debug --target $entrypoint --host $(hostname -I | awk '{print $1}')
 fi
 
-if [[ "$1" == "live" ]] ; then
+if [[ "$1" == "oldlive" ]] ; then
     INSTANCE_CONNECTION_NAME=canonn-api-236217:europe-north1:canonnpai ; export INSTANCE_CONNECTION_NAME
     gcloud functions deploy $fname  \
         --allow-unauthenticated \
@@ -36,7 +36,7 @@ if [[ "$1" == "test" ]] ; then
     functions-framework  --debug --target $entrypoint --host $(hostname -I | awk '{print $1}')
 fi
 
-if [[ "$1" == "newlive" ]] ; then
+if [[ "$1" == "live" ]] ; then
     unset INSTANCE_CONNECTION_NAME
     #We will set up a tunnel on 3308
     #If the database connection is 3308 then the tunnel will route to the destination on 3306
