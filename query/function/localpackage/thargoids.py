@@ -298,7 +298,7 @@ def get_hyperdiction_detections(request):
 
     if system:
         params.append(system)
-        clause = f"{clause} and system = %s"
+        clause = f"{clause} and `system` = %s"
 
     params.append(int(offset))
     params.append(int(limit))

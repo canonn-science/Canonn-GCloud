@@ -163,11 +163,11 @@ def get_system_codex(system):
         sqltext = """
             select distinct `system`,nullif(body,'') as body,english_name,hud_category from codexreport cr 
             join codex_name_ref cnr on cnr.entryid = cr.entryid
-            where system = %s
+            where `system` = %s
             union             
             select distinct `system`,nullif(body,'') as body,english_name,hud_category from organic_scans cr 
             join codex_name_ref cnr on cnr.name = cr.variant
-            where system = %s
+            where `system` = %s
         """
         cursor.execute(sqltext, (system, system))
         r = cursor.fetchall()
@@ -694,7 +694,7 @@ def codex_data(request):
         clause = f"{clause} and english_name = %s "
     if system:
         params.append(system)
-        clause = f"{clause} and system = %s "
+        clause = f"{clause} and `system` = %s "
     if spe:
         params.append(spe)
         clause = f"{clause} and english_name like concat(%s,'%%') "
