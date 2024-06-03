@@ -136,7 +136,7 @@ def challenge_status(request):
                         select distinct entryid,english_name 
                         from codex_name_ref cn 
                         where exists (
-                            select 1 from codexreport cr where cmdrname = %s and cr.entryid = cn.entryid 
+                            select 1 from codex_cmdrs cr where cmdr = %s and cr.entryid = cn.entryid 
                         ) 
                         {where2}
 				) cmdr_stats on cnr.entryid = cmdr_stats.entryid
@@ -439,15 +439,15 @@ SELECT
  from (
 select cmdr,
 max(case when scantype = 'Log' then least(
-ifnull(a,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(b,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(c,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(d,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(e,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(f,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(g,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(h,STR_TO_DATE("August 10 3307", "%%M %%d %%Y")),
-ifnull(i,STR_TO_DATE("August 10 3307", "%%M %%d %%Y"))
+ifnull(a,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(b,STR_TO_DATE('August 10 3307'', '%%M %%d %%Y')),
+ifnull(c,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(d,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),'
+ifnull(e,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(f,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(g,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(h,STR_TO_DATE('August 10 3307', '%%M %%d %%Y')),
+ifnull(i,STR_TO_DATE('August 10 3307', '%%M %%d %%Y'))
 ) else null end) as started,
 max(case 
 	when scantype = 'Analyse' 

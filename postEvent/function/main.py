@@ -292,6 +292,16 @@ def insertCodexReport(request_args):
             signal_type = signal_type[:-1]
             index_id = index_id[:-1]
 
+    # record the commender's find
+    sqlstmt = """
+        insert ignore into codex_cmdrs (cmdr,entryid)
+        values (%s,%s)
+    """
+    with get_cursor() as cursor:
+        cursor.execute(sqlstmt, (cmdrName, entryid))
+        if cursor.rowcount == 1:
+            print(f"Congratulations cmdr {cmdrName} you found {entryid}")
+
     # if there are 50 or more entries already we will skip writing
     with get_cursor() as cursor:
         cursor.execute(
