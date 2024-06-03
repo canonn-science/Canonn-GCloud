@@ -161,13 +161,13 @@ def get_system_codex(system):
 
     with get_cursor() as cursor:
         sqltext = """
-            select distinct `system`,nullif(body,'') as body,english_name,hud_category from codexreport cr 
+            select distinct cr.system,nullif(body,'') as body,english_name,hud_category from codexreport cr 
             join codex_name_ref cnr on cnr.entryid = cr.entryid
-            where `system` = %s
+            where cr.system = %s
             union             
-            select distinct `system`,nullif(body,'') as body,english_name,hud_category from organic_scans cr 
+            select distinct cr.system,nullif(body,'') as body,english_name,hud_category from organic_scans cr 
             join codex_name_ref cnr on cnr.name = cr.variant
-            where `system` = %s
+            where cr.system = %s
         """
         cursor.execute(sqltext, (system, system))
         r = cursor.fetchall()
