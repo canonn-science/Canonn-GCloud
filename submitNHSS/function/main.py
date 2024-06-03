@@ -86,25 +86,6 @@ def before_request():
     setup_sql_conn()
 
 
-@app.before_request
-def before_request():
-    """Establishes the SSH tunnel before each request."""
-    if not hasattr(app, "tunnel") or app.tunnel is None:
-        app.tunnel = create_tunnel()
-    else:
-        # we created a tunnel but is it still working?
-        if not is_database_up("localhost", app.tunnel_config.get("local_port")):
-            print("database or tunnel is down")
-            app.tunnel.check_tunnels()
-            if next(iter(app.tunnel.tunnel_is_up.values())):
-                print("Tunnel is up")
-            else:
-                print("Retry tunnel")
-                app.tunnel = create_tunnel()
-    """Lazy sql connection"""
-    setup_sql_conn()
-
-
 def get_webhooks():
 
     global hooklist
