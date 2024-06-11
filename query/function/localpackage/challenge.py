@@ -50,7 +50,7 @@ def challenge_next(request):
     entries = []
     entrysql = f"""
     select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
-        (select 1 from codexreport cr where cmdrname = %s and cnr.entryid = cr.entryid)
+        (select 1 from codex_cmdrs cr where cmdr = %s and cnr.entryid = cr.entryid)
     """
     setup_sql_conn()
     with get_cursor() as cursor:
