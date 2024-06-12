@@ -63,7 +63,7 @@ def organic_scans(cmdr, system, odyssey):
         where os.system = %s
         and variant is not null
         group by 
-        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE body end,
+        case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE replace(body,concat(os.system,' '),'') end,
         latitude,longitude,
         entryid,english_name,hud_category
     """
@@ -380,7 +380,7 @@ def cmdr_poi(cmdr, system, odyssey):
             from status_reports s  where 
             cmdr = %s
             and s.system = %s
-            group by category,comment 
+            group by category,comment,replace(body,concat(s.system,' '),'')
         ) data
     """
     with get_cursor() as cursor:
