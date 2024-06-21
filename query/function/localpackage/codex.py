@@ -724,6 +724,70 @@ def codex_data(request):
     return r
 
 
+def codex_bodies(request):
+
+    eng = request.args.get("english_name")
+
+    offset = request.args.get("offset", 0)
+    limit = request.args.get("limit", 1000)
+    if request.args.get("_start"):
+        offset = request.args.get("_start")
+    if request.args.get("_limit"):
+        limit = request.args.get("_limit")
+
+    params = []
+    clause = ""
+
+    if eng:
+        params.append(eng)
+        clause = f"{clause} and cnr.english_name = %s "
+
+    params.append(int(offset))
+    params.append(int(limit))
+
+    with get_cursor() as cursor:
+        sql = f"""
+        select
+            cr.id ,
+            case when ss.bodies_match = 1 then 'Y' else 'N' end as complete,
+            ss.name as systemName,
+            trim(replace(sb.name,ss.name,'')) as body,
+            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
+            FROM 
+                system_bodies sbx 
+            WHERE 
+                sbx.system_address = cr.system_address AND sbx.type = 'Star' 
+                and substr(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),1,1) not in ('Y','L')
+            ) as star_types,
+            ms.sub_type as star_class,
+            JSON_EXTRACT(sb.raw_json,'$.distanceToArrival')  as distanceToArrival,
+            sb.sub_type as bodyType,
+            ifnull(nullif(JSON_UNQUOTE(sb.raw_json->'$.atmosphereType'),'null'),'No atmosphere') as atmosphereType,
+            cast(JSON_EXTRACT(sb.raw_json,'$.atmosphereComposition') as json) as atmosphereComposition,
+            JSON_UNQUOTE(sb.raw_json->'$.gravity') as gravity,
+            JSON_UNQUOTE(sb.raw_json->'$.surfaceTemperature') as temperature,
+            ifnull(JSON_UNQUOTE(sb.raw_json->'$.volcanismType'),'No volcanism') as volcanismType,
+            cast(JSON_EXTRACT(sb.raw_json,'$.materials') as json) as materials,
+            JSON_EXTRACT(sb.raw_json,'$.orbitalEccentricity') as orbitalEccentricity,
+            cr.cmdr,
+            cast(cr.reported_at as char) as reported_at
+            from codex_bodies cr 
+            join codex_name_ref cnr on cr.entryid = cnr.entryid 
+            join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
+            join star_systems ss on ss.id64 = cr.system_address
+            left join system_bodies ms on ms.system_address  = cr.system_address and json_extract(ms.raw_json,'$.mainStar') = true 
+            where 1 = 1
+            {clause}
+            order by cr.id asc 
+            limit %s,%s
+        """
+        cursor.execute(sql, (params))
+        r = cursor.fetchall()
+        cursor.close()
+
+    return jsonify(r)
+
+
 ## replaces /poiListSignals used by Triumvitate
 def poi_list_signals(request):
 

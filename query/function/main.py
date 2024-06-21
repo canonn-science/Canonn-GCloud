@@ -225,6 +225,12 @@ def codex_systems():
     return localpackage.codex.codex_systems(request)
 
 
+@app.route("/codex/bodies")
+@wrap_route
+def codex_bodies():
+    return localpackage.codex.codex_bodies(request)
+
+
 @app.route("/codex/capi")
 @wrap_route
 def codex_capi():
