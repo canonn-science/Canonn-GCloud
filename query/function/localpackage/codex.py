@@ -747,9 +747,9 @@ def codex_bodies(request):
 
     with get_cursor() as cursor:
         sql = f"""
-        			select
+			select
 	            cs.id ,
-	            case when ss.bodies_match = 1 then 'Y' else 'N' end as complete,
+	            case when ss.bodies_match = 1 and ms.body_id is not null then 'Y' else 'N' end as complete,
 	            ss.name as systemName,
 	            trim(replace(sb.name,ss.name,'')) as body,
 	            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
@@ -773,7 +773,7 @@ def codex_bodies(request):
 	            ifnull(cr.cmdr,cs.cmdr),
 	            cast(ifnull(cr.reported_at,cs.reported_at) as char) as reported_at
             from codex_systems cs
-            left join star_systems ss on ss.name = cs.system
+            left join star_systems ss on ss.id64 = cs.system_address
         	left join codex_bodies cr on cr.system_address = ss.id64 and cr.entryid = cs.entryid 
             join codex_name_ref cnr on cs.entryid = cnr.entryid 
             left join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
