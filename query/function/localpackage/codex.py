@@ -747,45 +747,68 @@ def codex_bodies(request):
 
     with get_cursor() as cursor:
         sql = f"""
-        select
-            cr.id ,
-            case when ss.bodies_match = 1 then 'Y' else 'N' end as complete,
-            ss.name as systemName,
-            trim(replace(sb.name,ss.name,'')) as body,
-            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
-            FROM 
-                system_bodies sbx 
-            WHERE 
-                sbx.system_address = cr.system_address AND sbx.type = 'Star' 
-                and substr(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),1,1) not in ('Y','L')
-            ) as star_types,
-            ms.sub_type as star_class,
-            JSON_EXTRACT(sb.raw_json,'$.distanceToArrival')  as distanceToArrival,
-            sb.sub_type as bodyType,
-            ifnull(nullif(JSON_UNQUOTE(sb.raw_json->'$.atmosphereType'),'null'),'No atmosphere') as atmosphereType,
-            cast(JSON_EXTRACT(sb.raw_json,'$.atmosphereComposition') as json) as atmosphereComposition,
-            JSON_UNQUOTE(sb.raw_json->'$.gravity') as gravity,
-            JSON_UNQUOTE(sb.raw_json->'$.surfaceTemperature') as temperature,
-            ifnull(JSON_UNQUOTE(sb.raw_json->'$.volcanismType'),'No volcanism') as volcanismType,
-            cast(JSON_EXTRACT(sb.raw_json,'$.materials') as json) as materials,
-            JSON_EXTRACT(sb.raw_json,'$.orbitalEccentricity') as orbitalEccentricity,
-            cr.cmdr,
-            cast(cr.reported_at as char) as reported_at
-            from codex_bodies cr 
-            join codex_name_ref cnr on cr.entryid = cnr.entryid 
-            join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
-            join star_systems ss on ss.id64 = cr.system_address
+        			select
+	            cs.id ,
+	            case when ss.bodies_match = 1 then 'Y' else 'N' end as complete,
+	            ss.name as systemName,
+	            trim(replace(sb.name,ss.name,'')) as body,
+	            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
+	            FROM 
+	                system_bodies sbx 
+	            WHERE 
+	                sbx.system_address = cr.system_address AND sbx.type = 'Star' 
+	                and substr(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),1,1) not in ('Y','L')
+	            ) as star_types,
+	            ms.sub_type as star_class,
+	            JSON_EXTRACT(sb.raw_json,'$.distanceToArrival')  as distanceToArrival,
+	            sb.sub_type as bodyType,
+	            sb.body_id,
+	            ifnull(nullif(JSON_UNQUOTE(sb.raw_json->'$.atmosphereType'),'null'),'No atmosphere') as atmosphereType,
+	            cast(JSON_EXTRACT(sb.raw_json,'$.atmosphereComposition') as json) as atmosphereComposition,
+	            JSON_UNQUOTE(sb.raw_json->'$.gravity') as gravity,
+	            JSON_UNQUOTE(sb.raw_json->'$.surfaceTemperature') as temperature,
+	            ifnull(JSON_UNQUOTE(sb.raw_json->'$.volcanismType'),'No volcanism') as volcanismType,
+	            cast(JSON_EXTRACT(sb.raw_json,'$.materials') as json) as materials,
+	            JSON_EXTRACT(sb.raw_json,'$.orbitalEccentricity') as orbitalEccentricity,
+	            ifnull(cr.cmdr,cs.cmdr),
+	            cast(ifnull(cr.reported_at,cs.reported_at) as char) as reported_at
+            from codex_systems cs
+            left join star_systems ss on ss.name = cs.system
+        	left join codex_bodies cr on cr.system_address = ss.id64 and cr.entryid = cs.entryid 
+            join codex_name_ref cnr on cs.entryid = cnr.entryid 
+            left join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
             left join system_bodies ms on ms.system_address  = cr.system_address and json_extract(ms.raw_json,'$.mainStar') = true 
             where 1 = 1
             {clause}
-            order by cr.id asc 
+            order by cs.id asc 
             limit %s,%s
         """
         cursor.execute(sql, (params))
-        r = cursor.fetchall()
+        processed_rows = []
+
+        # Fetch and process rows one by one
+        while True:
+            row = cursor.fetchone()
+            if row is None:
+                break
+
+            # Create a new dictionary for the processed row
+            processed_row = {}
+
+            # Iterate over the columns in the row
+            for key, value in row.items():
+                try:
+                    # Try to load the JSON value
+                    processed_row[key] = json.loads(value)
+                except (TypeError, json.JSONDecodeError):
+                    # If it's not a JSON string, just use the original value
+                    processed_row[key] = value
+
+            # Append the processed row to the list
+            processed_rows.append(processed_row)
         cursor.close()
 
-    return jsonify(r)
+    return jsonify(processed_rows)
 
 
 ## replaces /poiListSignals used by Triumvitate
