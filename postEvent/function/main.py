@@ -522,6 +522,8 @@ def insert_codex_systems(request_args):
     x = request_args.get("x")
     y = request_args.get("y")
     z = request_args.get("z")
+    id64 = request_args.get("entry").get("SystemAddress")
+    reported_at = request_args.get("entry").get("timestamp")
 
     if name_localised is None:
         name_localised = (
@@ -542,10 +544,12 @@ def insert_codex_systems(request_args):
         release = " (Horizons)"
 
     if hud != "Unknown":
-        stmt = "insert ignore into codex_systems (`system`,x,y,z,entryid,z_order) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s))"
+        stmt = "insert ignore into codex_systems (`system`,x,y,z,entryid,z_order,system_address,cmdr,reported_at) values (%s,%s,%s,%s,%s,zorder(%s,%s,%s),%s,%s,str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))"
 
         with get_cursor() as cursor:
-            cursor.execute(stmt, (system, x, y, z, entryid, x, y, z))
+            cursor.execute(
+                stmt, (system, x, y, z, entryid, x, y, z, id64, cmdrName, reported_at)
+            )
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
                 codexsearch = (
