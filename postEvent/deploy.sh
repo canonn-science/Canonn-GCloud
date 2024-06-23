@@ -48,6 +48,7 @@ if [[ "$1" == "live" ]] ; then
         --entry-point $entrypoint \
         --region us-central1  \
         --trigger-http  \
+	--timeout 200 \
         --max-instances 10 \
         --set-env-vars=MYSQL_USER=$MYSQL_USER,MYSQL_PASSWORD=$TEST_PASSWORD,TUNNEL_KEY=$TUNNEL_KEY,TUNNEL_HOST=$TUNNEL_HOST,MYSQL_HOST=localhost,MYSQL_PORT=3308
 
