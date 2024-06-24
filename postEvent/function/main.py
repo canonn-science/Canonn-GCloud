@@ -32,9 +32,27 @@ import traceback
 
 whitelist = []
 hooklist = {}
+excuses = []
 
 app = current_app
 CORS(app)
+
+import random
+
+
+def load_excuses():
+    global excuses
+    with open("excuses.txt", "r") as file:
+        excuses = file.readlines()
+    return [excuse.strip() for excuse in excuses]
+
+
+excuses = load_excuses()
+
+
+def generate_random_excuse():
+    global excuses
+    return random.choice(excuses)
 
 
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = True
@@ -1741,6 +1759,51 @@ def buySuit(gs, entry, cmdr):
     except Exception as e:
         logging.exception("message")
         raise
+
+
+@app.route("/plugin/error", methods=["POST"])
+@wrap_route
+def plugin_error():
+    webhook = get_webhooks().get("plugin_error")
+    data = request.get_json(force=True)
+    sqlinsert = """insert ignore into plugin_errors(
+            system_name,
+            function_name,
+            error_text,
+            client_version
+        ) values (
+            %s,
+            %s,
+            %s,
+            %s
+        )
+    """
+    cursor = get_cursor()
+    cursor.execute(
+        sqlinsert,
+        (
+            data.get("system_name"),
+            data.get("function_name"),
+            data.get("error_text"),
+            data.get("clientVersion"),
+        ),
+    )
+    rowcount = cursor.rowcount
+
+    if rowcount == 1:
+
+        excuse = generate_random_excuse()
+        content = f"""Plugin error at [{data.get('system_name')}](https://signals.canonn.tech/?system={data.get('system_name')}) for {data.get('function_name')}()\nVersion: {data.get('clientVersion')}: {excuse}"""
+        payload = {}
+        payload["content"] = content
+        requests.post(
+            webhook,
+            data=json.dumps(payload),
+            headers={"Content-Type": "application/json"},
+        )
+
+    cursor.close()
+    return f"inserted {rowcount} records"
 
 
 @app.route("/", methods=["POST"])
