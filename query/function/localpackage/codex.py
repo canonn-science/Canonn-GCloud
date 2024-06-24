@@ -747,16 +747,18 @@ def codex_bodies(request):
 
     with get_cursor() as cursor:
         sql = f"""
-			select
+            select
 	            cs.id ,
-	            case when ss.bodies_match = 1 and ms.body_id is not null then 'Y' else 'N' end as complete,
+	            cs.system_address,
+	            case when ss.bodies_match = 1 and ifnull(ms.body_id,'null') != 'null' then 'Y' else 'N' end as complete,
 	            ss.name as systemName,
 	            trim(replace(sb.name,ss.name,'')) as body,
+                cast(JSON_EXTRACT(sb.raw_json,'$.rings') as json) as rings,
 	            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
 	            FROM 
 	                system_bodies sbx 
 	            WHERE 
-	                sbx.system_address = cr.system_address AND sbx.type = 'Star' 
+	                sbx.system_address = cs.system_address AND sbx.type = 'Star' 
 	                and substr(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),1,1) not in ('Y','L')
 	            ) as star_types,
 	            ms.sub_type as star_class,
@@ -770,14 +772,14 @@ def codex_bodies(request):
 	            ifnull(JSON_UNQUOTE(sb.raw_json->'$.volcanismType'),'No volcanism') as volcanismType,
 	            cast(JSON_EXTRACT(sb.raw_json,'$.materials') as json) as materials,
 	            JSON_EXTRACT(sb.raw_json,'$.orbitalEccentricity') as orbitalEccentricity,
-	            ifnull(cr.cmdr,cs.cmdr),
+	            ifnull(cr.cmdr,cs.cmdr) as cmdr,
 	            cast(ifnull(cr.reported_at,cs.reported_at) as char) as reported_at
             from codex_systems cs
             left join star_systems ss on ss.id64 = cs.system_address
         	left join codex_bodies cr on cr.system_address = ss.id64 and cr.entryid = cs.entryid 
             join codex_name_ref cnr on cs.entryid = cnr.entryid 
             left join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
-            left join system_bodies ms on ms.system_address  = cr.system_address and json_extract(ms.raw_json,'$.mainStar') = true 
+            left join system_bodies ms on ms.system_address  = cs.system_address and json_extract(ms.raw_json,'$.mainStar') = true 
             where 1 = 1
             {clause}
             order by cs.id asc 
