@@ -3,7 +3,7 @@ import json
 import logging
 from math import pow, sqrt, trunc
 from os import getenv
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode, quote
 import requests
 import pymysql
 import sys
@@ -1793,7 +1793,7 @@ def plugin_error():
     if rowcount == 1:
 
         excuse = generate_random_excuse()
-        content = f"""Plugin error at [{data.get('system_name')}](https://signals.canonn.tech/?system={data.get('system_name')}) for {data.get('function_name')}()\nVersion: {data.get('clientVersion')}: {excuse}"""
+        content = f"""Plugin error at [{data.get('system_name')}](https://signals.canonn.tech/?system={quote(data.get('system_name'))}) for {data.get('function_name')}()\nVersion: {data.get('clientVersion')}: {excuse}"""
         payload = {}
         payload["content"] = content
         requests.post(
