@@ -524,8 +524,9 @@ def codex_name_ref(request):
 
     with get_cursor() as cursor:
         sql = """
-            SELECT c.*,data2.reward
+            SELECT c.*,data2.reward,ci.cmdr as image_cmdr,ci.url as image_url
             FROM codex_name_ref c
+            left join codex_images ci on ci.entryid = c.entryid
             LEFT JOIN (
             SELECT
                             entryid, CAST(SUBSTRING_INDEX(GROUP_CONCAT(reward
@@ -747,43 +748,106 @@ def codex_bodies(request):
 
     with get_cursor() as cursor:
         sql = f"""
-            select
-	            cs.id ,
-	            cs.system_address,
-	            case when ss.bodies_match = 1 and ifnull(ms.body_id,'null') != 'null' then 'Y' else 'N' end as complete,
-	            ss.name as systemName,
-	            trim(replace(sb.name,ss.name,'')) as body,
-                cast(JSON_EXTRACT(sb.raw_json,'$.rings') as json) as rings,
-	            (SELECT GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(sbx.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types
-	            FROM 
-	                system_bodies sbx 
-	            WHERE 
-	                sbx.system_address = cs.system_address AND sbx.type = 'Star' 
-	                and substr(JSON_UNQUOTE(sbx.raw_json->'$.spectralClass'),1,1) not in ('Y','L')
-	            ) as star_types,
-	            ms.sub_type as star_class,
-	            JSON_EXTRACT(sb.raw_json,'$.distanceToArrival')  as distanceToArrival,
-	            sb.sub_type as bodyType,
-	            sb.body_id,
-	            ifnull(nullif(JSON_UNQUOTE(sb.raw_json->'$.atmosphereType'),'null'),'No atmosphere') as atmosphereType,
-	            cast(JSON_EXTRACT(sb.raw_json,'$.atmosphereComposition') as json) as atmosphereComposition,
-	            JSON_UNQUOTE(sb.raw_json->'$.gravity') as gravity,
-	            JSON_UNQUOTE(sb.raw_json->'$.surfaceTemperature') as temperature,
-	            ifnull(JSON_UNQUOTE(sb.raw_json->'$.volcanismType'),'No volcanism') as volcanismType,
-	            cast(JSON_EXTRACT(sb.raw_json,'$.materials') as json) as materials,
-	            JSON_EXTRACT(sb.raw_json,'$.orbitalEccentricity') as orbitalEccentricity,
-	            ifnull(cr.cmdr,cs.cmdr) as cmdr,
-	            cast(ifnull(cr.reported_at,cs.reported_at) as char) as reported_at
-            from codex_systems cs
-            left join star_systems ss on ss.id64 = cs.system_address
-        	left join codex_bodies cr on cr.system_address = ss.id64 and cr.entryid = cs.entryid 
-            join codex_name_ref cnr on cs.entryid = cnr.entryid 
-            left join system_bodies sb on sb.system_address  = cr.system_address and sb.body_id = cr.body_id 
-            left join system_bodies ms on ms.system_address  = cs.system_address and json_extract(ms.raw_json,'$.mainStar') = true 
-            where 1 = 1
-            {clause}
-            order by cs.id asc 
-            limit %s,%s
+    with base_data as (
+		# We can select the base data then any joins are only joining on the page that we are selecting      
+    	select 
+    		cs.id as system_seq,
+    		cs.system as tmp_system_name,
+    		cs.x,cs.y,cs.z,
+    		cs.system_address,
+    		cnr.*,
+    		z_order,
+    		ifnull(cb.cmdr,cs.cmdr) as cmdr,
+    		ifnull(cb.reported_at,cs.reported_at) as reported_at,
+    		cb.id as body_seq,
+    		cb.body_id
+    	from codex_systems cs
+    	left join codex_bodies cb on cb.entryid = cs.entryid and cb.system_address = cs.system_address 
+    	join codex_name_ref cnr on cnr.entryid = cs.entryid 
+        {clause}
+    	order by cs.reported_at desc 
+    	limit %s,%s
+    ), star_systems as (
+    	# now we will join on star system 
+        select 
+    		base_data.system_seq,
+    		ifnull(ss.x,base_data.x) as x,
+    		ifnull(ss.y,base_data.y) as y,
+    		ifnull(ss.z,base_data.z) as z,
+    		base_data.system_address,
+    		base_data.english_name,
+    		base_data.entryid,
+    		base_data.hud_category,
+    		base_data.sub_class,
+    		base_data.name as variant,
+    		base_data.z_order,
+    		base_data.cmdr,
+    		base_data.reported_at,
+    		base_data.body_seq,
+    		base_data.body_id,
+        	ifnull(ss.name,base_data.tmp_system_name) as system_name,
+        	ss.bodies_match
+        from base_data
+        left join star_systems ss on ss.id64 = base_data.system_address
+    )     , ne as (	
+    	# joining to get the nearest nebula
+       	select 
+    		star_systems.*,
+ 			(select sqrt(pow(star_systems.x-neb.x,2)+pow(star_systems.y-neb.y,2)+pow(star_systems.z-neb.z,2)) from edastro_pois neb where neb.poi_type in ('nebula','planetaryNebula') order by pow(star_systems.x-neb.x,2)+pow(star_systems.y-neb.y,2)+pow(star_systems.z-neb.z,2) asc limit 1) as nearest_nebula,
+ 			(select poi_type from edastro_pois neb where neb.poi_type in ('nebula','planetaryNebula') order by pow(star_systems.x-neb.x,2)+pow(star_systems.y-neb.y,2)+pow(star_systems.z-neb.z,2) asc limit 1) as nearest_nebula_type
+    	from star_systems
+    ), system_ids as (
+    	# get a unique list of system addresses
+    	select distinct system_address from base_data
+    ), body_ids as (
+    	# get a unique list of system addresses
+    	select distinct system_address,body_id,system_name from star_systems    
+    ), star_info as (
+    	# get info about the main star and other stars
+    	select bms.system_address,max(case when json_extract(bms.raw_json,'$.mainStar') = true then bms.sub_type else null end) as star_class,
+    	GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(bms.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(bms.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types 
+    	from system_ids
+    	left join system_bodies bms on bms.system_address = system_ids.system_address 
+    	group by bms.system_address
+    ), body_info as (
+    	# We will get info on all bodies in the system and as well as current body
+    	# but we will only include planets
+    	select
+    			sbs.system_address,body_ids.body_id,
+		    	max(case when sbs.body_id =  body_ids.body_id then trim(replace(sbs.name,body_ids.system_name,'')) else null end) as body,
+    	    	max(case when sbs.body_id =  body_ids.body_id then sbs.sub_type else null end) as body_type,
+	            max(case when sbs.body_id =  body_ids.body_id then cast(JSON_EXTRACT(sbs.raw_json,'$.rings') as json) else null end) as rings,
+	            max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.distanceToArrival') else null end) as distanceToArrival,
+				max(case when sbs.body_id =  body_ids.body_id then ifnull(nullif(JSON_UNQUOTE(sbs.raw_json->'$.atmosphereType'),'null'),'No atmosphere') else null end) as atmosphereType,
+				max(case when sbs.body_id =  body_ids.body_id then cast(JSON_EXTRACT(sbs.raw_json,'$.atmosphereComposition') as json) else null end) as atmosphereComposition,
+				max(case when sbs.body_id =  body_ids.body_id then JSON_UNQUOTE(sbs.raw_json->'$.gravity') else null end) as gravity,
+				max(case when sbs.body_id =  body_ids.body_id then JSON_UNQUOTE(sbs.raw_json->'$.surfaceTemperature') else null end) as temperature,
+				max(case when sbs.body_id =  body_ids.body_id then ifnull(JSON_UNQUOTE(sbs.raw_json->'$.volcanismType'),'No volcanism') else null end) as volcanismType,
+				max(case when sbs.body_id =  body_ids.body_id then cast(JSON_EXTRACT(sbs.raw_json,'$.materials') as json) else null end) as materials,
+				max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.orbitalEccentricity') else null end) as orbitalEccentricity
+    	from body_ids
+       	left join system_bodies sbs on sbs.system_address = body_ids.system_address 
+    	group by body_ids.system_address,body_id
+    )
+    select 
+    	ne.*,
+    	star_info.star_class,
+    	star_info.star_types,
+    	body_info.body,
+    	body_info.body_type,
+    	body_info.rings,
+        body_info.distanceToArrival,
+        body_info.atmosphereType,
+        body_info.atmosphereComposition,
+        body_info.gravity,
+        body_info.temperature,
+        body_info.volcanismType,
+        body_info.materials,
+        body_info.orbitalEccentricity,
+        case when ne.bodies_match = 1 and ifnull(star_info.star_class,'null') != 'null' then 'Y' else 'N' end as complete
+    from ne
+    left join star_info on star_info.system_address = ne.system_address
+    left join body_info on body_info.system_address = ne.system_address and body_info.body_id = ne.body_id
         """
         cursor.execute(sql, (params))
         processed_rows = []
