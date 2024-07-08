@@ -225,6 +225,12 @@ def codex_systems():
     return localpackage.codex.codex_systems(request)
 
 
+@app.route("/codex/bodies/<id64>")
+@wrap_route
+def get_id64_codex(id64):
+    return localpackage.codex.get_id64_codex(id64)
+
+
 @app.route("/codex/bodies")
 @wrap_route
 def codex_bodies():
@@ -247,6 +253,12 @@ def codex_odyssey_subclass():
 @wrap_route
 def codex_ref():
     return localpackage.codex.codex_name_ref(request)
+
+
+@app.route("/codex/cmdr/<cmdrname>")
+@wrap_route
+def codex_cmdr(cmdrname):
+    return localpackage.codex.cmdr(cmdrname, request)
 
 
 @app.route("/challenge/next")

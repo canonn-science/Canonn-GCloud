@@ -176,6 +176,16 @@ def get_system_codex(system):
     return None
 
 
+def get_id64_codex(id64):
+    sqltext = "select entryid,body_id from codex_bodies where system_address = %s"
+    with get_cursor() as cursor:
+        cursor.execute(sqltext, (id64))
+        r = cursor.fetchall()
+        cursor.close()
+        return jsonify(r)
+    return jsonify([])
+
+
 def mat_species(species):
     id = species.get("id")
 
@@ -664,6 +674,56 @@ def species_prices(request):
             "bonus": int(entry.get("reward")) * 2,
         }
     return res
+
+
+def cmdr(cmdr, request):
+    offset = request.args.get("offset", 0)
+    limit = request.args.get("limit", 1000)
+
+    print(f"limit {limit}")
+
+    with get_cursor() as cursor:
+        sql = f"""
+            SELECT
+                cs.`system` ,
+                cs.system_address,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'category', cnr.category,
+                        'english_nane', cnr.english_name,
+                        'entryid', cnr.entryid,
+                        'hud_category', cnr.hud_category,
+                        'name', cnr.name,
+                        'platform', cnr.platform,
+                        'sub_category', cnr.sub_category,
+                        'sub_class', cnr.sub_class,
+                        'species', trim(SUBSTRING_INDEX(cnr.english_name,'-',1))
+                    )
+                )
+                 AS hud_details,
+                ss.x,ss.y,ss.z
+            from codex_systems  cs
+            join star_systems ss on ss.id64 = cs.system_address
+            join codex_name_ref cnr on cs.entryid = cnr.entryid
+            where cs.cmdr = %s
+            GROUP BY
+                cs.`system`,ss.x,ss.y,ss.z,cs.system_address
+            order by cs.system_address 
+            limit %s,%s	
+        """
+        cursor.execute(sql, (cmdr, int(offset), int(limit)))
+        r = cursor.fetchall()
+        cursor.close()
+
+        retval = {}
+        for entry in r:
+            print(f"name :{entry.get('system')}")
+            retval[entry.get("system")] = {
+                "codex": json.loads(entry.get("hud_details")),
+                "coords": [entry.get("x"), entry.get("y"), entry.get("z")],
+            }
+
+    return jsonify(retval)
 
 
 def codex_data(request):
