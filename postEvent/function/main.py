@@ -276,6 +276,9 @@ def insertCodexReport(request_args):
     else:
         beta = "N"
     raw_json = json.dumps(request_args.get("entry"))
+
+    body_id = json.loads(raw_json).get("BodyID")
+
     entryid = request_args.get("entry").get("EntryID")
     name = request_args.get("entry").get("Name")
     name_localised = request_args.get("entry").get("Name_Localised")
@@ -319,6 +322,16 @@ def insertCodexReport(request_args):
         cursor.execute(sqlstmt, (cmdrName, entryid))
         if cursor.rowcount == 1:
             print(f"Congratulations cmdr {cmdrName} you found {entryid}")
+
+    sqlstmt = """
+        insert ignore into codex_bodies 
+        (system_address,body_id,entryid,cmdr,reported_at)
+        values (%s,%s,%s,%s,str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
+    """
+    with get_cursor() as cursor:
+        cursor.execute(sqlstmt, (id64, body_id, entryid, cmdrName, reported_at))
+        if cursor.rowcount == 1:
+            print(f"Congratulations cmdr {cmdrName} you found {entryid} on a new body")
 
     # if there are 50 or more entries already we will skip writing
     with get_cursor() as cursor:
@@ -526,6 +539,19 @@ def get_hud_category(entryid, name_localised):
         else:
             return "Unknown", name_localised
         cursor.close()
+
+
+def get_entry_id(variant):
+    if variant is None:
+        return None
+    stmt = "select entryid from codex_name_ref where name = %s"
+    with get_cursor() as cursor:
+        cursor.execute(stmt, (variant))
+        row = cursor.fetchone()
+        if row:
+            return row["entryid"]
+        else:
+            return None
 
 
 def insert_codex_systems(request_args):
@@ -794,6 +820,25 @@ def extendOrganicScans(gs, event, cmdr):
             bodyName = gs.get("bodyName")
 
         x, y, z = gs.get("systemCoordinates")
+        id64 = event.get("SystemAddress")
+        body_id = event.get("Body")
+        reported_at = event.get("timestamp")
+
+        entryid = get_entry_id(event.get("Variant"))
+
+        if entryid is not None:
+            # we need to record the body distinctly
+            sqlstmt = """
+            insert ignore into codex_bodies 
+            (system_address,body_id,entryid,cmdr,reported_at)
+            values (%s,%s,%s,%s,str_to_date(%s,'%%Y-%%m-%%dT%%H:%%i:%%SZ'))
+            """
+            with get_cursor() as cursor:
+                cursor.execute(sqlstmt, (id64, body_id, entryid, cmdr, reported_at))
+                if cursor.rowcount == 1:
+                    print(
+                        f"Congratulations cmdr {cmdrName} you found {entryid} on a new body"
+                    )
 
         # need to prevent too many entries being made
         with get_cursor() as cursor:
