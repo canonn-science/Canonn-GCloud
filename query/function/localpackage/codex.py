@@ -816,6 +816,12 @@ def codex_bodies(request):
     		cs.x,cs.y,cs.z,
     		cs.system_address,
     		cnr.*,
+    		case 
+	    		when cnr.hud_category = 'Biology' and 
+	    			REGEXP_LIKE(cnr.name, '_(Ae|B|D|F|G|K|L|M|N|A|O|T|TTS|W|Y)_Name;$') 
+	    		then SUBSTRING_INDEX(SUBSTRING_INDEX(cnr.name, '_', -2), '_', 1) 
+	    		else null 
+	    	end as codex_star,
     		z_order,
     		ifnull(cb.cmdr,cs.cmdr) as cmdr,
     		ifnull(cb.reported_at,cs.reported_at) as reported_at,
@@ -840,6 +846,7 @@ def codex_bodies(request):
     		base_data.hud_category,
     		base_data.sub_class,
     		base_data.name as variant,
+    		base_data.codex_star,
     		base_data.z_order,
     		base_data.cmdr,
     		base_data.reported_at,
@@ -862,18 +869,12 @@ def codex_bodies(request):
     ), body_ids as (
     	# get a unique list of system addresses
     	select distinct system_address,body_id,system_name from star_systems    
-    ), star_info as (
-    	# get info about the main star and other stars
-    	select bms.system_address,max(case when json_extract(bms.raw_json,'$.mainStar') = true then bms.sub_type else null end) as star_class,
-    	GROUP_CONCAT(concat(ifnull(nullif(JSON_UNQUOTE(bms.raw_json->'$.spectralClass'),'null'),sub_type),' ',nullif(JSON_UNQUOTE(bms.raw_json->'$.luminosity'),'null')) SEPARATOR ',') AS star_types 
-    	from system_ids
-    	left join system_bodies bms on bms.system_address = system_ids.system_address 
-    	group by bms.system_address
     ), body_info as (
     	# We will get info on all bodies in the system and as well as current body
-    	# but we will only include planets
+    	# 
     	select
     			sbs.system_address,body_ids.body_id,
+    			# data for the current body
 		    	max(case when sbs.body_id =  body_ids.body_id then trim(replace(sbs.name,body_ids.system_name,'')) else null end) as body,
     	    	max(case when sbs.body_id =  body_ids.body_id then sbs.sub_type else null end) as body_type,
 	            max(case when sbs.body_id =  body_ids.body_id then cast(JSON_EXTRACT(sbs.raw_json,'$.rings') as json) else null end) as rings,
@@ -884,15 +885,93 @@ def codex_bodies(request):
 				max(case when sbs.body_id =  body_ids.body_id then JSON_UNQUOTE(sbs.raw_json->'$.surfaceTemperature') else null end) as temperature,
 				max(case when sbs.body_id =  body_ids.body_id then ifnull(JSON_UNQUOTE(sbs.raw_json->'$.volcanismType'),'No volcanism') else null end) as volcanismType,
 				max(case when sbs.body_id =  body_ids.body_id then cast(JSON_EXTRACT(sbs.raw_json,'$.materials') as json) else null end) as materials,
-				max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.orbitalEccentricity') else null end) as orbitalEccentricity
+				max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.orbitalEccentricity') else null end) as orbitalEccentricity,
+                max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.parents') else null end) as parents,
+                max(case when sbs.body_id =  body_ids.body_id then JSON_EXTRACT(sbs.raw_json,'$.semiMajorAxis') else null end) as semiMajorAxis,
+				# aggregate data
+				group_concat(distinct case when `type` = 'Planet' then sub_type else null end) as body_types_present,
+				max(case when json_extract(sbs.raw_json,'$.mainStar') = true then sbs.sub_type else null end) as star_class  ,
+    			GROUP_CONCAT(
+    					case when sbs.type = 'Star' then
+    					concat(ifnull(nullif(JSON_UNQUOTE(sbs.raw_json->'$.spectralClass'),'null'),sbs.sub_type),' ',nullif(JSON_UNQUOTE(sbs.raw_json->'$.luminosity'),'null'))
+    					else null end
+    				SEPARATOR ',') AS star_types
     	from body_ids
        	left join system_bodies sbs on sbs.system_address = body_ids.system_address 
-    	group by body_ids.system_address,body_id
-    )
+    	group by body_ids.system_address,body_id 
+    ), unranked_stars AS (
+    SELECT 
+    	bi.system_address,bi.body_id,sb.sub_type,sb.name,
+    	cast(JSON_UNQUOTE(sb.raw_json->'$.absoluteMagnitude') as DECIMAL(65,30)) as absoluteMagnitude,
+    	JSON_UNQUOTE(sb.raw_json->'$.surfaceTemperature') as surfaceTemperature,
+    	JSON_UNQUOTE(sb.raw_json->'$.spectralClass') as spectralClass,
+    	JSON_UNQUOTE(sb.raw_json->'$.luminosity') as luminosity,    	
+        CASE 
+            WHEN json_extract(bi.parents,'$[0].Star') = sb.body_id then
+                cast(JSON_UNQUOTE(sb.raw_json->'$.absoluteMagnitude') as DECIMAL(65,30)) + 5 * LOG10(cast((bi.semiMajorAxis / 206265) / 10 as DECIMAL(65,30)))
+            WHEN ABS(bi.distanceToArrival - JSON_UNQUOTE(sb.raw_json->'$.distanceToArrival')) != 0 THEN
+                cast(JSON_UNQUOTE(sb.raw_json->'$.absoluteMagnitude') as DECIMAL(65,30)) + 5 * LOG10(cast((ABS(bi.distanceToArrival- JSON_UNQUOTE(sb.raw_json->'$.distanceToArrival')) * 3.08567758e-14) / 10 as DECIMAL(65,30))) 
+            ELSE 
+                NULL
+        END AS apparent_magnitude
+    FROM system_bodies sb
+    join body_info bi on bi.system_address = sb.system_address
+    WHERE sb.type = 'Star' 
+), illuminating_stars AS (
+	select data.* from (
+    SELECT us.*,
+        RANK() OVER (PARTITION BY system_address,body_id ORDER BY apparent_magnitude ASC) AS magrank
+    FROM unranked_stars us
+    ) data where magrank = 1
+), codex_stars as (
+	select ne.system_address,ne.body_id,
+	sum(case 
+		when codex_star = 'G' and sb.sub_type in ('G (White-Yellow super giant) Star', 'G (White-Yellow) Star') then 1 
+     	when codex_star = 'Ae' and sb.sub_type in ('Herbig Ae/Be Star') then 1
+     	when codex_star = 'D' and sb.sub_type in (
+	        'White Dwarf (D) Star',
+	        'White Dwarf (DA) Star',
+	        'White Dwarf (DAB) Star',
+	        'White Dwarf (DAV) Star',
+	        'White Dwarf (DAZ) Star',
+	        'White Dwarf (DB) Star',
+	        'White Dwarf (DBV) Star',
+	        'White Dwarf (DBZ) Star',
+	        'White Dwarf (DC) Star',
+	        'White Dwarf (DCV) Star',
+	        'White Dwarf (DQ) Star'
+    	) then 1
+    	when codex_star = 'L' and sb.sub_type in ('L (Brown dwarf) Star') then 1
+    	when codex_star = 'F' and sb.sub_type in ('F (White super giant) Star', 'F (White) Star') then 1
+    	when codex_star = 'B' and sb.sub_type in ('B (Blue-White super giant) Star', 'B (Blue-White) Star') then 1
+    	when codex_star = 'K' and sb.sub_type in ('K (Yellow-Orange giant) Star', 'K (Yellow-Orange) Star') then 1
+    	when codex_star = 'M' and sb.sub_type in ('M (Red dwarf) Star', 'M (Red giant) Star', 'M (Red super giant) Star') then 1
+	    when codex_star = 'N' and sb.sub_type in ('Neutron Star') then 1
+	    when codex_star = 'A' and sb.sub_type in ('A (Blue-White super giant) Star', 'A (Blue-White) Star') then 1
+	    when codex_star = 'O' and sb.sub_type in ('O (Blue-White) Star') then 1
+	    when codex_star = 'T' and sb.sub_type in ('T (Brown dwarf) Star') then 1
+	    when codex_star = 'TTS' and sb.sub_type in ('T Tauri Star') then 1
+	    when codex_star = 'W' and sb.sub_type in (
+			'Wolf-Rayet C Star',
+	        'Wolf-Rayet N Star',
+	        'Wolf-Rayet NC Star',
+	        'Wolf-Rayet O Star',
+	        'Wolf-Rayet Star'
+	    ) then 'Y'
+		when codex_star = 'Y' and sb.sub_type in ('Y (Brown dwarf) Star') then 1
+		when codex_star is null then null
+    else 0
+    end) as codex_star_match
+	from ne
+	join system_bodies sb on sb.system_address = ne.system_address
+	group by ne.system_address,ne.body_id
+)
+    # we need something that joins on body info and uses the distanceToArrival to identify the star with the highest apparent magnitude 
+    # Sadly this means we have to hit system_bodies twice unless I did something clever on the body_info to get the data I want?
     select 
     	ne.*,
-    	star_info.star_class,
-    	star_info.star_types,
+ 	    body_info.star_class,
+   	    body_info.star_types,
     	body_info.body,
     	body_info.body_type,
     	body_info.rings,
@@ -904,10 +983,59 @@ def codex_bodies(request):
         body_info.volcanismType,
         body_info.materials,
         body_info.orbitalEccentricity,
-        case when ne.bodies_match = 1 and ifnull(star_info.star_class,'null') != 'null' then 'Y' else 'N' end as complete
+        body_info.body_types_present,
+        body_info.parents,
+        body_info.semiMajorAxis,
+        case when ne.bodies_match = 1 and ifnull(body_info.star_class,'null') != 'null' then 'Y' else 'N' end as complete,
+        il.sub_type as illuminating_subtype,
+        il.name as illuminating_name,
+        il.apparent_magnitude,
+        il.absoluteMagnitude,
+        il.surfaceTemperature,
+        il.spectralClass,
+        il.luminosity,
+                case 
+	    when codex_star = 'G' and il.sub_type in ('G (White-Yellow super giant) Star', 'G (White-Yellow) Star') then 'Y' 
+     	when codex_star = 'Ae' and il.sub_type in ('Herbig Ae/Be Star') then 'Y'
+     	when codex_star = 'D' and il.sub_type in (
+	        'White Dwarf (D) Star',
+	        'White Dwarf (DA) Star',
+	        'White Dwarf (DAB) Star',
+	        'White Dwarf (DAV) Star',
+	        'White Dwarf (DAZ) Star',
+	        'White Dwarf (DB) Star',
+	        'White Dwarf (DBV) Star',
+	        'White Dwarf (DBZ) Star',
+	        'White Dwarf (DC) Star',
+	        'White Dwarf (DCV) Star',
+	        'White Dwarf (DQ) Star'
+    	) then 'Y'
+    	when codex_star = 'L' and il.sub_type in ('L (Brown dwarf) Star') then 'Y'
+    	when codex_star = 'F' and il.sub_type in ('F (White super giant) Star', 'F (White) Star') then 'Y'
+    	when codex_star = 'B' and il.sub_type in ('B (Blue-White super giant) Star', 'B (Blue-White) Star') then 'Y'
+    	when codex_star = 'K' and il.sub_type in ('K (Yellow-Orange giant) Star', 'K (Yellow-Orange) Star') then 'Y'
+    	when codex_star = 'M' and il.sub_type in ('M (Red dwarf) Star', 'M (Red giant) Star', 'M (Red super giant) Star') then 'Y'
+	    when codex_star = 'N' and il.sub_type in ('Neutron Star') then 'Y'
+	    when codex_star = 'A' and il.sub_type in ('A (Blue-White super giant) Star', 'A (Blue-White) Star') then 'Y'
+	    when codex_star = 'O' and il.sub_type in ('O (Blue-White) Star') then 'Y'
+	    when codex_star = 'T' and il.sub_type in ('T (Brown dwarf) Star') then 'Y'
+	    when codex_star = 'TTS' and il.sub_type in ('T Tauri Star') then 'Y'
+	    when codex_star = 'W' and il.sub_type in (
+			'Wolf-Rayet C Star',
+	        'Wolf-Rayet N Star',
+	        'Wolf-Rayet NC Star',
+	        'Wolf-Rayet O Star',
+	        'Wolf-Rayet Star'
+	    ) then 'Y'
+		when codex_star = 'Y' and il.sub_type in ('Y (Brown dwarf) Star') then 'Y'
+		when codex_star is null then '-'
+    else 'N'
+    end as star_type_match,
+    cs.codex_star_match
     from ne
-    left join star_info on star_info.system_address = ne.system_address
     left join body_info on body_info.system_address = ne.system_address and body_info.body_id = ne.body_id
+    left join illuminating_stars il on body_info.system_address = il.system_address and body_info.body_id = il.body_id
+    left join codex_stars cs on body_info.system_address = cs.system_address and body_info.body_id = cs.body_id
         """
         cursor.execute(sql, (params))
         processed_rows = []
