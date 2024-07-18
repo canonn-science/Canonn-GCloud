@@ -837,7 +837,7 @@ def extendOrganicScans(gs, event, cmdr):
                 cursor.execute(sqlstmt, (id64, body_id, entryid, cmdr, reported_at))
                 if cursor.rowcount == 1:
                     print(
-                        f"Congratulations cmdr {cmdrName} you found {entryid} on a new body"
+                        f"Congratulations cmdr {cmdr} you found {entryid} on a new body"
                     )
 
         # need to prevent too many entries being made
