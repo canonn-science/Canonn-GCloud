@@ -27,6 +27,7 @@ def challenge_next(request):
     px = request.args.get("x")
     py = request.args.get("y")
     pz = request.args.get("z")
+    exclude = request.args.get("exclude")
     x, y, z = None, None, None
     limit = ""
     if request.args.get("horizons") in ("Y", "y"):
@@ -47,14 +48,24 @@ def challenge_next(request):
     if x is None:
         return {"error": "cant find source system"}
 
+    params = []
+    params.append(cmdr)
+
+    exclude_clause = ""
+    if exclude_clause is not None:
+        exclude_clause = "and english_name not like concat('%%',%s,'%%')"
+        params.append(exclude)
+
     entries = []
     entrysql = f"""
     select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
         (select 1 from codex_cmdrs cr where cmdr = %s and cnr.entryid = cr.entryid)
+        {exclude_clause}
     """
+    print(entrysql)
     setup_sql_conn()
     with get_cursor() as cursor:
-        cursor.execute(entrysql, cmdr)
+        cursor.execute(entrysql, params)
         rows = cursor.fetchall()
         entries = [row["entryid"] for row in rows]
     placeholders = ", ".join(["%s"] * len(entries))
@@ -271,6 +282,18 @@ def challenge_status(request):
     res = enrich_data(rg)
 
     return res
+
+
+def missing_codex(request):
+    cmdr = request.args.get("cmdr", None)
+    with get_cursor() as cursor:
+        sql = f"""
+            select entryid,english_name,hud_category from codex_name_ref cnr where not exists (
+        select 1 from codex_cmdrs cc where cmdr = %s and cnr.entryid = cc.entryid)
+        """
+        cursor.execute(sql, (cmdr))
+        r = cursor.fetchall()
+    return jsonify(r)
 
 
 def challenge_svg(request):
