@@ -62,6 +62,7 @@ def organic_scans(cmdr, system, odyssey):
         end
         where os.system = %s
         and variant is not null
+        and english_name is not null
         group by 
         case when body LIKE '%% Ring' then SUBSTR(body,1,LENGTH(body)-5) ELSE replace(body,concat(os.system,' '),'') end,
         latitude,longitude,
