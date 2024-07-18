@@ -291,9 +291,10 @@ def challenge_status():
     return localpackage.challenge.challenge_status(request)
 
 
-# @app.route("/nearest/codex/")
-# def __codex():
-#    return localpackage.challenge.nearest_codex(request)
+@app.route("/missing/codex")
+@wrap_route
+def missing_codex():
+    return localpackage.challenge.missing_codex(request)
 
 
 @app.route("/nearest/codex")
