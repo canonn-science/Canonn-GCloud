@@ -267,6 +267,12 @@ def challenge_next():
     return localpackage.challenge.challenge_next(request)
 
 
+@app.route("/next/missing/image")
+@wrap_route
+def next_missing_image():
+    return localpackage.challenge.next_missing_image(request)
+
+
 @app.route("/challenge/svg")
 @wrap_route
 def challenge_svg():

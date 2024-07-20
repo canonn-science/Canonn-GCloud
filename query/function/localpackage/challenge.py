@@ -52,7 +52,7 @@ def challenge_next(request):
     params.append(cmdr)
 
     exclude_clause = ""
-    if exclude_clause is not None:
+    if exclude_clause != "":
         exclude_clause = "and english_name not like concat('%%',%s,'%%')"
         params.append(exclude)
 
@@ -60,6 +60,102 @@ def challenge_next(request):
     entrysql = f"""
     select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and not exists
         (select 1 from codex_cmdrs cr where cmdr = %s and cnr.entryid = cr.entryid)
+        {exclude_clause}
+    """
+    print(entrysql)
+    setup_sql_conn()
+    with get_cursor() as cursor:
+        cursor.execute(entrysql, params)
+        rows = cursor.fetchall()
+        entries = [row["entryid"] for row in rows]
+    placeholders = ", ".join(["%s"] * len(entries))
+
+    sql = f"""
+        select `system`,cnr.english_name,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance from (
+        select * from (
+            select * from codex_systems 
+            where zorder(%s,%s,%s) > z_order
+            and entryid in ({placeholders})
+            order by z_order desc
+            limit 100) data
+        union
+        select * from (
+            select * from codex_systems 
+            where zorder(%s,%s,%s) <= z_order
+            and entryid in ( {placeholders})
+            order by z_order asc
+            limit 100
+        ) data2
+    ) all_data
+    join codex_name_ref cnr on cnr.entryid = all_data.entryid
+    order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
+    """
+
+    res = {}
+    res["sql"] = sql
+
+    try:
+        result = []
+        setup_sql_conn()
+
+        # Remember to close SQL resources declared while running this function.
+        # Keep any declared in global scope (e.g. mysql_conn) for later reuse.
+        with get_cursor() as cursor:
+            # startCoords=(sx, sy, sz)
+            # endCoords=(ex, ey, ez)
+            # lineDistance=(startCoords+endCoords)
+            # limits=(offset,limit)
+            params = [x, y, z]
+            params.extend([x, y, z])
+            params.extend(entries)
+            params.extend([x, y, z])
+            params.extend(entries)
+            params.extend([x, y, z])
+            cursor.execute(sql, tuple(params))
+            # cursor.execute(sql,(sx,sy,sz,ex,ey,ez,sx,sy,sz,ex,ey,ez,jumpRange))
+            cr = cursor.fetchall()
+    except Exception as e:
+        cr = [{"error": str(e)}]
+    return cr[0]
+
+
+def next_missing_image(request):
+    system = request.args.get("system")
+    px = request.args.get("x")
+    py = request.args.get("y")
+    pz = request.args.get("z")
+    exclude = request.args.get("exclude")
+    x, y, z = None, None, None
+    limit = ""
+    if request.args.get("horizons") in ("Y", "y"):
+        limit = " platform = 'legacy' and "
+
+    if system:
+        s = getCoordinates(system)
+
+    if system and s:
+        x = s[0]
+        y = s[1]
+        z = s[2]
+    if px is not None and py is not None and pz is not None:
+        x = float(px)
+        y = float(py)
+        z = float(pz)
+
+    if x is None:
+        return {"error": "cant find source system"}
+
+    params = []
+
+    exclude_clause = ""
+    if exclude_clause != "":
+        exclude_clause = "and english_name not like concat('%%',%s,'%%')"
+        params.append(exclude)
+
+    entries = []
+    entrysql = f"""
+    select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and exists
+        (select 1 from codex_images cr where cnr.entryid = cr.entryid and (cr.url is null or cr.cmdr is null))
         {exclude_clause}
     """
     print(entrysql)
