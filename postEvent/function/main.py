@@ -1806,6 +1806,39 @@ def buySuit(gs, entry, cmdr):
         raise
 
 
+@app.route("/srvsurvey/stations", methods=["POST"])
+@wrap_route
+def post_station_data():
+    data = request.get_json(force=True)
+    sqlinsert = """insert ignore into station_subtypes(
+            raw_json
+        ) values (
+            %s
+        )
+    """
+    cursor = get_cursor()
+    cursor.execute(
+        sqlinsert,
+        (json.dumps(data)),
+    )
+    sqlinsert = """insert ignore into station_subtype(
+            raw_json
+        ) values (
+            %s
+        )
+        ON DUPLICATE KEY UPDATE
+        raw_json = %s
+    """
+    cursor = get_cursor()
+    cursor.execute(
+        sqlinsert,
+        (json.dumps(data), json.dumps(data)),
+    )
+    rowcount = cursor.rowcount
+    cursor.close()
+    return jsonify(f"inserted {rowcount} records")
+
+
 @app.route("/plugin/error", methods=["POST"])
 @wrap_route
 def plugin_error():
