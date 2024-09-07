@@ -52,7 +52,7 @@ def challenge_next(request):
     params.append(cmdr)
 
     exclude_clause = ""
-    if exclude_clause != "":
+    if exclude is not None:
         exclude_clause = "and english_name not like concat('%%',%s,'%%')"
         params.append(exclude)
 
@@ -148,7 +148,7 @@ def next_missing_image(request):
     params = []
 
     exclude_clause = ""
-    if exclude_clause != "":
+    if exclude is not None:
         exclude_clause = "and english_name not like concat('%%',%s,'%%')"
         params.append(exclude)
 
