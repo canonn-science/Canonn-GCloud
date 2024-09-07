@@ -77,14 +77,14 @@ def challenge_next(request):
             where zorder(%s,%s,%s) > z_order
             and entryid in ({placeholders})
             order by z_order desc
-            limit 100) data
+            limit 5000) data
         union
         select * from (
             select * from codex_systems 
             where zorder(%s,%s,%s) <= z_order
             and entryid in ( {placeholders})
             order by z_order asc
-            limit 100
+            limit 5000
         ) data2
     ) all_data
     join codex_name_ref cnr on cnr.entryid = all_data.entryid
