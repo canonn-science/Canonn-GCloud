@@ -30,6 +30,7 @@ import localpackage.regionsvg
 import localpackage.linkdecoder
 import localpackage.events
 import localpackage.fyi
+import localpackage.srvsurvey
 import localpackage.fleet_carriers
 import functions_framework
 from paramiko import RSAKey
@@ -90,6 +91,12 @@ def wrap_route(f):
 @app.before_request
 def before_request():
     setup_sql_conn()
+
+
+@app.route("/srvsurvey/system/<id64>")
+@wrap_route
+def srv_fetch_system(id64):
+    return localpackage.srvsurvey.fetch_system(id64)
 
 
 @app.route("/typeahead")
