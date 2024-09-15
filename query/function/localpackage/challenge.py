@@ -8,6 +8,7 @@ import json
 from flask import request, jsonify
 import flask
 from math import sqrt, trunc
+from collections import defaultdict
 
 
 def getCoordinates(system):
@@ -213,6 +214,47 @@ def next_missing_image(request):
     except Exception as e:
         cr = [{"error": str(e)}]
     return cr[0]
+
+
+def nest_codex(data):
+    # Using defaultdict to handle missing keys
+    nested_dict = defaultdict(lambda: defaultdict(list))
+
+    # Loop through each dictionary in the list
+    for item in data:
+        hud_category = item["hud_category"]
+        sub_class = item["sub_class"]
+        english_name = item["english_name"]
+        fdev_name = item["name"]
+        value = {"name": fdev_name, "english_name": english_name}
+
+        # Append english_name to the list under the correct hud_category and sub_class
+        nested_dict[hud_category][sub_class].append(value)
+
+    # Convert defaultdict back to regular dict before returning
+    return {k: dict(v) for k, v in nested_dict.items()}
+
+
+def challenge_missing(request):
+    cmdr = request.args.get("cmdr", None)
+    platform = request.args.get("platform", None)
+    setup_sql_conn()
+
+    with get_cursor() as cursor:
+        sql = f"""
+            select distinct entryid,english_name,hud_category,sub_class,name 
+            from codex_name_ref cn 
+            where not exists (
+                select 1 from codex_cmdrs cr where cmdr = %s and cr.entryid = cn.entryid 
+            ) 
+        """
+        cursor.execute(sql, (cmdr))
+        r = cursor.fetchall()
+        cursor.close()
+
+        retval = nest_codex(r)
+
+        return jsonify(retval)
 
 
 def challenge_status(request):

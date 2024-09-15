@@ -106,6 +106,17 @@ Gets a structure of all codex entries used by EDMC-Canonn
 * species (restricts the query to species eg Anomaly or Stratum)
 * variant (searches the variant name to filter the results)
 
+# challenge/missing
+
+This function will return a data structure showing all codex types the commander has not yet scanned
+
+## parameters
+
+* cmdr (the commander name to lookup)
+
+## example
+[CMDR LCU No Fool Like One](https://us-central1-canonn-api-236217.cloudfunctions.net/query/challenge/missing?cmdr=LCU%20No%20Fool%20Like%20One)
+
 ##example
 [Get Everything](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref)
 [With Hierarchy](https://us-central1-canonn-api-236217.cloudfunctions.net/query/codex/ref?hierarchy=1)

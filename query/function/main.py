@@ -270,8 +270,14 @@ def codex_cmdr(cmdrname):
 
 @app.route("/challenge/next")
 @wrap_route
-def challenge_next():
+def challenge_missing():
     return localpackage.challenge.challenge_next(request)
+
+
+@app.route("/challenge/missing")
+@wrap_route
+def challenge_next():
+    return localpackage.challenge.challenge_missing(request)
 
 
 @app.route("/next/missing/image")
