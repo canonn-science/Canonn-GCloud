@@ -128,7 +128,7 @@ def next_missing_image(request):
     
     exclude = request.args.get("exclude")
     x, y, z = None, None, None
-    limit = ""
+    
     if request.args.get("horizons") in ("Y", "y"):
         limit = " platform = 'legacy' and "
 
@@ -156,7 +156,7 @@ def next_missing_image(request):
 
     entries = []
     entrysql = f"""
-    select entryid from codex_name_ref cnr where {limit} hud_category not in ('None') and exists
+    select entryid from codex_name_ref cnr where  hud_category not in ('None') and exists
         (select 1 from codex_images cr where cnr.entryid = cr.entryid and (cr.url is null or cr.cmdr is null))
         {exclude_clause}
     """
@@ -214,10 +214,10 @@ def next_missing_image(request):
             cr = cursor.fetchall()
     except Exception as e:
         cr = [{"error": str(e)}]
-    if request.args.get("limit") is None:        
+    if request.args.get("limit") is None:
         return cr[0]
     else:
-        return cr
+        return jsonify(cr)
 
 
 def nest_codex(data):
