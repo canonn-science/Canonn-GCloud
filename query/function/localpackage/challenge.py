@@ -125,6 +125,7 @@ def next_missing_image(request):
     px = request.args.get("x")
     py = request.args.get("y")
     pz = request.args.get("z")
+    
     exclude = request.args.get("exclude")
     x, y, z = None, None, None
     limit = ""
@@ -185,7 +186,7 @@ def next_missing_image(request):
         ) data2
     ) all_data
     join codex_name_ref cnr on cnr.entryid = all_data.entryid
-    order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 1
+    order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc limit 10
     """
 
     res = {}
@@ -213,7 +214,10 @@ def next_missing_image(request):
             cr = cursor.fetchall()
     except Exception as e:
         cr = [{"error": str(e)}]
-    return cr[0]
+    if request.args.get("limit") is None:        
+        return cr[0]
+    else:
+        return cr
 
 
 def nest_codex(data):
