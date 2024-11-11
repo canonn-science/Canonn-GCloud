@@ -125,10 +125,10 @@ def next_missing_image(request):
     px = request.args.get("x")
     py = request.args.get("y")
     pz = request.args.get("z")
-    
+
     exclude = request.args.get("exclude")
     x, y, z = None, None, None
-    
+
     if request.args.get("horizons") in ("Y", "y"):
         limit = " platform = 'legacy' and "
 
@@ -715,6 +715,14 @@ def nearest_codex(request):
         y = request.args.get("y", 0.0)
         z = request.args.get("z", 0.0)
 
+    if request.args.get("limit"):
+        limit = int(request.args.get("limit"))
+    else:
+        limit = 20
+
+    if limit > 20:
+        limit = 20
+
     entries = []
     entrysql = f"select entryid from codex_name_ref cnr where hud_category not in ('None') and english_name like concat('%%',%s,'%%')"
     setup_sql_conn()
@@ -742,7 +750,7 @@ def nearest_codex(request):
     setup_sql_conn()
     with get_cursor() as cursor:
         sql = f"""
-            select cnr.english_name,cnr.entryid,data3.system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance
+            select cnr.english_name,cnr.entryid,data3.system,cast(round(sqrt(pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2)),2) as char) as distance,x,y,z
             from (
             	select * from (
                     select * from codex_systems 
@@ -762,7 +770,7 @@ def nearest_codex(request):
             ) data3
             join codex_name_ref cnr on cnr.entryid=data3.entryid
             order by pow(x-%s,2)+pow(y-%s,2)+pow(z-%s,2) asc 
-            limit 20
+            limit %s
         """
 
         params = []
@@ -772,6 +780,7 @@ def nearest_codex(request):
         params.extend([x, y, z])
         params.extend(entries)
         params.extend([x, y, z])
+        params.extend([limit])
         cursor.execute(sql, params)
         r = cursor.fetchall()
         cursor.close()
