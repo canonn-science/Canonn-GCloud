@@ -262,6 +262,12 @@ def codex_ref():
     return localpackage.codex.codex_name_ref(request)
 
 
+@app.route("/codex/quantify/<entryid>")
+@wrap_route
+def codex_quantify(entryid):
+    return localpackage.codex.quantify_codex(entryid)
+
+
 @app.route("/codex/cmdr/<cmdrname>")
 @wrap_route
 def codex_cmdr(cmdrname):

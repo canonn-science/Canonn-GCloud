@@ -530,6 +530,27 @@ def system_biostats(request):
     return jsonify(spanshdump)
 
 
+def quantify_codex(entryid):
+    with get_cursor() as cursor:
+        sql = """
+            SELECT 
+                `system` as systemName, 
+                SQRT(POW(x - 0, 2) + POW(y - 0, 2) + POW(z - 0, 2)) AS distance,
+                COUNT(*) OVER () AS total_count  
+            FROM 
+                codex_systems
+                where entryid  = %s
+            ORDER BY 
+                distance ASC
+            LIMIT 1;
+
+        """
+        cursor.execute(sql, (entryid))
+        r = cursor.fetchone()
+        cursor.close()
+        return jsonify(r)
+
+
 def codex_name_ref(request):
 
     with get_cursor() as cursor:
