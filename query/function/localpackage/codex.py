@@ -535,7 +535,7 @@ def quantify_codex(entryid):
         sql = """
             SELECT 
                 `system` as systemName, 
-                SQRT(POW(x - 0, 2) + POW(y - 0, 2) + POW(z - 0, 2)) AS distance,
+                SQRT(POW(x - -178.65625, 2) + POW(y - 77.125, 2) + POW(z - -87.125, 2)) AS distance,
                 COUNT(*) OVER () AS total_count  
             FROM 
                 codex_systems
