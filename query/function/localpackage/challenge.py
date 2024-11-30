@@ -429,10 +429,16 @@ def challenge_status(request):
 def missing_codex(request):
     cmdr = request.args.get("cmdr", None)
     with get_cursor() as cursor:
-        sql = f"""
-            select entryid,english_name,hud_category from codex_name_ref cnr where not exists (
-        select 1 from codex_cmdrs cc where cmdr = %s and cnr.entryid = cc.entryid)
-        """
+        if cmdr == "MISSING IMAGES":
+            sql = f"""
+                select entryid,english_name,hud_category from codex_name_ref cnr where exists (
+            select 1 from codex_images cc where (cmdr = %s or cmdr is null or url is null) and cnr.entryid = cc.entryid)
+            """
+        else:
+            sql = f"""
+                select entryid,english_name,hud_category from codex_name_ref cnr where not exists (
+            select 1 from codex_cmdrs cc where cmdr = %s and cnr.entryid = cc.entryid)
+            """
         cursor.execute(sql, (cmdr))
         r = cursor.fetchall()
     return jsonify(r)
