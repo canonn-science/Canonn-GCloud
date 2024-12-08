@@ -462,8 +462,9 @@ def challenge_svg(request):
                 c += 1
                 titles["I" + str(c)] = {"name": name, "class": "missing"}
     maxcol = trunc(sqrt(c))
+    maxrow = (c - 1) // maxcol + 1
     width = maxcol * 21
-    height = maxcol * 21 + 100
+    height = maxrow * 21 + 100
 
     svg_start = f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}px" height="{height}px" viewBox="0 0 {width} {height}" style="background-color: black" >'
     svg_header = """
