@@ -569,6 +569,7 @@ def codex_name_ref(request):
             FROM organic_sales os
             LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
             REPLACE(os.species,'_Name;','%%')
+            where os.reported_at < '2024-10-31'
             ) DATA
                  GROUP BY entryid
             ) AS data2 ON data2.entryid = c.entryid
@@ -680,6 +681,7 @@ def species_prices(request):
                     created_at
                 FROM organic_sales os
                 JOIN codex_name_ref cnr ON cnr.name LIKE REPLACE(os.species,'_Name;','%%')
+                WHERE os.reported_at < '2024-10-11'
             ) data
             GROUP BY REPLACE(JSON_EXTRACT(sub_species, '$.p[0]'),'"',''), sub_class
             ORDER BY reward DESC;       
