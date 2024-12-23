@@ -54,7 +54,7 @@ def challenge_next(request):
 
     exclude_clause = ""
     if exclude is not None:
-        exclude_clause = "and english_name not like concat('%%',%s,'%%')"
+        exclude_clause = "and hud_category not like concat('%%',%s,'%%')"
         params.append(exclude)
 
     entries = []
