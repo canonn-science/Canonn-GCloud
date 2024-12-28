@@ -99,9 +99,11 @@ systems = [
     },
 ]
 
+GNOSIS_REF = "20-09-10"
+
 
 def get_schedule():
-    start_date = "20-09-17"
+    start_date = GNOSIS_REF
     thursdays_count = count_thursdays(start_date)
     schedule = []
 
@@ -130,7 +132,9 @@ def gnosis(ds=None):
     else:
         target = pytz.utc.localize(datetime.utcnow())
 
-    ref_date = pytz.utc.localize(datetime.strptime("2020-09-17 07", "%Y-%m-%d %H"))
+    ref_date = pytz.utc.localize(
+        datetime.strptime("20" + GNOSIS_REF + " 07", "%Y-%m-%d %H")
+    )
 
     wb = weeks_between(target, ref_date)
     wp = wb % 8
