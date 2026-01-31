@@ -555,24 +555,10 @@ def codex_name_ref(request):
 
     with get_cursor() as cursor:
         sql = """
-            SELECT c.*,data2.reward,ci.cmdr as image_cmdr,ci.url as image_url
+            SELECT c.*,sp.reward,ci.cmdr as image_cmdr,ci.url as image_url
             FROM codex_name_ref c
             left join codex_images ci on ci.entryid = c.entryid
-            LEFT JOIN (
-            SELECT
-                            entryid, CAST(SUBSTRING_INDEX(GROUP_CONCAT(reward
-                            ORDER BY created_at DESC), ',', 1) AS SIGNED) AS reward
-            FROM (
-            SELECT
-            entryid,
-            reward,created_at
-            FROM organic_sales os
-            LEFT JOIN codex_name_ref cnr ON cnr.name LIKE
-            REPLACE(os.species,'_Name;','%%')
-            where os.reported_at < '2024-10-31'
-            ) DATA
-                 GROUP BY entryid
-            ) AS data2 ON data2.entryid = c.entryid
+            left join species_prices sp on c.name LIKE REPLACE(sp.species,'_Name;','%%')
             WHERE 1 = 1 
         """
         hud_category = request.args.get("category")
@@ -669,22 +655,14 @@ def species_prices(request):
     r = None
     with get_cursor() as cursor:
         sql = """
-            SELECT
-                REPLACE(JSON_EXTRACT(sub_species, '$.p[0]'),'"','') as sub_species,
-                CAST(SUBSTRING_INDEX(GROUP_CONCAT(reward ORDER BY created_at DESC), ',', 1) as SIGNED) as reward,
-                sub_class
-            FROM (
-                SELECT
-                    CAST(CONCAT('{"p": ["', REPLACE(english_name,' - ','","'),'"]}') as JSON) sub_species,
-                    reward,
-                    sub_class,
-                    created_at
-                FROM organic_sales os
-                JOIN codex_name_ref cnr ON cnr.name LIKE REPLACE(os.species,'_Name;','%%')
-                WHERE os.reported_at < '2024-10-11'
-            ) data
-            GROUP BY REPLACE(JSON_EXTRACT(sub_species, '$.p[0]'),'"',''), sub_class
-            ORDER BY reward DESC;       
+            select distinct 
+            SUBSTRING_INDEX(english_name,' - ',1) sub_species,
+            reward,
+            sub_class
+            FROM codex_name_ref c
+            join species_prices sp on c.name LIKE REPLACE(sp.species,'_Name;','%%')
+            WHERE 1 = 1    
+            order by reward desc  
         """
         cursor.execute(sql, ())
         r = cursor.fetchall()
