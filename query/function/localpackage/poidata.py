@@ -73,17 +73,12 @@ def organic_scans(cmdr, system, odyssey):
         cursor.execute(sql, (cmdr, system))
         cr = cursor.fetchall()
 
-    exclude = {}
-    for entry in cr:
-        if entry.get("body"):
-            exclude[entry.get("entryid")] = True
-
+    
     result = []
     i = 0
     while i < len(cr):
         entry = cr[i]
-        if entry.get("body") or not exclude.get(entry.get("entryid")):
-            # print(entry.get("body"))
+        if entry.get("body"):
             result.append(entry)
         i += 1
 
@@ -529,8 +524,8 @@ def getSystemPoi(request):
         result["cmdr"] = cpoi
     if fss:
         result["FSSsignals"] = fss
-    # if scans:
-    #    result["ScanOrganic"] = scans
+    if scans:
+        result["ScanOrganic"] = scans
 
     return result
 
