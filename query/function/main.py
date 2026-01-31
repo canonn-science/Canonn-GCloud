@@ -37,6 +37,8 @@ from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
 import logging
 
+import localpackage.simbad
+
 from functools import wraps
 from flask import url_for
 import uuid
@@ -560,3 +562,25 @@ def root():
 @functions_framework.http
 def payload(request):
     return "what happen", 400
+
+
+# /simbad endpoint
+@app.route("/simbad", methods=["GET"])
+@wrap_route
+def simbad_lookup():
+    system_address = request.args.get("system_address")
+    name = request.args.get("name")
+    if not system_address or not name:
+        return jsonify({"error": "Missing system_address or name"}), 400
+    try:
+        # system_address should be int
+        system_address = int(system_address)
+    except Exception:
+        return jsonify({"error": "system_address must be an integer"}), 400
+    result = localpackage.simbad.get_simbad_object(system_address, name)
+    if result is None:
+        return (
+            jsonify({"found": False, "system_address": system_address, "name": name}),
+            404,
+        )
+    return jsonify(result)
