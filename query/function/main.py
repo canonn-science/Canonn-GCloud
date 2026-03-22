@@ -577,7 +577,13 @@ def simbad_lookup():
         system_address = int(system_address)
     except Exception:
         return jsonify({"error": "system_address must be an integer"}), 400
-    result = localpackage.simbad.get_simbad_object(system_address, name)
+
+    # Optional coordinates for fallback search
+    x = request.args.get("x", type=float)
+    y = request.args.get("y", type=float)
+    z = request.args.get("z", type=float)
+
+    result = localpackage.simbad.get_simbad_object(system_address, name, x=x, y=y, z=z)
     if result is None:
         return (
             jsonify({"found": False, "system_address": system_address, "name": name}),

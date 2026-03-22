@@ -11,7 +11,7 @@ requests
 Werkzeug==2.2.2
 sshtunnel>=0.4.0
 paramiko<3.0
-
+astropy
 astroquery
 bs4
 

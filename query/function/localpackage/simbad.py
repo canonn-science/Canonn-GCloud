@@ -1,80 +1,141 @@
 import datetime
+import logging
 from . import dbutils
 from astroquery.simbad import Simbad
-import requests
-from bs4 import BeautifulSoup
+from astropy import units as u
+from astropy.coordinates import (
+    SkyCoord,
+    CartesianRepresentation,
+    SphericalRepresentation,
+    Galactic,
+    ICRS,
+)
+from astropy.table import QTable
 
 
 def now():
     return datetime.datetime.utcnow()
 
 
-def get_simbad_from_stellar_catalog(wise_short_name):
+def search_simbad_by_coordinates(x, y, z, name=None, maxdist_ly=0.1):
     """
-    Given a WISE short name (e.g., "WISE-2056-1459"),
-    scrape StellarCatalog to find the full SIMBAD identifier.
+    Search SIMBAD for the nearest star, pulsar, or black hole within maxdist_ly
+    of the given Elite Dangerous coordinates (x, y, z in light years).
+    If name starts with 'WISE', prefer returning a WISE object if found.
+    Returns the main_id if found, None otherwise.
     """
-    # Normalize the URL for StellarCatalog
-    wise_name_url = wise_short_name.lower().replace(" ", "-")
-    url = f"https://www.stellarcatalog.com/stars/{wise_name_url}"
-    print(url)
+    print(
+        f"[SIMBAD] Starting coordinate search at ({x}, {y}, {z}) with max distance {maxdist_ly} ly, name hint: '{name}'"
+    )
+    try:
+        # Convert Elite Dangerous coordinates to galactic coordinates
+        cart = CartesianRepresentation(z, -x, y, unit=u.lightyear)
+        coord = SphericalRepresentation.from_cartesian(cart)
+        icrs = SkyCoord(coord.lon, coord.lat, coord.distance, frame=Galactic).icrs
 
-    # Fetch the page
-    response = requests.get(url)
-    if response.status_code != 200:
-        return f"Error: Could not fetch page, status code {response.status_code}"
+        # Calculate search radius in degrees
+        maxdist = maxdist_ly * u.lightyear
+        radius = (maxdist * u.radian / coord.distance) << u.deg
+        print(
+            f"[SIMBAD] Converted coords - ICRS RA: {icrs.ra}, Dec: {icrs.dec}, Distance: {coord.distance}, Search radius: {radius}"
+        )
 
-    # Parse HTML
-    soup = BeautifulSoup(response.text, "html.parser")
+        # Build coordinate table for TAP query (both ICRS and FK4 frames)
+        fk4 = icrs.fk4
+        fk4_icrs = SkyCoord(fk4.ra, fk4.dec, fk4.distance, frame=ICRS)
 
-    # Look for SIMBAD link (it usually contains 'simbad' in the href)
-    simbad_link = soup.find("a", href=lambda x: x and "simbad" in x.lower())
+        coords = QTable(
+            names=("frame", "ra", "dec", "radius", "distance"),
+            rows=[
+                (
+                    "icrs",
+                    u.Quantity(icrs.ra),
+                    u.Quantity(icrs.dec),
+                    radius,
+                    coord.distance,
+                ),
+                (
+                    "fk4_icrs",
+                    u.Quantity(fk4_icrs.ra),
+                    u.Quantity(fk4_icrs.dec),
+                    radius,
+                    coord.distance,
+                ),
+            ],
+        )
 
-    if simbad_link and "href" in simbad_link.attrs:
-        href = simbad_link["href"]
-        # The SIMBAD identifier is usually at the end of the URL after 'Ident='
-        if "Ident=" in href:
-            simbad_id = href.split("Ident=")[-1]
-            # Decode URL encoding if any
-            simbad_id = simbad_id.replace("%20", " ").replace("%2B", "+")
-            return simbad_id
-        else:
-            return wise_short_name
-    else:
-        return wise_short_name
+        # TAP query to find nearest objects (stars, pulsars, black holes)
+        query = """
+        SELECT
+            sys_coords.frame,
+            basic.oid,
+            basic.main_id,
+            basic.otype,
+            basic.ra,
+            basic.dec,
+            basic.plx_value,
+            RADIANS(DISTANCE(POINT('ICRS', basic.ra, basic.dec), POINT('ICRS', sys_coords.ra, sys_coords.dec))) * sys_coords."distance" AS distance_ly
+        FROM TAP_UPLOAD.sys_coords
+        JOIN basic ON CONTAINS(POINT('ICRS', basic.ra, basic.dec), CIRCLE('ICRS', sys_coords.ra, sys_coords.dec, sys_coords.radius)) = 1
+        WHERE basic.otype IN ('*', 'Pulsar', 'BH', 'V*', 'PM*', 'HV*', 'C*', 'WD*', 'BD*', 'N*', 'sg*', 'AB*', 'Mi*', 'sr*', 'Ce*', 'RR*', 'Ro*', 'LP*', 'Er*', 'Fl*', 'Or*', 'SB*', 'El*', 'EB*', 'Be*', 'WR*', 'Al*', 'bC*', 'XB*', 'Sy*', 'CV*', 'No*', 'RG*', 'HB*', 'BS*', 'RC*', 'Pl')
+        ORDER BY distance_ly ASC
+        """
+
+        mirrors = [
+            ("simbad.cds.unistra.fr", 5),
+            ("simbad.harvard.edu", 10),
+        ]
+
+        for mirror_url, timeout in mirrors:
+            try:
+                print(f"[SIMBAD] Trying TAP query on mirror: {mirror_url}")
+                simbad = Simbad()
+                simbad.TIMEOUT = timeout
+                simbad.server = mirror_url
+                result = simbad.query_tap(query=query, sys_coords=coords)
+
+                if result is not None and len(result) > 0:
+                    # Print all results
+                    print(f"[SIMBAD] Found {len(result)} objects via coordinates:")
+                    for i, row in enumerate(result):
+                        print(f"[SIMBAD]   {i+1}. oid: {row['oid']}, main_id: {row['main_id']}, otype: {row['otype']}, distance: {row['distance_ly']:.6f} ly, frame: {row['frame']}")
+                    
+                    # If name starts with WISE, prefer a WISE object closest to coordinates
+                    if name and name.upper().startswith("WISE"):
+                        # Filter for WISE objects and pick the closest one
+                        wise_results = [row for row in result if str(row['main_id']).upper().startswith("WISE")]
+                        if wise_results:
+                            # Already sorted by distance, so first WISE result is closest
+                            closest_wise = wise_results[0]
+                            print(f"[SIMBAD] Name starts with WISE, selecting closest WISE object: '{closest_wise['main_id']}' at distance {closest_wise['distance_ly']:.6f} ly")
+                            return closest_wise['main_id']
+                        else:
+                            print(f"[SIMBAD] Name starts with WISE but no WISE objects found in results, falling back to most common")
+                    
+                    # Count occurrences of each main_id to find the most common
+                    from collections import Counter
+                    main_id_counts = Counter(result["main_id"])
+                    most_common_main_id, count = main_id_counts.most_common(1)[0]
+                    
+                    print(f"[SIMBAD] Most common main_id: '{most_common_main_id}' (appears {count} times out of {len(result)})")
+                    return most_common_main_id
+                else:
+                    print(f"[SIMBAD] No results from TAP query on {mirror_url}")
+            except Exception as e:
+                print(f"[SIMBAD] Coordinate search failed on {mirror_url}: {e}")
+                continue
+
+        print("[SIMBAD] Coordinate search exhausted all mirrors, no results found")
+        return None
+    except Exception as e:
+        print(f"[SIMBAD] Error in coordinate search: {e}")
+        return None
 
 
-def wise_to_simbad(wise_short_name):
-    """
-    Convert a WISE short name (WISE hhmm±ddmm) into a SIMBAD-style full name.
-
-    Example:
-        WISE 0350-5658 -> WISE J035000-565800
-    """
-    # Remove "WISE " prefix if present
-    name = wise_short_name.strip().replace("WISE ", "")
-
-    # Extract RA and Dec parts
-    ra_part = name[:4]  # hhmm
-    dec_part = name[4:]  # ±ddmm
-
-    # Split RA into hours and minutes
-    ra_hh = ra_part[:2]
-    ra_mm = ra_part[2:]
-    ra_ss = "00.00"  # placeholder for seconds
-
-    # Split Dec into degrees and minutes
-    dec_sign = dec_part[0]  # + or -
-    dec_dd = dec_part[1:3]
-    dec_mm = dec_part[3:]
-    dec_ss = "00.0"  # placeholder for arcseconds
-
-    # Combine into SIMBAD-style name
-    simbad_name = f"WISE J{ra_hh}{ra_mm}{ra_ss}{dec_sign}{dec_dd}{dec_mm}{dec_ss}"
-    return simbad_name
-
-
-def get_simbad_object(system_address, name):
+def get_simbad_object(system_address, name, x=None, y=None, z=None):
+    print(
+        f"[SIMBAD] get_simbad_object called: system_address={system_address}, name='{name}', coords=({x}, {y}, {z})"
+    )
 
     dbutils.setup_sql_conn()
     cur = dbutils.get_cursor()
@@ -87,6 +148,7 @@ def get_simbad_object(system_address, name):
         for prefix in norm_prefixes:
             if norm_name.startswith(prefix + " "):
                 norm_name = prefix + "-" + norm_name[len(prefix) + 1 :]
+                print(f"[SIMBAD] Normalized name: '{name}' -> '{norm_name}'")
                 break
 
         # Try to get from DB
@@ -96,40 +158,89 @@ def get_simbad_object(system_address, name):
         )
         record = cur.fetchone()
         if record:
+            print(f"[SIMBAD] Cache hit for '{name}', returning cached record")
             return record  # cache hit
 
-        # Handle WISE names specially
-        if name.startswith("WISE "):
-            norm_name = get_simbad_from_stellar_catalog(name)
-            print(f"WISE name converted: {name} -> {norm_name}")
-
-        # cache miss → query SIMBAD
+        # cache miss → query SIMBAD by name
+        print(
+            f"[SIMBAD] Cache miss for '{name}', querying SIMBAD by name: '{norm_name}'"
+        )
         result = None
         successful_mirror = None
         mirrors = [
-            ("simbad.u-strasbg.fr", 1),
-            ("simbad.harvard.edu", 5),
-            ("simbad.cds.unistra.fr", 10),
+            ("simbad.cds.unistra.fr", 5),
+            ("simbad.harvard.edu", 10),
         ]
 
         for mirror_url, timeout in mirrors:
             try:
+                print(f"[SIMBAD] Trying name query on mirror: {mirror_url}")
                 simbad = Simbad()
                 simbad.TIMEOUT = timeout
                 simbad.server = mirror_url
                 simbad.add_votable_fields("ids", "plx", "oid")
                 result = simbad.query_object(norm_name)
                 if result is not None:
+                    print(
+                        f"[SIMBAD] Name query succeeded on {mirror_url}, found: {result['main_id'][0] if 'main_id' in result.colnames else 'unknown'}"
+                    )
                     successful_mirror = mirror_url
                     break  # Success, exit the loop
+                else:
+                    print(f"[SIMBAD] Name query returned None on {mirror_url}")
             except Exception as query_error:
+                print(f"[SIMBAD] Name query failed on {mirror_url}: {query_error}")
                 if mirror_url == mirrors[-1]:  # Last mirror failed
                     pass
                 continue  # Try next mirror
 
-        # Cache the result even if not found (to avoid repeated queries)
+        # If name-based query failed and we have coordinates, try coordinate search
+        if (
+            (result is None or len(result) == 0)
+            and x is not None
+            and y is not None
+            and z is not None
+        ):
+            print(
+                f"[SIMBAD] Name-based query failed for '{name}', attempting coordinate search at ({x}, {y}, {z})"
+            )
+            main_id = search_simbad_by_coordinates(x, y, z, name=name)
+
+            if main_id:
+                # Found a nearby object via coordinates, now query SIMBAD with that main_id
+                print(
+                    f"[SIMBAD] Found nearby object '{main_id}', querying SIMBAD for full details"
+                )
+                for mirror_url, timeout in mirrors:
+                    try:
+                        print(
+                            f"[SIMBAD] Trying detail query for '{main_id}' on mirror: {mirror_url}"
+                        )
+                        simbad = Simbad()
+                        simbad.TIMEOUT = timeout
+                        simbad.server = mirror_url
+                        simbad.add_votable_fields("ids", "plx", "oid")
+                        result = simbad.query_object(main_id)
+                        if result is not None:
+                            print(f"[SIMBAD] Detail query succeeded on {mirror_url}")
+                            successful_mirror = mirror_url
+                            break
+                        else:
+                            print(
+                                f"[SIMBAD] Detail query returned None on {mirror_url}"
+                            )
+                    except Exception as query_error:
+                        print(
+                            f"[SIMBAD] Detail query failed on {mirror_url}: {query_error}"
+                        )
+                        continue
+            else:
+                print(f"[SIMBAD] Coordinate search found no nearby objects")
+
+        # Now process the result (either from name query or coordinate fallback)
         if result is None or len(result) == 0:
-            # Cache "not found" result with null fields
+            # All options exhausted - cache "not found" result with null fields
+            print(f"[SIMBAD] All options exhausted for '{name}', caching empty record")
             record_data = {
                 "system_address": system_address,
                 "name": name,
@@ -182,6 +293,11 @@ def get_simbad_object(system_address, name):
                 "created_at": now(),
                 "updated_at": now(),
             }
+            print(
+                f"[SIMBAD] Found data - simbad_name: {simbad_name}, oid: {simbad_ident}, parallax: {parallax}"
+            )
+
+        print(f"[SIMBAD] Storing record in database for '{name}'")
         cur.execute(
             """
             INSERT INTO system_simbad_data (system_address, name, simbad_name, simbad_ident,other_names, ra_j2000, dec_j2000, parallax, epoch_error_j2000b1950, created_at, updated_at)
@@ -214,9 +330,13 @@ def get_simbad_object(system_address, name):
                 record = dict(record) if hasattr(record, "keys") else record
                 if isinstance(record, dict):
                     record["simbad_mirror"] = successful_mirror
+        print(
+            f"[SIMBAD] Returning record for '{name}': simbad_name={record.get('simbad_name') if isinstance(record, dict) else 'N/A'}"
+        )
         return record
     except Exception as e:
-        import logging
+        print(f"[SIMBAD] ERROR in get_simbad_object: {e}")
+        import traceback
 
-        logging.error(f"SIMBAD/DB error: {e}")
+        traceback.print_exc()
         return None
