@@ -11,15 +11,26 @@ from math import sqrt, trunc
 from collections import defaultdict
 
 
-def getCoordinates(system):
+def getCoordinates(system_name):
     try:
-        url = "https://www.edsm.net/api-v1/system?systemName={}&showCoordinates=1"
-        r = requests.get(url.format(system))
-        s = r.json()
-        c = s.get("coords")
-        return [float(c.get("x")), float(c.get("y")), float(c.get("z"))]
-    except:
-        raise Exception("Unable to get system from EDSM")
+        url = "https://spansh.co.uk/api/systems/field_values/system_names"
+        r = requests.get(url, params={"q": system_name}, timeout=10)
+        r.raise_for_status()
+
+        data = r.json()
+
+        for system in data["min_max"]:
+            if system["name"].lower() == system_name.lower():
+                return [
+                    float(system["x"]),
+                    float(system["y"]),
+                    float(system["z"])
+                ]
+
+        raise Exception(f"System '{system_name}' not found")
+
+    except Exception as e:
+        raise Exception(f"Unable to get system from Spansh: {e}")
 
 
 def challenge_next(request):

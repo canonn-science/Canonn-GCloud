@@ -8,6 +8,7 @@ import json
 from flask import jsonify
 from os import getenv
 import requests
+import time
 
 
 # Distances of Merope and Col70
@@ -104,24 +105,100 @@ def decode(s):
 
 def getCoordinates(system):
     try:
-        url = "https://www.edsm.net/api-v1/system?systemName={}&showCoordinates=1"
-        r = requests.get(url.format(system))
+        url = "https://spansh.co.uk/api/systems/field_values/system_names?q={}"
+        r = requests.get(url.format(quote_plus(system)))
         s = r.json()
-        c = s.get("coords")
-        return numpy.array([float(c.get("x")), float(c.get("y")), float(c.get("z"))])
-    except:
-        raise Exception("Unable to get system from EDSM")
+        mm = s.get("min_max", [])
+
+        # find exact name match in min_max
+        for entry in mm:
+            name = entry.get("name")
+            if name and name.strip().lower() == system.strip().lower():
+                x = entry.get("x")
+                y = entry.get("y")
+                z = entry.get("z")
+                return numpy.array([float(x), float(y), float(z)])
+
+        # no exact match found
+        raise Exception("Unable to find exact match for system in Spansh")
+    except Exception:
+        raise Exception("Unable to get system from Spansh")
 
 
 def getSphere(c):
     try:
-        url = "https://www.edsm.net/api-v1/sphere-systems?x={}&y={}&z={}&radius={}&showCoordinates=1"
-        r = requests.get(url.format(c[0], c[1], c[2], radius))
-        s = r.json()
+        # build the search payload
+        search = {
+            "filters": {"distance": {"min": "0.00", "max": "{:.2f}".format(radius)}},
+            "sort": [{"distance": {"direction": "asc"}}],
+            "size": 500,
+            "page": 0,
+            "reference_coords": {"x": float(c[0]), "y": float(c[1]), "z": float(c[2])},
+        }
 
-        return s
-    except:
-        raise Exception("Unable to get system from EDSM")
+        save_url = "https://spansh.co.uk/api/systems/search/save"
+
+        r = requests.post(save_url, json=search)
+        resp = r.json()
+
+        ref = resp.get("search_reference")
+        if not ref:
+            raise Exception("No search_reference returned from Spansh")
+
+        recall_url = "https://spansh.co.uk/api/systems/search/recall/{}".format(ref)
+
+        r2 = requests.get(recall_url)
+        recall = r2.json()
+        # expose the recall response for debugging
+
+        results = recall.get("results", [])
+
+        # If no results, try once more after a brief pause
+        if not results:
+            time.sleep(0.1)
+            r3 = requests.get(recall_url)
+            recall = r3.json()
+            try:
+                print("Spansh recall retry response:", json.dumps(recall, indent=2))
+            except Exception:
+                print("Spansh recall retry response:", recall)
+            results = recall.get("results", [])
+
+        if not results:
+            raise Exception("No results returned from Spansh recall")
+
+        formatted = []
+        for item in results:
+            name = item.get("name")
+            xv = item.get("x")
+            yv = item.get("y")
+            zv = item.get("z")
+            distance_val = item.get("distance")
+
+            try:
+                x = float(xv)
+            except (TypeError, ValueError):
+                x = xv
+            try:
+                y = float(yv)
+            except (TypeError, ValueError):
+                y = yv
+            try:
+                z = float(zv)
+            except (TypeError, ValueError):
+                z = zv
+
+            formatted.append(
+                {
+                    "name": name,
+                    "coords": {"x": x, "y": y, "z": z},
+                    "distance": distance_val,
+                }
+            )
+
+        return formatted
+    except Exception:
+        raise Exception("Unable to get sphere systems from Spansh")
 
 
 # Find the intersection of three spheres
@@ -240,6 +317,7 @@ def get_trilateration_result(O, r1, r2, r3, res):
                 {
                     "name": i.get("name"),
                     "error": i.get("distance"),
+                    "coords": i.get("coords"),
                     "control": round(cd, 2),
                     "matches": matchCount,
                 }

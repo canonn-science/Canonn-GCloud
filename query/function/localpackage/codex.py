@@ -15,39 +15,39 @@ id64list = []
 
 
 # get the id64 for a given system
-
-
-def getId64(systemName):
+def getId64(system_name):
     global id64list
     for system in id64list:
-        id = system.get(systemName)
+        id = system.get(system_name)
         if id:
             print("id64 from cache")
             return id
     try:
-        print(systemName)
+        url = "https://spansh.co.uk/api/systems/field_values/system_names"
+        r = requests.get(url, params={"q": system_name}, timeout=10)
+        r.raise_for_status()
 
-        param = urllib.parse.quote(systemName)
-        print(param)
+        data = r.json()
 
-        url = f"https://www.edsm.net/api-v1/system?systemName={param}&showId=1"
-        print(url)
-        r = requests.get(url)
-        j = r.json()
-        if j.get("id64"):
-            # we will store 200 id64 in memory
-            if len(id64list) > 200:
-                id64list.pop()
+        for system in data["min_max"]:
+            if system["name"].lower() == system_name.lower():
+                if len(id64list) > 200:
+                    id64list.pop()
 
-            item = {}
-            item[systemName] = j.get("id64")
-            id64list.append(item)
-            return j.get("id64")
-    except:
+                item = {}
+                item[system_name] = system.get("id64")
+                id64list.append(item)
+                return system.get("id64")
+            
+        raise Exception(f"System '{system_name}' not found")
+
+    except Exception as e:
         print("Error getting request")
         print(url)
-        print(j)
+        print(data)
         return None
+   
+
 
 
 def findRegion64(id):
@@ -67,13 +67,11 @@ def findRegion64(id):
 def get_biostats(cache=True):
     global biostats
     if not biostats or not cache:
-        print("fetching stats")
+
         r = requests.get(
             "https://drive.google.com/uc?id=14t7SKjLyATHVipuqNiGT-ziA2nRW8sKj"
         )
         biostats = r.json()
-    else:
-        print("stats cached")
 
 
 def biostats_cache(cache):
@@ -94,7 +92,6 @@ def get_spansh_by_id(id64):
     # ignore caching as we want latest data
     # if not cached:
     if True:
-        print("fetching from spansh")
         r = requests.get(f"https://spansh.co.uk/api/dump/{id64}")
         spanshdump = r.json()
         if spanshdump.get("system"):
@@ -482,9 +479,12 @@ def system_biostats(request):
     global spanshdump
 
     id = request.args.get("id")
+    caller = request.args.get("caller")
     systemName = request.args.get("system")
     if request.args.get("system"):
         id = getId64(systemName)
+
+    print(f"caller: {caller} id: {id} system: {systemName}")
 
     # lazy loaders
     get_biostats()
