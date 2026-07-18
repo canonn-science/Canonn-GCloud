@@ -57,29 +57,44 @@ def is_database_up(host, port):
 def create_tunnel():
     global tunnel_config
     global tunnel
+
     if tunnel:
-        print("tunnel already started")
-    else:
-        print("create tunnel")
-        if tunnel_config.get("keyfile") is not None:
-            key = RSAKey.from_private_key_file(tunnel_config.get("keyfile"))
+        if tunnel.is_active:
+            print("tunnel already started")
+            return tunnel
+        # tunnel object exists but the underlying SSH connection has died
+        print("tunnel is dead, tearing down before reconnecting")
+        try:
+            tunnel.close()
+        except:
+            logging.error("error closing dead tunnel")
+        tunnel = None
 
-            tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(tunnel_config.get("host"), 22),
-                ssh_username=tunnel_config.get("user"),
-                ssh_pkey=key,
-                local_bind_address=("localhost", tunnel_config.get("local_port")),
-                remote_bind_address=("localhost", tunnel_config.get("remote_port")),
-                compression=True,
-            )
-            try:
-                tunnel.start()
-                print("tunnel started")
-            except:
-                print("Failed to start tunnel")
-                return None
+    print("create tunnel")
+    if tunnel_config.get("keyfile") is not None:
+        key = RSAKey.from_private_key_file(tunnel_config.get("keyfile"))
 
+        new_tunnel = SSHTunnelForwarder(
+            ssh_address_or_host=(tunnel_config.get("host"), 22),
+            ssh_username=tunnel_config.get("user"),
+            ssh_pkey=key,
+            local_bind_address=("localhost", tunnel_config.get("local_port")),
+            remote_bind_address=("localhost", tunnel_config.get("remote_port")),
+            compression=True,
+        )
+        try:
+            new_tunnel.start()
+            print("tunnel started")
+        except Exception:
+            # do not assign to the global tunnel; a half-started
+            # SSHTunnelForwarder would otherwise be treated as truthy
+            # forever and never get retried
+            print("Failed to start tunnel")
+            return None
+
+        tunnel = new_tunnel
         return tunnel
+
     return None
 
 
@@ -147,4 +162,5 @@ def setup_sql_conn():
         mysql_conn.ping(reconnect=True)
     except:
         close_mysql()
+        create_tunnel()
         setup_sql()
