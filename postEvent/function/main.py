@@ -501,10 +501,10 @@ def insertCodex(request_args):
         if cursor.rowcount == 1:
             canonnsearch = "https://canonn.science/?s="
             codexsearch = (
-                "https://canonn-science.github.io/canonn-signals/index.html?system="
+                "https://signals.canonn.tech/?system="
             )
 
-            content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {}{}".format(
+            content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}](<{}{}>) of region {} category: {} sub category: {}{}".format(
                 cmdrName,
                 name_localised,
                 canonnsearch,
@@ -597,10 +597,10 @@ def insert_codex_systems(request_args):
             if cursor.rowcount == 1:
                 canonnsearch = "https://canonn.science/?s="
                 codexsearch = (
-                    "https://canonn-science.github.io/canonn-signals/index.html?system="
+                    "https://signals.canonn.tech?system="
                 )
 
-                content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}]({}{}) of region {} category: {} sub category: {} {}".format(
+                content = "Commander {} has discovered [{}](<{}{}>) ({}) in system [{}](<{}{}>) of region {} category: {} sub category: {} {}".format(
                     cmdrName,
                     english_name,
                     canonnsearch,
@@ -1871,7 +1871,7 @@ def plugin_error():
     if rowcount == 1:
 
         excuse = generate_random_excuse()
-        content = f"""Plugin error at [{data.get('system_name')}](https://signals.canonn.tech/?system={quote(data.get('system_name'))}) for {data.get('function_name')}()\nVersion: {data.get('clientVersion')}: {excuse}"""
+        content = f"""Plugin error at [{data.get('system_name')}](<https://signals.canonn.tech/?system={quote(data.get('system_name'))}>) for {data.get('function_name')}()\nVersion: {data.get('clientVersion')}: {excuse}"""
         payload = {}
         payload["content"] = content
         requests.post(
