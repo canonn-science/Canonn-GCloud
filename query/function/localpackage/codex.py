@@ -6,6 +6,9 @@ from pymysql.err import OperationalError
 from EDRegionMap.RegionMap import findRegion
 import requests
 import json
+import math
+import re
+from datetime import datetime, timezone
 from flask import jsonify
 import urllib.parse
 
@@ -241,63 +244,426 @@ def checkMats(body, species):
 
 
 """
-  If the species is tied to a star type and the star type does not match 
-  then return false all other cases we can return true
+Ports of canonn-signals' influencing-star.ts (flux-dominance algorithm that determines
+which star in a multi-star system governs a body's biology) and biology-star-class.ts
+(filters a guessed biology signal against that star's class), so the CanonnBiostats API
+can apply the same logic Canonn Signals uses in the browser.
+See https://github.com/canonn-science/canonn-signals/blob/main/src/app/data/influencing-star.ts
+and https://github.com/canonn-science/canonn-signals/blob/main/src/app/data/biology-star-class.ts
 """
 
+KM_PER_AU = 149597870.7
+KM_PER_LIGHT_SECOND = 299792.458
+DEG_TO_RAD = math.pi / 180
+MS_PER_DAY = 86400000
 
-def checkStar(codex, system):
-    fdevname = codex.get("fdevname")
-    try:
-        h1, h1, genus, species, star, t = fdevname.split("_")
-    except:
-        # we don't know so let it got
-        # print(f"exception: {fdevname}")
-        return True
+REFERENCE_MS = datetime(2021, 4, 1, tzinfo=timezone.utc).timestamp() * 1000
+NEAR_TIE_RATIO_THRESHOLD = 2.0
+TIME_AVERAGE_N_SAMPLES = 24
+SAMPLE_TIMES_MS = [
+    datetime(
+        round(1500 + (2700 - 1500) * i / (TIME_AVERAGE_N_SAMPLES - 1)),
+        1,
+        1,
+        tzinfo=timezone.utc,
+    ).timestamp()
+    * 1000
+    for i in range(TIME_AVERAGE_N_SAMPLES)
+]
 
-    stars = {
-        "O": ["O (Blue-White) Star"],
-        "B": ["B (Blue-White) Star"],
-        "A": ["A (Blue-White super giant) Star", "A (Blue-White) Star"],
-        "F": ["F (White) Star", "F (White super giant) Star"],
-        "G": ["G (White-Yellow super giant) Star", "G (White-Yellow) Star"],
-        "K": ["K (Yellow-Orange giant) Star", "K (Yellow-Orange) Star"],
-        "M": ["M (Red dwarf) Star", "M (Red super giant) Star"],
-        "L": ["L (Brown dwarf) Star"],
-        "T": ["T (Brown dwarf) Star"],
-        "TTS": ["T Tauri Star"],
-        "Y": ["Y (Brown dwarf) Star"],
-        "W": ["Wolf-Rayet Star"],
-        "D": [
-            "White Dwarf (D) Star",
-            "White Dwarf (DA) Star",
-            "White Dwarf (DAB) Star",
-            "White Dwarf (DAV) Star",
-            "White Dwarf (DAZ) Star",
-            "White Dwarf (DB) Star",
-            "White Dwarf (DBV) Star",
-            "White Dwarf (DC) Star",
-            "White Dwarf (DCV) Star",
-            "White Dwarf (DQ) Star",
-        ],
-        "N": ["Neutron Star"],
-        "Ae": ["Herbig Ae/Be Star"],
+# Y-class (brown dwarf) flux boost, see N_BOOST below for the rationale.
+Y_BOOST = 1.75
+# Neutron-star flux boost. Stefan-Boltzmann (R^2*T^4) systematically under-ranks neutron
+# stars, since their microscopic radius crushes even their multi-million-K fictional
+# surfaceTemperature, so a larger boost compensates.
+N_BOOST = 2.5
+
+_ORBITAL_FIELDS = (
+    "semiMajorAxis",
+    "orbitalEccentricity",
+    "orbitalInclination",
+    "ascendingNode",
+    "argOfPeriapsis",
+    "meanAnomaly",
+)
+
+
+def _body_index(system):
+    return {
+        b.get("bodyId"): b for b in system.get("bodies") or [] if b.get("bodyId") is not None
     }
-    # if star is defined and in the star list we have a star class
-    if star and stars.get(star):
-        subTypes = stars.get(star)
-        for body in system.get("bodies"):
-            if subTypes and body.get("subType") and body.get("subType") in subTypes:
-                return True
-    else:
-        # we don't know so let it through
-        # print(f"lookup failed: {codex}")
+
+
+def _ancestor_ids(body):
+    ids = []
+    for entry in body.get("parents") or []:
+        ids.extend(entry.values())
+    return ids
+
+
+def _build_parent_map(system):
+    """
+    Maps every body id appearing anywhere in the system to its immediate parent id, built
+    from consecutive pairs in every body's own flattened `parents` chain (nearest-first).
+    This recovers the correct immediate parent even for a node (e.g. an intermediate
+    barycentre) whose own record omits `parents` entirely, as long as some descendant's
+    chain lists it - Spansh sometimes drops `parents` on such nodes even though they
+    genuinely orbit something. An id that never appears as a non-terminal entry in any
+    chain has no mapped parent and is the true system root.
+    """
+    parent_of = {}
+    for b in system.get("bodies") or []:
+        bid = b.get("bodyId")
+        if bid is None:
+            continue
+        ids = [bid] + _ancestor_ids(b)
+        for child_id, next_id in zip(ids, ids[1:]):
+            parent_of.setdefault(child_id, next_id)
+    return parent_of
+
+
+def _mean_anomaly_now_deg(mean_anomaly_deg, orbital_period_days, timestamp, now_ms):
+    if not orbital_period_days or not timestamp:
+        return mean_anomaly_deg
+    try:
+        epoch_ms = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp() * 1000
+    except (ValueError, AttributeError):
+        return mean_anomaly_deg
+    cycles = ((now_ms - epoch_ms) / MS_PER_DAY) / orbital_period_days
+    return (((mean_anomaly_deg + cycles * 360) % 360) + 360) % 360
+
+
+def _orbital_state_vector_km(a_au, e, incl_deg, node_deg, argp_deg, mean_anomaly_deg):
+    a = a_au * KM_PER_AU
+    ecc = min(max(e, 0), 0.999)
+    m = (((mean_anomaly_deg % 360) + 360) % 360) * DEG_TO_RAD
+    E = m if ecc < 0.8 else math.pi
+    for _ in range(12):
+        delta = (E - ecc * math.sin(E) - m) / (1 - ecc * math.cos(E))
+        E -= delta
+        if abs(delta) < 1e-12:
+            break
+    xo = a * (math.cos(E) - ecc)
+    yo = a * math.sqrt(1 - ecc * ecc) * math.sin(E)
+    node = -node_deg * DEG_TO_RAD
+    argp = -argp_deg * DEG_TO_RAD
+    incl = incl_deg * DEG_TO_RAD
+    cO, sO = math.cos(node), math.sin(node)
+    cw, sw = math.cos(argp), math.sin(argp)
+    ci, si = math.cos(incl), math.sin(incl)
+    return (
+        xo * (cO * cw - sO * sw * ci) - yo * (cO * sw + sO * cw * ci),
+        xo * (sO * cw + cO * sw * ci) - yo * (sO * sw - cO * cw * ci),
+        xo * (sw * si) + yo * (cw * si),
+    )
+
+
+def _body_offset_km(body, now_ms):
+    if any(body.get(f) is None for f in _ORBITAL_FIELDS):
+        return None
+    timestamp = (body.get("timestamps") or {}).get("meanAnomaly")
+    m = _mean_anomaly_now_deg(
+        body.get("meanAnomaly"), body.get("orbitalPeriod"), timestamp, now_ms
+    )
+    return _orbital_state_vector_km(
+        body.get("semiMajorAxis"),
+        body.get("orbitalEccentricity"),
+        body.get("orbitalInclination"),
+        body.get("ascendingNode"),
+        body.get("argOfPeriapsis"),
+        m,
+    )
+
+
+def _absolute_position_km(body_id, index, parent_map, now_ms, cache):
+    """
+    Absolute position (km) in the system's shared frame: own orbital offset plus every
+    ancestor's, walking `parent_map` (see `_build_parent_map`) rather than each node's own
+    `parents` field, so a barycentre missing that field still resolves to its real parent.
+    """
+    if body_id in cache:
+        return cache[body_id]
+    parent_id = parent_map.get(body_id)
+    if parent_id is None:
+        cache[body_id] = (0.0, 0.0, 0.0)
+        return cache[body_id]
+    body = index.get(body_id)
+    if body is None:
+        cache[body_id] = (0.0, 0.0, 0.0)
+        return cache[body_id]
+    offset = _body_offset_km(body, now_ms)
+    if offset is None:
+        cache[body_id] = None
+        return None
+    parent_pos = _absolute_position_km(parent_id, index, parent_map, now_ms, cache)
+    if parent_pos is None:
+        cache[body_id] = None
+        return None
+    pos = tuple(o + p for o, p in zip(offset, parent_pos))
+    cache[body_id] = pos
+    return pos
+
+
+def _calculated_distance_ls(target_id, star_id, index, parent_map, now_ms, cache):
+    tp = _absolute_position_km(target_id, index, parent_map, now_ms, cache)
+    if tp is None:
+        return None
+    sp = _absolute_position_km(star_id, index, parent_map, now_ms, cache)
+    if sp is None:
+        return None
+    dx, dy, dz = tp[0] - sp[0], tp[1] - sp[1], tp[2] - sp[2]
+    return math.sqrt(dx * dx + dy * dy + dz * dz) / KM_PER_LIGHT_SECOND
+
+
+def _flux(star, distance):
+    if distance is None or distance == 0:
+        return None
+    r, t = star.get("solarRadius"), star.get("surfaceTemperature")
+    if r is None or t is None:
+        return None
+    return (r * t * t / distance) ** 2
+
+
+def _time_averaged_flux(target_id, star, index, parent_map):
+    star_id = star.get("bodyId")
+    total = 0
+    for now_ms in SAMPLE_TIMES_MS:
+        d = _calculated_distance_ls(target_id, star_id, index, parent_map, now_ms, {})
+        f = _flux(star, d)
+        if f is None:
+            return None
+        total += f
+    return total / len(SAMPLE_TIMES_MS)
+
+
+def _ancestor_chain_via_map(body_id, parent_map):
+    """
+    Full ancestor chain (nearest-first) for `body_id`, walking the robust `parent_map`
+    (see `_build_parent_map`) rather than the body's own `parents` field - so a barycentre
+    whose own record omits `parents` still contributes correctly when it's the target or
+    star itself, not just when it's an ancestor encountered along the way.
+    """
+    chain = []
+    current = parent_map.get(body_id)
+    while current is not None:
+        chain.append(current)
+        current = parent_map.get(current)
+    return chain
+
+
+def _nearest_common_ancestor(target_id, star_id, parent_map):
+    chain_star = set(_ancestor_chain_via_map(star_id, parent_map))
+    for anc_id in _ancestor_chain_via_map(target_id, parent_map):
+        if anc_id == star_id or anc_id in chain_star:
+            return anc_id
+    return None
+
+
+def _sum_sq_sma_to(body_id, stop_id, index, parent_map):
+    if body_id == stop_id:
+        return 0
+    body = index.get(body_id)
+    if body is None:
+        return None
+    sma = body.get("semiMajorAxis")
+    if sma is None:
+        return None
+    total = sma * sma
+    current = body_id
+    while True:
+        anc_id = parent_map.get(current)
+        if anc_id is None:
+            # reached the true root without ever hitting stop_id - unresolved
+            return None
+        if anc_id == stop_id:
+            return total
+        anc = index.get(anc_id)
+        if anc is None:
+            return None
+        anc_sma = anc.get("semiMajorAxis")
+        if anc_sma is None:
+            return None
+        total += anc_sma * anc_sma
+        current = anc_id
+
+
+def _characteristic_distance_au(target, star, index, parent_map):
+    target_id = target.get("bodyId")
+    star_id = star.get("bodyId")
+    common = _nearest_common_ancestor(target_id, star_id, parent_map)
+    if common is None:
+        return None
+    d1 = _sum_sq_sma_to(target_id, common, index, parent_map)
+    if d1 is None:
+        return None
+    d2 = _sum_sq_sma_to(star_id, common, index, parent_map)
+    if d2 is None:
+        return None
+    return math.sqrt(d1 + d2)
+
+
+def _is_y_star(star):
+    if (star.get("spectralClass") or "")[:1] == "Y":
         return True
-    # We didn't find the right starclass
+    return (star.get("subType") or "").startswith("Y (Brown dwarf")
+
+
+def _is_n_star(star):
+    if (star.get("spectralClass") or "")[:1] == "N":
+        return True
+    return star.get("subType") == "Neutron Star"
+
+
+def _class_boost_factor(star):
+    if _is_n_star(star):
+        return N_BOOST
+    if _is_y_star(star):
+        return Y_BOOST
+    return 1
+
+
+def influencing_star(body, system, index=None, parent_map=None):
+    """
+    Determines the star that governs `body`'s biology, or None when the system has no
+    stars or the winner can't be determined. Mirrors influencingStar() in influencing-star.ts:
+    ranks stars by flux (R*T^2/distance)^2 at the body's real 3D orbital position
+    (hypothesis N), falling back to the characteristic orbital-scale distance (hypothesis F)
+    when the full orbital chain isn't resolvable for every candidate star.
+
+    `index`/`parent_map` (see `_body_index`/`_build_parent_map`) may be precomputed once by
+    the caller and reused across every body in the system - each build is O(bodies), so
+    recomputing them per body here would make a whole-system pass O(bodies^2).
+    """
+    if index is None:
+        index = _body_index(system)
+    if parent_map is None:
+        parent_map = _build_parent_map(system)
+    stars = [b for b in system.get("bodies") or [] if b.get("type") == "Star"]
+    if not stars:
+        return None
+    if len(stars) == 1:
+        return {"star": stars[0], "method": "only-star", "starCount": 1}
+
+    target_id = body.get("bodyId")
+
+    pos_cache = {}
+    snapshot = [
+        (s, _flux(s, _calculated_distance_ls(target_id, s.get("bodyId"), index, parent_map, REFERENCE_MS, pos_cache)))
+        for s in stars
+    ]
+
+    if all(score is not None for _, score in snapshot):
+        effective = snapshot
+        ranked = sorted((score for _, score in snapshot), reverse=True)
+        near_tie = len(ranked) >= 2 and ranked[1] > 0 and ranked[0] / ranked[1] <= NEAR_TIE_RATIO_THRESHOLD
+        if near_tie:
+            effective = []
+            for s, score in snapshot:
+                avg = _time_averaged_flux(target_id, s, index, parent_map)
+                effective.append((s, avg if avg is not None else score))
+        boosted = [(s, sc * _class_boost_factor(s)) for s, sc in effective]
+        winner = max(boosted, key=lambda x: x[1])[0]
+        return {"star": winner, "method": "flux-3d", "starCount": len(stars)}
+
+    # F fallback: characteristic orbital-scale distance flux.
+    characteristic = [(s, _flux(s, _characteristic_distance_au(body, s, index, parent_map))) for s in stars]
+    if any(score is None for _, score in characteristic):
+        return None
+    boosted = [(s, sc * _class_boost_factor(s)) for s, sc in characteristic]
+    winner = max(boosted, key=lambda x: x[1])[0]
+    return {"star": winner, "method": "flux-characteristic", "starCount": len(stars)}
+
+
+# Star-class tokens Elite's codex names encode ahead of the trailing `_Name;`.
+CODEX_STAR_CLASS_TOKENS = {
+    "G", "M", "L", "F", "K", "TTS", "T", "N", "A", "B", "Y", "D", "O", "W", "Ae",
+}
+_CODEX_STAR_CLASS_RE = re.compile(r"_([A-Za-z]+)_Name;$")
+
+
+def codex_star_class_token(codex_name):
+    """
+    Extracts the star-class token from a codex entry's internal `name` field (e.g.
+    `$Codex_Ent_Aleoids_02_TTS_Name;` -> `"TTS"`), or None when the name doesn't end in a
+    recognised token, meaning the species isn't tied to a specific star class.
+    """
+    if not codex_name:
+        return None
+    m = _CODEX_STAR_CLASS_RE.search(codex_name)
+    if not m:
+        return None
+    token = m.group(1)
+    return token if token in CODEX_STAR_CLASS_TOKENS else None
+
+
+def _spectral_letter(spectral_class):
+    if not spectral_class:
+        return None
+    m = re.match(r"^([OBAFGKMLTY])", spectral_class.strip(), re.IGNORECASE)
+    return m.group(1).upper() if m else None
+
+
+def _is_white_dwarf(spectral_class, sub_type):
+    if (sub_type or "").startswith("White Dwarf"):
+        return True
+    return bool(re.match(r"^D", (spectral_class or "").strip(), re.IGNORECASE))
+
+
+def _star_class_letter(spectral_class, sub_type):
+    direct = _spectral_letter(spectral_class)
+    if direct:
+        return direct
+    m = re.match(r"^([OBAFGKMLTY]) \(", sub_type or "")
+    return m.group(1) if m else None
+
+
+def influencing_star_class_token(star):
+    """
+    Maps a star's spectralClass/subType to the same star-class token vocabulary the codex
+    uses in species names, or None when the star's class has no codex token at all (e.g. a
+    Black Hole).
+    """
+    spectral_class = star.get("spectralClass")
+    sub_type = star.get("subType") or ""
+    if _is_white_dwarf(spectral_class, sub_type):
+        return "D"
+    if (spectral_class or "")[:1] == "N" or sub_type == "Neutron Star":
+        return "N"
+    if "Wolf-Rayet" in sub_type:
+        return "W"
+    if sub_type == "T Tauri Star":
+        return "TTS"
+    if sub_type == "Herbig Ae/Be Star":
+        return "Ae"
+    return _star_class_letter(spectral_class, sub_type)
+
+
+def is_biology_guess_allowed(english_name, codex_name, influencing_star_token):
+    """
+    True when a guessed biology signal should be kept given the resolved Influencing Star's
+    class token. `codex_name` is the guess's codex entry's internal `name` field.
+    """
+    # Stratum Araneamus - Emerald can occur around any star class.
+    if english_name == "Stratum Araneamus - Emerald":
+        return True
+
+    required_token = codex_star_class_token(codex_name)
+    if required_token is None or required_token == influencing_star_token:
+        return True
+
+    # Yellow Tussocks (codex star class F) also occur around Neutron Stars.
+    if (
+        required_token == "F"
+        and influencing_star_token == "N"
+        and english_name.startswith("Tussock")
+        and english_name.endswith("Yellow 1")
+    ):
+        return True
+
     return False
 
 
-def guess_biology(body, codex):
+def guess_biology(body, codex, inf_star=None):
     global biostats
     global spanshdump
     system = spanshdump.get("system")
@@ -309,12 +675,15 @@ def guess_biology(body, codex):
         return []
 
     parentType = get_parent_type(system, body)
+    influencing_token = influencing_star_class_token(inf_star["star"]) if inf_star else None
 
     for key in biostats.keys():
         species = biostats.get(key)
 
         if species.get("hud_category") == "Biology":
-            validStar = checkStar(species, system)
+            validStar = is_biology_guess_allowed(
+                species.get("name"), species.get("fdevname"), influencing_token
+            )
 
             odyssey = species.get("platform") == "odyssey"
 
@@ -510,12 +879,23 @@ def system_biostats(request):
         if sanomaly:
             spanshdump["system"]["signals"]["anomaly"] = sanomaly
 
+    # Built once and shared across every body below - each body's own influencing_star()
+    # call would otherwise rebuild these from the full body list, making the loop O(n^2).
+    body_index = _body_index(system)
+    parent_map = _build_parent_map(system)
+
     for i, body in enumerate(system.get("bodies")):
         if landable(body):
             if not spanshdump["system"]["bodies"][i].get("signals"):
                 spanshdump["system"]["bodies"][i]["signals"] = {}
 
-            guess = guess_biology(body, codex)
+            inf_star = (
+                influencing_star(body, system, body_index, parent_map)
+                if body.get("type") == "Planet"
+                else None
+            )
+
+            guess = guess_biology(body, codex, inf_star)
             if guess:
                 spanshdump["system"]["bodies"][i]["signals"]["guesses"] = guess
 
@@ -525,6 +905,18 @@ def system_biostats(request):
             set_codex(i, "Guardian", body, codex)
             set_codex(i, "Cloud", body, codex)
             set_codex(i, "Anomaly", body, codex)
+
+            has_biology = guess or spanshdump["system"]["bodies"][i]["signals"].get(
+                "biology"
+            )
+            if inf_star and has_biology:
+                spanshdump["system"]["bodies"][i]["signals"]["influencingStar"] = {
+                    "name": inf_star["star"].get("name"),
+                    "bodyId": inf_star["star"].get("bodyId"),
+                    "subType": inf_star["star"].get("subType"),
+                    "method": inf_star["method"],
+                    "starCount": inf_star["starCount"],
+                }
 
     # return jsonify(biostats.get("2100407"))
     return jsonify(spanshdump)
