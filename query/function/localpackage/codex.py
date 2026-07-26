@@ -8,8 +8,9 @@ import requests
 import json
 import math
 import re
+import gzip
 from datetime import datetime, timezone
-from flask import jsonify
+from flask import jsonify, Response
 import urllib.parse
 
 biostats = {}
@@ -83,7 +84,28 @@ def biostats_cache(cache):
     return jsonify(biostats)
 
 
-def get_spansh_by_id(id64):
+_FLEET_CARRIER_STATION_TYPE = "Drake-Class Carrier"
+
+
+def _strip_fleet_carriers(system):
+    """
+    Removes fleet carrier entries from the system's station list and every body's own,
+    leaving everything else (factions, non-carrier stations, settlements) untouched.
+    """
+    stations = system.get("stations")
+    if stations:
+        system["stations"] = [
+            s for s in stations if s.get("type") != _FLEET_CARRIER_STATION_TYPE
+        ]
+    for body in system.get("bodies") or []:
+        body_stations = body.get("stations")
+        if body_stations:
+            body["stations"] = [
+                s for s in body_stations if s.get("type") != _FLEET_CARRIER_STATION_TYPE
+            ]
+
+
+def get_spansh_by_id(id64, keep_all_data=False):
     global spanshdump
 
     cached = (
@@ -98,10 +120,13 @@ def get_spansh_by_id(id64):
         r = requests.get(f"https://spansh.co.uk/api/dump/{id64}")
         spanshdump = r.json()
         if spanshdump.get("system"):
-            if spanshdump.get("system").get("factions"):
-                del spanshdump["system"]["factions"]
-            if spanshdump.get("system").get("stations"):
-                del spanshdump["system"]["stations"]
+            if keep_all_data:
+                _strip_fleet_carriers(spanshdump["system"])
+            else:
+                if spanshdump.get("system").get("factions"):
+                    del spanshdump["system"]["factions"]
+                if spanshdump.get("system").get("stations"):
+                    del spanshdump["system"]["stations"]
 
         # check that id64 matches
         cached = (
@@ -843,27 +868,24 @@ def get_stats_by_name(names):
     return jsonify(retval)
 
 
-def system_biostats(request):
-    global biostats
-    global spanshdump
-
+def _resolve_system_id(request):
     id = request.args.get("id")
     caller = request.args.get("caller")
     systemName = request.args.get("system")
-    if request.args.get("system"):
+    if systemName:
         id = getId64(systemName)
 
     print(f"caller: {caller} id: {id} system: {systemName}")
+    return id
 
-    # lazy loaders
-    get_biostats()
-    get_spansh_by_id(id)
 
-    if not spanshdump:
-        return jsonify({"error": "no spansh data"})
-
-    system = spanshdump.get("system")
-    codex = get_system_codex(system.get("name"))
+def _augment_system_biostats(system, codex):
+    """
+    Shared by /codex/biostats and /codex/dump: attaches system-level cloud/anomaly signals
+    and region, then per landable body attaches biology guesses, confirmed codex signals,
+    and the influencing star. Mutates the `spanshdump` global (which owns `system`) in place.
+    """
+    global spanshdump
 
     scloud = get_body_codex(codex, "Cloud")
     sanomaly = get_body_codex(codex, "Anomaly")
@@ -918,8 +940,59 @@ def system_biostats(request):
                     "starCount": inf_star["starCount"],
                 }
 
+
+def _gzip_json_response(data):
+    body = gzip.compress(json.dumps(data, separators=(",", ":")).encode("utf-8"))
+    response = Response(body, mimetype="application/json")
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Content-Length"] = str(len(body))
+    return response
+
+
+def system_biostats(request):
+    global biostats
+    global spanshdump
+
+    id = _resolve_system_id(request)
+
+    # lazy loaders
+    get_biostats()
+    get_spansh_by_id(id)
+
+    if not spanshdump:
+        return jsonify({"error": "no spansh data"})
+
+    system = spanshdump.get("system")
+    codex = get_system_codex(system.get("name"))
+    _augment_system_biostats(system, codex)
+
     # return jsonify(biostats.get("2100407"))
     return jsonify(spanshdump)
+
+
+def codex_dump(request):
+    """
+    Same augmentation pass as /codex/biostats, but keeps the full Spansh dump (factions,
+    stations, settlements - everything except fleet carriers) instead of stripping factions
+    and stations outright, and gzips the JSON response body to stay under the cloud
+    function output size limit that the fuller payload would otherwise risk hitting.
+    """
+    global biostats
+    global spanshdump
+
+    id = _resolve_system_id(request)
+
+    get_biostats()
+    get_spansh_by_id(id, keep_all_data=True)
+
+    if not spanshdump:
+        return jsonify({"error": "no spansh data"})
+
+    system = spanshdump.get("system")
+    codex = get_system_codex(system.get("name"))
+    _augment_system_biostats(system, codex)
+
+    return _gzip_json_response(spanshdump)
 
 
 def quantify_codex(entryid):

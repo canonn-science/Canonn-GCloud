@@ -454,6 +454,12 @@ def system_biostats():
     return localpackage.codex.system_biostats(request)
 
 
+@app.route("/codex/dump")
+@wrap_route
+def codex_dump():
+    return localpackage.codex.codex_dump(request)
+
+
 @app.route("/get_gr_data")
 @wrap_route
 def get_gr_data():
