@@ -1,9 +1,18 @@
+import csv
+import gzip
+import json
 import time
 import requests
-from flask import jsonify
+from flask import Response
 
 SEARCH_URL = "https://spansh.co.uk/api/systems/search/save"
 RECALL_URL = "https://spansh.co.uk/api/systems/search/recall/{search_reference}/{page}"
+ARCHITECTS_TSV_URL = (
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5TMBu2KJQBaNqSBropWVdXUcOjz-wJe57e8h4pRPzr7zZ066yjO-H2Z7hqZe-fOVSpzy-7dzAqU2z"
+    "/pub?gid=1448295597&single=true&output=tsv"
+)
+ARCHITECTS_FIELDS = ["System Name", "Architect Name", "Canonn Architect", "Preferred Faction"]
+ARCHITECTS_PAGE_SIZE = 100
 
 SEARCH_BODY = {
     "filters": {
@@ -18,16 +27,26 @@ SEARCH_BODY = {
 }
 
 CACHE_TTL_SECONDS = 3600
+ARCHITECTS_CACHE_TTL_SECONDS = 86400
 PAGE_CACHE_LIMIT = 200
 
 _reference_cache = {"reference": None, "expires": 0}
 _page_cache = {}
+_architects_cache = {"records": None, "expires": 0}
+
+
+def _gzip_json_response(data):
+    body = gzip.compress(json.dumps(data, separators=(",", ":")).encode("utf-8"))
+    response = Response(body, mimetype="application/json")
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Content-Length"] = str(len(body))
+    return response
 
 
 def query():
     now = time.time()
     if _reference_cache["reference"] and _reference_cache["expires"] > now:
-        return jsonify(_reference_cache["reference"])
+        return _gzip_json_response(_reference_cache["reference"])
 
     r = requests.post(SEARCH_URL, json=SEARCH_BODY, timeout=10)
     r.raise_for_status()
@@ -36,7 +55,7 @@ def query():
     _reference_cache["reference"] = reference
     _reference_cache["expires"] = now + CACHE_TTL_SECONDS
 
-    return jsonify(reference)
+    return _gzip_json_response(reference)
 
 
 def query_page(search_reference, page):
@@ -45,7 +64,7 @@ def query_page(search_reference, page):
 
     cached = _page_cache.get(key)
     if cached and cached["expires"] > now:
-        return jsonify(cached["data"])
+        return _gzip_json_response(cached["data"])
 
     r = requests.get(
         RECALL_URL.format(search_reference=search_reference, page=page), timeout=10
@@ -61,4 +80,31 @@ def query_page(search_reference, page):
         _page_cache.pop(next(iter(_page_cache)))
     _page_cache[key] = {"data": data, "expires": now + CACHE_TTL_SECONDS}
 
-    return jsonify(data)
+    return _gzip_json_response(data)
+
+
+def _fetch_architects():
+    now = time.time()
+    if _architects_cache["records"] is not None and _architects_cache["expires"] > now:
+        return _architects_cache["records"]
+
+    r = requests.get(ARCHITECTS_TSV_URL, timeout=10)
+    r.raise_for_status()
+
+    reader = csv.DictReader(r.text.splitlines(), delimiter="\t")
+    records = [
+        {field: row.get(field, "") for field in ARCHITECTS_FIELDS} for row in reader
+    ]
+
+    _architects_cache["records"] = records
+    _architects_cache["expires"] = now + ARCHITECTS_CACHE_TTL_SECONDS
+
+    return records
+
+
+def architects_page(page):
+    records = _fetch_architects()
+    start = page * ARCHITECTS_PAGE_SIZE
+    end = start + ARCHITECTS_PAGE_SIZE
+
+    return _gzip_json_response(records[start:end])

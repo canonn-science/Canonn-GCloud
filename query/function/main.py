@@ -572,6 +572,12 @@ def canonnbgs_query_page(searchReference, page):
     return localpackage.canonnbgs.query_page(searchReference, int(page))
 
 
+@app.route("/canonnbgs/architects/<page>")
+@wrap_route
+def canonnbgs_architects_page(page):
+    return localpackage.canonnbgs.architects_page(int(page))
+
+
 @app.route("/")
 @wrap_route
 def root():
