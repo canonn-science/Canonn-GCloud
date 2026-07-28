@@ -32,6 +32,7 @@ import localpackage.events
 import localpackage.fyi
 import localpackage.srvsurvey
 import localpackage.fleet_carriers
+import localpackage.canonnbgs
 import functions_framework
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
@@ -557,6 +558,18 @@ def raw_data():
         cursor.close()
 
     return jsonify(raw)
+
+
+@app.route("/canonnbgs", methods=["GET"])
+@wrap_route
+def canonnbgs_query():
+    return localpackage.canonnbgs.query()
+
+
+@app.route("/canonnbgs/<searchReference>/<page>")
+@wrap_route
+def canonnbgs_query_page(searchReference, page):
+    return localpackage.canonnbgs.query_page(searchReference, int(page))
 
 
 @app.route("/")
