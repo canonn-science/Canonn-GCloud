@@ -2,8 +2,9 @@ import csv
 import gzip
 import json
 import time
+from datetime import datetime
 import requests
-from flask import Response
+from flask import Response, jsonify
 
 SEARCH_URL = "https://spansh.co.uk/api/systems/search/save"
 RECALL_URL = "https://spansh.co.uk/api/systems/search/recall/{search_reference}/{page}"
@@ -13,6 +14,7 @@ ARCHITECTS_TSV_URL = (
 )
 ARCHITECTS_FIELDS = ["System Name", "Architect Name", "Canonn Architect", "Preferred Faction"]
 ARCHITECTS_PAGE_SIZE = 100
+ARCHITECTS_TIMESTAMP_FORMAT = "%d/%m/%Y %H:%M:%S"
 
 SEARCH_BODY = {
     "filters": {
@@ -21,7 +23,7 @@ SEARCH_BODY = {
         ]
     },
     "sort": [{"distance": {"direction": "asc"}}],
-    "size": 100,
+    "size": 50,
     "page": 0,
     "reference_system": "Varati",
 }
@@ -92,9 +94,7 @@ def _fetch_architects():
     r.raise_for_status()
 
     reader = csv.DictReader(r.text.splitlines(), delimiter="\t")
-    records = [
-        {field: row.get(field, "") for field in ARCHITECTS_FIELDS} for row in reader
-    ]
+    records = list(reader)
 
     _architects_cache["records"] = records
     _architects_cache["expires"] = now + ARCHITECTS_CACHE_TTL_SECONDS
@@ -102,9 +102,36 @@ def _fetch_architects():
     return records
 
 
+def _project_architect(record):
+    return {field: record.get(field, "") for field in ARCHITECTS_FIELDS}
+
+
+def _architect_timestamp(record):
+    try:
+        return datetime.strptime(record.get("Timestamp", ""), ARCHITECTS_TIMESTAMP_FORMAT)
+    except ValueError:
+        return datetime.min
+
+
 def architects_page(page):
     records = _fetch_architects()
     start = page * ARCHITECTS_PAGE_SIZE
     end = start + ARCHITECTS_PAGE_SIZE
 
-    return _gzip_json_response(records[start:end])
+    return _gzip_json_response([_project_architect(r) for r in records[start:end]])
+
+
+def architect_by_system(system_name):
+    records = _fetch_architects()
+    matches = [
+        record
+        for record in records
+        if record.get("System Name", "").lower() == system_name.lower()
+    ]
+
+    if not matches:
+        return jsonify({"error": "not found", "system": system_name}), 404
+
+    latest = max(matches, key=_architect_timestamp)
+
+    return jsonify(_project_architect(latest))

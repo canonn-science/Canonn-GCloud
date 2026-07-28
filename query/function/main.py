@@ -578,6 +578,12 @@ def canonnbgs_architects_page(page):
     return localpackage.canonnbgs.architects_page(int(page))
 
 
+@app.route("/canonnbgs/architect/<systemname>")
+@wrap_route
+def canonnbgs_architect(systemname):
+    return localpackage.canonnbgs.architect_by_system(systemname)
+
+
 @app.route("/")
 @wrap_route
 def root():
