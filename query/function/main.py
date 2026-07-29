@@ -584,6 +584,12 @@ def canonnbgs_architect(systemname):
     return localpackage.canonnbgs.architect_by_system(systemname)
 
 
+@app.route("/canonnbgs/reload")
+@wrap_route
+def canonnbgs_reload():
+    return localpackage.canonnbgs.reload_cache()
+
+
 @app.route("/")
 @wrap_route
 def root():

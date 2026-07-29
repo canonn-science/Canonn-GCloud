@@ -29,7 +29,7 @@ SEARCH_BODY = {
 }
 
 CACHE_TTL_SECONDS = 3600
-ARCHITECTS_CACHE_TTL_SECONDS = 86400
+ARCHITECTS_CACHE_TTL_SECONDS = 7200
 PAGE_CACHE_LIMIT = 200
 
 _reference_cache = {"reference": None, "expires": 0}
@@ -119,6 +119,16 @@ def architects_page(page):
     end = start + ARCHITECTS_PAGE_SIZE
 
     return _gzip_json_response([_project_architect(r) for r in records[start:end]])
+
+
+def reload_cache():
+    _reference_cache["reference"] = None
+    _reference_cache["expires"] = 0
+    _page_cache.clear()
+    _architects_cache["records"] = None
+    _architects_cache["expires"] = 0
+
+    return jsonify({"reloaded": True})
 
 
 def architect_by_system(system_name):
