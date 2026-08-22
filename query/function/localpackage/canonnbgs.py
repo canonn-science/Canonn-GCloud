@@ -22,10 +22,15 @@ SEARCH_BODY = {
             {"name": ["Canonn", "Canonn Deep Space Research"]}
         ]
     },
-    "sort": [{"distance": {"direction": "asc"}}],
-    "size": 50,
-    "page": 0,
-    "reference_system": "Varati",
+    "sort": [
+    {
+      "updated_at": {
+        "direction": "desc"
+      }
+    }
+  ],
+    "size": 500,
+    "page": 0
 }
 
 CACHE_TTL_SECONDS = 3600
@@ -77,6 +82,11 @@ def query_page(search_reference, page):
     data.pop("search", None)
     data.pop("reference", None)
     data.pop("search_reference", None)
+
+    for system in data.get("results") or []:
+        system.pop("bodies", None)
+        system.pop("stations", None)
+        system.pop("synthesis_recipes", None)
 
     if len(_page_cache) >= PAGE_CACHE_LIMIT:
         _page_cache.pop(next(iter(_page_cache)))
