@@ -14,6 +14,8 @@ ARCHITECTS_TSV_URL = (
 )
 ARCHITECTS_FIELDS = ["System Name", "Architect Name", "Canonn Architect", "Preferred Faction"]
 ARCHITECTS_PAGE_SIZE = 100
+FLEET_CARRIER_FACTION = "FleetCarrier"
+CANONN_FACTIONS = {"Canonn", "Canonn Deep Space Research"}
 ARCHITECTS_TIMESTAMP_FORMAT = "%d/%m/%Y %H:%M:%S"
 
 SEARCH_BODY = {
@@ -65,6 +67,26 @@ def query():
     return _gzip_json_response(reference)
 
 
+def _summarise_stations(system):
+    stations = [
+        station
+        for station in system.get("stations") or []
+        if station.get("controlling_minor_faction") != FLEET_CARRIER_FACTION
+    ]
+
+    system["station_count"] = len(stations)
+    system["canonn_assets"] = [
+        {
+            "name": station.get("name"),
+            "type": station.get("type"),
+            "controlling_minor_faction": station.get("controlling_minor_faction"),
+        }
+        for station in stations
+        if "canonn" in (station.get("name") or "").lower()
+        or station.get("controlling_minor_faction") in CANONN_FACTIONS
+    ]
+
+
 def query_page(search_reference, page):
     now = time.time()
     key = (search_reference, page)
@@ -84,6 +106,7 @@ def query_page(search_reference, page):
     data.pop("search_reference", None)
 
     for system in data.get("results") or []:
+        _summarise_stations(system)
         system.pop("bodies", None)
         system.pop("stations", None)
         system.pop("synthesis_recipes", None)
