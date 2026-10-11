@@ -482,7 +482,7 @@ def norm_system(name) -> str:
     return " ".join((name or "").split()).casefold()
 
 
-def _clean_cell(value) -> str:
+def clean_cell(value) -> str:
     value = (value or "").strip().strip("`").strip()
     return "" if value.casefold() in PLACEHOLDERS else value
 
@@ -512,8 +512,8 @@ def latest_by_system(records: list[dict]) -> dict[str, dict]:
         if norm in best and best[norm][0] > key:
             continue
         best[norm] = (key, {
-            "architect": _clean_cell(row.get("architect name")),
-            "preferred_faction": _clean_cell(row.get("preferred faction")),
+            "architect": clean_cell(row.get("architect name")),
+            "preferred_faction": clean_cell(row.get("preferred faction")),
         })
     return {norm: entry for norm, (_k, entry) in best.items()}
 

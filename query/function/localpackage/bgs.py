@@ -24,8 +24,8 @@ from localpackage.bgs_logic import (
     faction_series,
     int_arg,
     list_bucket,
-    match_systems,
-    latest_by_system,
+    clean_cell,
+    norm_system,
     order_by_swing,
     pipeline,
     stalest,
@@ -273,8 +273,41 @@ def _last_conflict_end(addresses):
     return out
 
 
-def _summary_context(addresses, now):
+def _latest_architects(names):
+    """{lower name: newest architects row}. A system can have several
+    submissions; the newest by submitted_at (then id) wins."""
+    if not names:
+        return {}
+    marks, params = _in(names)
+    rows = _rows(
+        f"SELECT system_name, architect_name, canonn_architect, preferred_faction "
+        f"FROM {_t('architects')} WHERE system_name IN ({marks}) "
+        f"ORDER BY submitted_at, id",
+        params,
+    )
+    # ascending order: later rows overwrite earlier ones
+    return {r["system_name"].lower(): r for r in rows}
+
+
+def _overrides(names):
+    """{lower name: bgs_overrides row}"""
+    if not names:
+        return {}
+    marks, params = _in(names)
+    rows = _rows(
+        f"SELECT system_name, faction, position, details "
+        f"FROM {_t('bgs_overrides')} WHERE system_name IN ({marks})",
+        params,
+    )
+    return {r["system_name"].lower(): r for r in rows}
+
+
+def _summary_context(systems, now):
+    addresses = [s["system_address"] for s in systems]
+    names = [s["name"] for s in systems]
     return {
+        "architects": _latest_architects(names),
+        "overrides": _overrides(names),
         "now": now,
         "series": _series_many(addresses, now - dt.timedelta(days=SERIES_DAYS)),
         "factions": _current_factions(addresses),
@@ -331,7 +364,28 @@ def _build_summary(system, ctx):
 
     last_event = ctx["last_conflict_end"].get(address)
     last_seen = system["last_seen"]
+    key = (system["name"] or "").lower()
+    architect = ctx["architects"].get(key)
+    override = ctx["overrides"].get(key)
     return {
+        "architect": (
+            {
+                "architect_name": architect["architect_name"],
+                "canonn_architect": architect["canonn_architect"],
+                "preferred_faction": architect["preferred_faction"],
+            }
+            if architect
+            else None
+        ),
+        "bgs_override": (
+            {
+                "faction": override["faction"],
+                "position": override["position"],
+                "details": override["details"],
+            }
+            if override
+            else None
+        ),
         # string: id64 values exceed JavaScript's safe integer range
         "system_address": str(address),
         "name": system["name"],
@@ -407,7 +461,7 @@ def systems():
             params + [cutoff, MAX_PAGE_SIZE * 2],
         )
         total = _scalar(f"SELECT COUNT(*) FROM {_t('systems')} s {where}", params)
-        ctx = _summary_context([r["system_address"] for r in rows], generated_at)
+        ctx = _summary_context(rows, generated_at)
         return _respond(
             {
                 "data": [_build_summary(r, ctx) for r in rows],
@@ -465,8 +519,8 @@ def systems():
             params_join + params + [size, page * size],
         )
 
-    ctx = _summary_context([r["system_address"] for r in rows], generated_at)
-    body = _envelope([_build_summary(r, ctx) for r in rows], page, size, total)
+    ctx = _summary_context(rows, generated_at)
+    body =_envelope([_build_summary(r, ctx) for r in rows], page, size, total)
     body["generated_at"] = generated_at.isoformat()
     return _respond(body, max_age=30, compress=True)
 
@@ -477,7 +531,7 @@ def system_detail(address):
     rows = _rows(f"SELECT * FROM {_t('systems')} WHERE system_address = %s", [address])
     if not rows:
         return jsonify({"error": "not found"}), 404
-    summary = _build_summary(rows[0], _summary_context([address], now))
+    summary = _build_summary(rows[0], _summary_context(rows, now))
     summary["pair_stats"] = [
         dict(r, system_address=str(r["system_address"]))
         for r in _rows(f"SELECT * FROM {_t('pair_stats')} WHERE system_address = %s", [address])
@@ -653,33 +707,41 @@ def coverage_systems():
 
 @_api
 def architects():
-    body = {
-        "enabled": bool(canonnbgs.ARCHITECTS_TSV_URL),
-        "systems": {},
-        "sheet_fetched_at": None,
-        "stale": False,
-        "error": None,
-        "browser_cache_seconds": ARCHITECTS_BROWSER_CACHE_SECONDS,
-        "generated_at": _utcnow().isoformat(),
-    }
-    if not body["enabled"]:
-        return _respond(body)
+    """Latest architect submission per system, read from the architects table.
+    Response shape is unchanged from the sheet-backed version; the sheet-only
+    fields are kept for client compatibility."""
+    rows = _rows(
+        f"SELECT system_name, architect_name, canonn_architect, preferred_faction "
+        f"FROM {_t('architects')} ORDER BY submitted_at, id"
+    )
+    # ascending order: the newest row per system overwrites earlier ones
+    latest = {norm_system(r["system_name"]): r for r in rows}
 
-    cache = canonnbgs._architects_cache
-    error = None
-    try:
-        records = canonnbgs._fetch_architects()
-    except Exception as exc:  # serve the last good copy rather than failing
-        error = f"{type(exc).__name__}: {exc}"
-        records = cache["records"] or []
-    fetched_at = cache.get("fetched_at")
+    systems_out = {}
+    for r in _rows(f"SELECT name FROM {_t('systems')}"):
+        row = latest.get(norm_system(r["name"]))
+        if not row:
+            continue
+        entry = {
+            "architect": clean_cell(row["architect_name"]),
+            "preferred_faction": clean_cell(row["preferred_faction"]),
+        }
+        if entry["architect"] or entry["preferred_faction"]:
+            entry["canonn_architect"] = row["canonn_architect"]
+            systems_out[r["name"]] = entry
 
-    names = [r["name"] for r in _rows(f"SELECT name FROM {_t('systems')}")]
-    body["systems"] = match_systems(latest_by_system(records), names)
-    body["sheet_fetched_at"] = fetched_at.isoformat() if fetched_at else None
-    body["error"] = error
-    body["stale"] = error is not None and fetched_at is not None
-    return _respond(body, max_age=300)
+    return _respond(
+        {
+            "enabled": True,
+            "systems": systems_out,
+            "sheet_fetched_at": None,
+            "stale": False,
+            "error": None,
+            "browser_cache_seconds": ARCHITECTS_BROWSER_CACHE_SECONDS,
+            "generated_at": _utcnow().isoformat(),
+        },
+        max_age=300,
+    )
 
 
 @_api
