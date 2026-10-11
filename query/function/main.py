@@ -33,6 +33,7 @@ import localpackage.fyi
 import localpackage.srvsurvey
 import localpackage.fleet_carriers
 import localpackage.canonnbgs
+import localpackage.bgs
 import functions_framework
 from paramiko import RSAKey
 from sshtunnel import SSHTunnelForwarder
@@ -588,6 +589,67 @@ def canonnbgs_architect(systemname):
 @wrap_route
 def canonnbgs_reload():
     return localpackage.canonnbgs.reload_cache()
+
+
+# BGS tracker read API (the spec's /canonnbgs/* paths, served under /bgs/*)
+@app.route("/bgs/systems")
+@wrap_route
+def bgs_systems():
+    return localpackage.bgs.systems()
+
+
+@app.route("/bgs/systems/<int:address>")
+@wrap_route
+def bgs_system_detail(address):
+    return localpackage.bgs.system_detail(address)
+
+
+@app.route("/bgs/systems/<int:address>/history")
+@wrap_route
+def bgs_system_history(address):
+    return localpackage.bgs.system_history(address)
+
+
+@app.route("/bgs/systems/<int:address>/conflicts")
+@wrap_route
+def bgs_system_conflicts(address):
+    return localpackage.bgs.system_conflicts(address)
+
+
+@app.route("/bgs/events")
+@wrap_route
+def bgs_events():
+    return localpackage.bgs.events()
+
+
+@app.route("/bgs/activity")
+@wrap_route
+def bgs_activity():
+    return localpackage.bgs.activity()
+
+
+@app.route("/bgs/coverage")
+@wrap_route
+def bgs_coverage():
+    return localpackage.bgs.coverage()
+
+
+@app.route("/bgs/coverage/systems")
+@wrap_route
+def bgs_coverage_systems():
+    return localpackage.bgs.coverage_systems()
+
+
+@app.route("/bgs/architects")
+@wrap_route
+def bgs_architects():
+    return localpackage.bgs.architects()
+
+
+@app.route("/bgs/health")
+@wrap_route
+def bgs_health():
+    return localpackage.bgs.health()
 
 
 @app.route("/")

@@ -2,15 +2,17 @@ import csv
 import gzip
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from os import getenv
 import requests
 from flask import Response, jsonify
 
 SEARCH_URL = "https://spansh.co.uk/api/systems/search/save"
 RECALL_URL = "https://spansh.co.uk/api/systems/search/recall/{search_reference}/{page}"
-ARCHITECTS_TSV_URL = (
+ARCHITECTS_TSV_URL = getenv(
+    "ARCHITECTS_TSV_URL",
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5TMBu2KJQBaNqSBropWVdXUcOjz-wJe57e8h4pRPzr7zZ066yjO-H2Z7hqZe-fOVSpzy-7dzAqU2z"
-    "/pub?gid=1448295597&single=true&output=tsv"
+    "/pub?gid=1448295597&single=true&output=tsv",
 )
 ARCHITECTS_FIELDS = ["System Name", "Architect Name", "Canonn Architect", "Preferred Faction"]
 ARCHITECTS_PAGE_SIZE = 100
@@ -131,6 +133,7 @@ def _fetch_architects():
 
     _architects_cache["records"] = records
     _architects_cache["expires"] = now + ARCHITECTS_CACHE_TTL_SECONDS
+    _architects_cache["fetched_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
 
     return records
 
@@ -160,6 +163,7 @@ def reload_cache():
     _page_cache.clear()
     _architects_cache["records"] = None
     _architects_cache["expires"] = 0
+    _architects_cache["fetched_at"] = None
 
     return jsonify({"reloaded": True})
 
@@ -175,6 +179,10 @@ def architect_by_system(system_name):
     if not matches:
         return jsonify({"error": "not found", "system": system_name}), 404
 
-    latest = max(matches, key=_architect_timestamp)
+    # most recent timestamp wins; a later sheet row wins ties (same rule as
+    # the bulk /bgs/architects endpoint)
+    latest = max(
+        enumerate(matches), key=lambda item: (_architect_timestamp(item[1]), item[0])
+    )[1]
 
     return jsonify(_project_architect(latest))
